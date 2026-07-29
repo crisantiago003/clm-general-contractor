@@ -506,6 +506,7 @@ function go(v, params){
   window.scrollTo(0,0);
 }
 function render(){
+  if(session && session.type === 'Pending'){ renderPendingScreen(); return; }
   if(view !== 'dashboard' && !roleCanAccessTab(view)){
     toast("Your role doesn't have access to that section.");
     view = 'dashboard'; sub = {};
@@ -571,6 +572,9 @@ function getAlerts(){
   pendingReqs.forEach(r=>{ alerts.push({ type:'Request', label:`${r.site} purchase request pending approval`, action:()=>go('inventory',{itab:'requests'}) }); });
   lowStockMaterials().forEach(g=>{ alerts.push({ type:'Low Stock', label:`${g.name} — ${g.qty} left (reorder at ${g.reorderPoint})`, action:()=>go('inventory',{itab:'materials',matView:'summary'}) }); });
   DB.cashAdvances.filter(a=>a.status==='Outstanding').forEach(a=>{ alerts.push({ type:'Advance', label:`${a.employeeName} owes ${money(a.amount)} (cash advance)`, action:()=>{ const emp=employeeById(a.employeeId); if(emp) go('employees',{empId:emp.id,tab:'advances'}); } }); });
+  if(session && session.type==='Admin'){
+    DB.users.filter(u=>u.type==='Pending').forEach(u=>{ alerts.push({ type:'New Account', label:`${u.name} is waiting for a role assignment`, action:()=>go('users') }); });
+  }
   accountsReceivable().filter(r=>r.daysOutstanding>30).forEach(r=>{ alerts.push({ type:'Overdue Invoice', label:`#${r.order.id} ${partyName(r.order)} — ${r.daysOutstanding}d overdue`, action:()=>go('orders',{editId:r.order.id}) }); });
   return alerts;
 }
@@ -755,15 +759,13 @@ function doSignup(){
   if(pw !== pw2){ err.textContent = "Passwords don't match"; return; }
   const requiredCode = (DB.settings && DB.settings.signupCode) || '';
   if(requiredCode && code !== requiredCode){ err.textContent = 'Invite code is incorrect — ask your Admin for the current one'; return; }
-  const newUser = { id: nextId(DB.users), name, password: pw, type: 'Sales' };
+  const newUser = { id: nextId(DB.users), name, password: pw, type: 'Pending' };
   DB.users.push(newUser);
   saveDB();
   session = { id: newUser.id, name: newUser.name, type: newUser.type };
   sessionStorage.setItem('buildsuite_session', JSON.stringify(session));
-  document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('appRoot').style.display = 'block';
-  toast('Account created — you have basic access until an Admin upgrades your role');
-  go('dashboard');
+  toast('Account created — an Admin needs to assign your role before you can use BuildSuite');
+  enterApp();
 }
 function doLogin(){
   const u = document.getElementById('loginUser').value;
@@ -772,9 +774,31 @@ function doLogin(){
   if(!res.ok){ document.getElementById('loginErr').textContent = res.msg; return; }
   session = { id: res.user.id, name: res.user.name, type: res.user.type };
   sessionStorage.setItem('buildsuite_session', JSON.stringify(session));
+  enterApp();
+}
+function enterApp(){
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('appRoot').style.display = 'block';
-  go('dashboard');
+  if(session.type === 'Pending'){
+    renderPendingScreen();
+  } else {
+    go('dashboard');
+  }
+}
+function renderPendingScreen(){
+  document.getElementById('headerBar').innerHTML = `
+    <div class="brand"><div class="mark">BS</div><div class="name">Build<span>Suite</span></div></div>
+    <div class="spacer"></div>
+    <div class="userchip"><div class="av">${initials(session.name)}</div>${esc(session.name)}</div>
+    <button class="btn ghost sm" onclick="logout()">Log out</button>
+  `;
+  document.getElementById('mainArea').innerHTML = `
+    <div class="panel" style="max-width:480px;margin:60px auto;text-align:center;padding:40px 32px">
+      <div style="font-size:40px;margin-bottom:12px">⏳</div>
+      <h2 style="margin-bottom:8px">Waiting for Approval</h2>
+      <p class="mut" style="font-size:13.5px;line-height:1.6">Your account has been created, ${esc(session.name)}, but you don't have access to anything yet. An Admin needs to review your account and assign you a role first. Check back soon, or ask your Admin directly.</p>
+    </div>
+  `;
 }
 
 /* ============================================================ DASHBOARD ============================================================ */
@@ -3538,14 +3562,33 @@ function deleteTransaction(id){
 const USER_TYPES = ['Admin','Manager','Sales','Clerk'];
 function renderUsers(){
   if(session.type !== 'Admin'){ go('dashboard'); return; }
-  const rows = [...DB.users].sort((a,b)=>a.name.localeCompare(b.name));
+  const pending = DB.users.filter(u=>u.type==='Pending').sort((a,b)=>a.name.localeCompare(b.name));
+  const active = DB.users.filter(u=>u.type!=='Pending').sort((a,b)=>a.name.localeCompare(b.name));
   document.getElementById('mainArea').innerHTML = `
     <div class="crumb">Users</div>
+    ${pending.length ? `
+    <div class="panel" style="border-color:var(--accent)">
+      <div class="ph"><h3 style="text-transform:none;font-size:16px;color:var(--accent)">⏳ Waiting for Approval (${pending.length})</h3></div>
+      <div class="mut" style="font-size:12.5px;margin-bottom:10px">These accounts signed up but have no access yet. Assign a role to let them in.</div>
+      <div class="twrap"><table>
+        <tr><th>Name</th><th>Assign Role</th><th></th></tr>
+        ${pending.map(u=>`
+          <tr>
+            <td><div style="display:flex;align-items:center;gap:10px"><div class="avatar">${initials(u.name)}</div><b>${esc(u.name)}</b></div></td>
+            <td>
+              <div style="display:flex;gap:6px">
+                ${USER_TYPES.map(t=>`<button class="btn ${t==='Admin'?'del':'ghost'} sm" onclick="approveUser(${u.id},'${t}')">${t}</button>`).join('')}
+              </div>
+            </td>
+            <td><button class="x" onclick="deleteUser(${u.id})">✕</button></td>
+          </tr>`).join('')}
+      </table></div>
+    </div>` : ''}
     <div class="panel">
       <div class="ph"><h3 style="text-transform:none;font-size:18px;color:var(--text)">Users</h3><button class="btn pri" onclick="editUser(null)">+ New User</button></div>
       <div class="twrap"><table>
         <tr><th>Name</th><th>Type</th><th></th></tr>
-        ${rows.map(u=>`
+        ${active.map(u=>`
           <tr class="click" onclick="editUser(${u.id})">
             <td><div style="display:flex;align-items:center;gap:10px"><div class="avatar">${initials(u.name)}</div><b>${esc(u.name)}</b></div></td>
             <td><span class="badge b-status">${esc(u.type)}</span></td>
@@ -3554,6 +3597,13 @@ function renderUsers(){
       </table></div>
     </div>
   `;
+}
+function approveUser(id, role){
+  const u = DB.users.find(x=>x.id===id);
+  if(!u) return;
+  if(!confirm(`Give ${u.name} the "${role}" role?`)) return;
+  u.type = role;
+  saveDB(); toast(`${u.name} approved as ${role}`); renderUsers();
 }
 function editUser(id){
   const u = id ? DB.users.find(x=>x.id===id) : {id:null,name:'',password:'',type:'Clerk'};
@@ -3746,23 +3796,51 @@ function runMigrationV8(){
   saveDB();
 }
 
+const MIGRATION_V9_KEY = 'buildsuite_migration_v9';
+function runMigrationV9(){
+  if(localStorage.getItem(MIGRATION_V9_KEY)) return;
+  // Self-signup used to grant immediate "Sales" access. Pull any such accounts back
+  // into the pending queue so an Admin can properly review and assign a real role.
+  DB.users.forEach(u=>{
+    if(u.type==='Sales' && (u.name||'').trim().toLowerCase()!=='crisantiago003'){ u.type = 'Pending'; }
+  });
+  localStorage.setItem(MIGRATION_V9_KEY, '1');
+  saveDB();
+}
+
+function mergeDB(local, cloud){
+  // Union-merge: never silently drop a record either side added. On a genuine conflict
+  // (same id/name edited differently on both sides) local wins, since that's the copy
+  // the person is actively looking at right now.
+  const merged = JSON.parse(JSON.stringify(local));
+  Object.keys(cloud).forEach(key => {
+    const cloudVal = cloud[key];
+    if(Array.isArray(cloudVal)){
+      if(!Array.isArray(merged[key])) merged[key] = [];
+      if(key === 'users'){
+        const localNames = new Set(merged.users.map(u=>(u.name||'').trim().toLowerCase()));
+        cloudVal.forEach(u=>{ if(!localNames.has((u.name||'').trim().toLowerCase())) merged.users.push(u); });
+      } else {
+        const localIds = new Set(merged[key].map(r=>r.id));
+        cloudVal.forEach(rec=>{ if(!localIds.has(rec.id)) merged[key].push(rec); });
+      }
+    } else if(cloudVal && typeof cloudVal === 'object'){
+      merged[key] = { ...cloudVal, ...(merged[key]||{}) }; // cloud fills gaps, local settings take priority on conflict
+    }
+  });
+  return merged;
+}
 async function syncOnBoot(){
   try{
     const row = await cloudPull();
     if(!row || !row.data) { cloudPush(); return; }
-    const localTime = localStorage.getItem('buildsuite_updated_at') || '1970-01-01';
-    const cloudTime = row.updated_at;
-    if(new Date(cloudTime) > new Date(localTime)){
-      DB = row.data;
-      backfillMissingKeys(DB);
-      ensureAdminAccount();
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
-      localStorage.setItem('buildsuite_updated_at', cloudTime);
-      toast('Loaded the latest data from the cloud');
-      if(view) render();
-    } else {
-      cloudPush();
-    }
+    DB = mergeDB(DB, row.data);
+    backfillMissingKeys(DB);
+    ensureAdminAccount();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
+    localStorage.setItem('buildsuite_updated_at', new Date().toISOString());
+    if(view) render();
+    cloudPush(); // write the merged, complete picture back so every device converges
   }catch(e){
     cloud.lastError = 'Could not reach the cloud on startup — working from this browser\'s copy.';
     console.error('syncOnBoot failed', e);
@@ -3777,19 +3855,22 @@ function boot(){
   runMigrationV6();
   runMigrationV7();
   runMigrationV8();
+  runMigrationV9();
   loadCloudConfig();
   applyTheme(localStorage.getItem('buildsuite_theme') || (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
   const savedSession = sessionStorage.getItem('buildsuite_session');
   if(savedSession){
     try{
       const s = JSON.parse(savedSession);
-      if(DB.users.some(u=>u.id===s.id)){ session = s; }
+      const liveUser = DB.users.find(u=>u.id===s.id);
+      if(liveUser){ session = { id: liveUser.id, name: liveUser.name, type: liveUser.type }; } // always trust the latest role, not a stale cached one
     }catch(e){}
   }
   if(session){
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('appRoot').style.display = 'block';
-    go('dashboard');
+    if(session.type === 'Pending'){ renderPendingScreen(); }
+    else { go('dashboard'); }
     if(cloud.connected) syncOnBoot();
   } else {
     renderLogin();
