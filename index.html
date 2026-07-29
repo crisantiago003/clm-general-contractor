@@ -1192,9 +1192,24 @@ function doSignup(){
   toast(`Account created! Your username is "${username}" — waiting for an Admin to approve you`);
   enterApp();
 }
-function doLogin(){
+async function doLogin(){
   const u = document.getElementById('loginUser').value;
   const p = document.getElementById('loginPw').value;
+  const btn = document.querySelector('.loginCard button.btn.pri');
+  if(cloud.connected){
+    if(btn){ btn.disabled = true; btn.textContent = 'Checking...'; }
+    try{
+      const row = await cloudPull();
+      if(row && row.data){
+        DB = mergeDB(DB, row.data);
+        backfillMissingKeys(DB);
+        ensureAdminAccount();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
+        localStorage.setItem('buildsuite_updated_at', new Date().toISOString());
+      }
+    }catch(e){ /* fall through and try with whatever data we already have locally */ }
+    if(btn){ btn.disabled = false; btn.textContent = 'Sign in'; }
+  }
   const res = attemptLogin(u, p);
   if(!res.ok){ document.getElementById('loginErr').textContent = res.msg; return; }
   session = { id: res.user.id, name: res.user.name, type: res.user.type };
