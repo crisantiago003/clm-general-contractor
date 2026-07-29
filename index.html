@@ -3751,7 +3751,7 @@ function renderMyProfile(){
         </div>
       </div></div>
       <div class="grid2">
-        <div class="field"><label class="fl">Position</label><select id="pf_position">${empTypeOptions(u.position)}</select></div>
+        <div class="field"><label class="fl">Position <span class="mut" style="text-transform:none;font-weight:400">(set by your Admin)</span></label><input value="${esc(u.position)||'Not yet set'}" disabled></div>
         <div class="field"><label class="fl">Current Project Site <span class="mut" style="text-transform:none;font-weight:400">(set by your Admin)</span></label><input value="${esc(u.currentSite)||'Not yet assigned'}" disabled></div>
         ${payrollSite && payrollSite.site ? `<div class="field"><label class="fl">According to Payroll <span class="mut" style="text-transform:none;font-weight:400">(last paid ${fmtDate(payrollSite.date)})</span></label><input value="${esc(payrollSite.site)}" disabled></div>` : ''}
         <div class="field"><label class="fl">Personal Email</label><input id="pf_email" type="email" value="${esc(u.email)}"></div>
@@ -3807,6 +3807,28 @@ function renderMyProfile(){
     </div>
 
     <div class="panel">
+      <h3>My Payroll</h3>
+      ${linked && linked.history.length ? `
+        <div class="mut" style="font-size:12px;margin-bottom:10px">Your own pay history — visible to you regardless of your access level.</div>
+        <div class="stat-row" style="font-weight:800;font-size:15px"><span>Total Net Pay (all time)</span><span class="mono">${money(linked.history.reduce((s,{pe})=>s+(Number(pe.netPay)||0),0))}</span></div>
+        <div class="twrap"><table>
+          <tr><th>Pay Date</th><th>Period</th><th class="right">Regular</th><th class="right">OT</th><th class="right">Deductions</th><th class="right">Net Pay</th><th></th></tr>
+          ${linked.history.map(({pe,pr})=>`
+            <tr>
+              <td class="mut">${fmtDate(pr.payDate)}</td>
+              <td class="mut">${fmtDate(pr.fromDate)} – ${fmtDate(pr.toDate)}</td>
+              <td class="num">${money(pe.regPay)}</td>
+              <td class="num">${money(pe.otPay||0)}</td>
+              <td class="num">${money((Number(pe.govDeductions)||0)+(Number(pe.advanceDeducted)||0))}</td>
+              <td class="num"><b>${money(pe.netPay)}</b></td>
+              <td><button class="btn ghost sm" onclick="openPayslip('${pe.id}')">🖨 View</button></td>
+            </tr>
+          `).join('')}
+        </table></div>
+      ` : `<div class="empty">No payroll records linked yet — this shows up once you're added to the payroll roster with a matching name.</div>`}
+    </div>
+
+    <div class="panel">
       <h3>Change Password</h3>
       <div class="grid3">
         ${pwField('pw_current','Current Password','','current-password')}
@@ -3856,7 +3878,6 @@ function removeProfilePicture(){
 function saveMyProfile(){
   const u = DB.users.find(x=>x.id===session.id);
   if(!u) return;
-  u.position = document.getElementById('pf_position').value;
   u.email = document.getElementById('pf_email').value;
   u.phone = document.getElementById('pf_phone').value;
   u.address = document.getElementById('pf_address').value;
@@ -4418,12 +4439,13 @@ function dismissReview(id){
 }
 const CUSTOM_TAB_LIST = [['dashboard','Dashboard'],['orders','Orders'],['products','Products'],['customers','Projects'],['vendors','Suppliers'],['employees','Employees'],['fleet','Fleet'],['inventory','Inventory'],['payroll','Payroll'],['transactions','Transactions']];
 function editUser(id){
-  const u = id ? DB.users.find(x=>x.id===id) : {id:null,name:'',username:'',password:'',type:'Clerk',customTabs:[]};
+  const u = id ? DB.users.find(x=>x.id===id) : {id:null,name:'',username:'',password:'',type:'Clerk',position:'',customTabs:[]};
   openModal(`
     <h3>${id?'Edit':'New'} User</h3>
     <div class="field"><label class="fl">Full Name *</label><input id="f_name" value="${esc(u.name)}"></div>
     <div class="field"><label class="fl">Username * <span class="mut" style="text-transform:none;font-weight:400">(what they type to log in)</span></label><input id="f_username" value="${esc(u.username)||esc(u.name)}"></div>
     <div class="field"><label class="fl">Password *</label><input id="f_pw" value="${esc(u.password)}"></div>
+    <div class="field"><label class="fl">Position</label><select id="f_position">${empTypeOptions(u.position)}</select></div>
     <div class="field"><label class="fl">User Type</label><select id="f_type" onchange="document.getElementById('customTabsBox').style.display=this.value==='Custom'?'block':'none'">${USER_TYPES.map(t=>`<option ${u.type===t?'selected':''}>${t}</option>`).join('')}<option ${u.type==='Custom'?'selected':''}>Custom</option></select></div>
     <div id="customTabsBox" style="display:${u.type==='Custom'?'block':'none'}">
       <label class="fl">Custom Access — pick exactly which sections this account can open</label>
@@ -4447,8 +4469,9 @@ function saveUser(id){
   if(!name || !username || !pw){ toast('Please add a full name, username, and password before saving'); return; }
   if(DB.users.some(u=>u.id!==id && (u.username||u.name).toLowerCase()===username.toLowerCase())){ toast(`Username "${username}" is already taken`); return; }
   const type = document.getElementById('f_type').value;
+  const position = document.getElementById('f_position').value;
   const customTabs = [...document.querySelectorAll('.customTabChk:checked')].map(c=>c.value);
-  const vals = { name, username, password: pw, type, customTabs, reviewed: true, credentialsGiven: true };
+  const vals = { name, username, password: pw, type, position, customTabs, reviewed: true, credentialsGiven: true };
   if(id){ Object.assign(DB.users.find(x=>x.id===id), vals); }
   else { DB.users.push({ id: nextId(DB.users), ...vals }); }
   saveDB(); closeModal(); toast('User saved'); renderUsers();
