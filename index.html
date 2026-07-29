@@ -288,14 +288,52 @@ async function preLoginCloudConnect(){
     toast('Could not connect — double check the URL and key your Admin gave you.');
   }
 }
+async function connectFromPendingScreen(){
+  const url = document.getElementById('cloudUrl').value.trim().replace(/\/$/,'');
+  const key = document.getElementById('cloudKey').value.trim();
+  const code = document.getElementById('cloudCode').value.trim();
+  if(!url || !key || !code){ toast('Please fill in the URL, key, and sync code your Admin gave you'); return; }
+  cloud.url = url; cloud.key = key; cloud.code = code;
+  const myOwnAccount = DB.users.find(u=>u.id===session.id); // must not be lost in the switch to cloud data
+  try{
+    const existing = await cloudPull();
+    if(existing && existing.data){
+      const cloudDB = existing.data;
+      backfillMissingKeys(cloudDB);
+      const alreadyThere = myOwnAccount && cloudDB.users.some(u=>(u.username||u.name).toLowerCase()===(myOwnAccount.username||myOwnAccount.name).toLowerCase());
+      if(myOwnAccount && !alreadyThere){ cloudDB.users.push(myOwnAccount); }
+      DB = cloudDB;
+      ensureAdminAccount();
+      cloud.connected = true;
+      saveCloudConfig();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
+      localStorage.setItem('buildsuite_updated_at', new Date().toISOString());
+      if(myOwnAccount && !alreadyThere){ await cloudPush(); } // make sure this account reaches everyone else too
+      startCloudPolling();
+      closeModal();
+      const liveUser = DB.users.find(u=>u.id===session.id);
+      if(liveUser){
+        session = { id: liveUser.id, name: liveUser.name, type: liveUser.type };
+        sessionStorage.setItem('buildsuite_session', JSON.stringify(session));
+      }
+      if(session.type !== 'Pending'){ toast('Connected — and you\'re already approved!'); go('dashboard'); }
+      else { toast('Connected — your Admin can now see your account'); renderPendingScreen(); }
+    } else {
+      toast('No company data found at that address — double check with your Admin.');
+    }
+  }catch(e){
+    toast('Could not connect — double check the details your Admin gave you.');
+  }
+}
 function openPreLoginCloudConnect(){
+  const fromPending = !!session;
   openModal(`
     <h3>Connect This Device</h3>
     <p style="font-size:13px;color:var(--muted)">Ask your Admin for these three details — they only need to be entered once on this device.</p>
     <input id="cloudUrl" placeholder="Supabase Project URL" style="margin-bottom:8px">
     <input id="cloudKey" placeholder="Supabase anon public key" style="margin-bottom:8px">
     <input id="cloudCode" placeholder="Sync code">
-    <button class="btn pri" style="width:100%;justify-content:center;margin-top:14px" onclick="preLoginCloudConnect()">Connect</button>
+    <button class="btn pri" style="width:100%;justify-content:center;margin-top:14px" onclick="${fromPending?'connectFromPendingScreen()':'preLoginCloudConnect()'}">Connect</button>
     <div class="btnrow"><button class="btn ghost" onclick="closeModal()">Cancel</button></div>
   `);
 }
@@ -1158,8 +1196,44 @@ function renderPendingScreen(){
       <h2 style="margin-bottom:8px">Waiting for Approval</h2>
       <p class="mut" style="font-size:13.5px;line-height:1.6">Your account has been created, ${esc(session.name)}, but you don't have access to anything yet. An Admin needs to review your account and assign you a role first. Check back soon, or ask your Admin directly.</p>
       <div class="stat-row" style="justify-content:center;gap:8px;margin-top:14px"><span class="mut">Your username:</span><b class="mono">${esc((DB.users.find(u=>u.id===session.id)||{}).username || session.name)}</b></div>
+      <div style="border-top:1px solid var(--line);margin-top:18px;padding-top:16px">
+        ${cloud.connected
+          ? `<div class="mut" style="font-size:12px">🟢 Connected — checking automatically every 20 seconds.</div><button class="btn ghost sm" style="margin-top:10px" onclick="checkApprovalNow()">Check Now</button>`
+          : `<div class="mut" style="font-size:12px;margin-bottom:10px">⚠️ This device isn't connected to your company's shared database yet — your Admin won't see this account until it is.</div><button class="btn pri sm" onclick="openPreLoginCloudConnect()">Connect to Company Workspace</button>`}
+      </div>
     </div>
   `;
+}
+async function checkApprovalNow(){
+  if(!cloud.connected){ toast('Not connected to the shared database yet'); return; }
+  toast('Checking...');
+  try{
+    const row = await cloudPull();
+    if(row && row.data){
+      const cloudUser = row.data.users.find(u=>u.id===session.id);
+      DB = mergeDB(DB, row.data);
+      backfillMissingKeys(DB);
+      ensureAdminAccount();
+      // mergeDB prefers local data on conflicts (to protect active edits elsewhere), but for the
+      // logged-in person's OWN account, the cloud's role is always the one that should win here.
+      if(cloudUser){
+        const localUser = DB.users.find(u=>u.id===session.id);
+        if(localUser) Object.assign(localUser, cloudUser);
+      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
+      const liveUser = DB.users.find(u=>u.id===session.id);
+      if(liveUser && liveUser.type !== 'Pending'){
+        session = { id: liveUser.id, name: liveUser.name, type: liveUser.type };
+        sessionStorage.setItem('buildsuite_session', JSON.stringify(session));
+        toast('You\'ve been approved! Loading your access...');
+        go('dashboard');
+      } else {
+        toast('Still waiting for approval — check back soon.');
+      }
+    }
+  }catch(e){
+    toast('Could not reach the shared database. Try again in a moment.');
+  }
 }
 
 /* ============================================================ EMPLOYEE HOME (no financial data) ============================================================ */
@@ -4695,9 +4769,14 @@ function startCloudPolling(){
     try{
       const row = await cloudPull();
       if(row && row.data){
+        const cloudUser = session ? row.data.users.find(u=>u.id===session.id) : null;
         DB = mergeDB(DB, row.data);
         backfillMissingKeys(DB);
         ensureAdminAccount();
+        if(cloudUser){
+          const localUser = DB.users.find(u=>u.id===session.id);
+          if(localUser) Object.assign(localUser, cloudUser);
+        }
         localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
         localStorage.setItem('buildsuite_updated_at', new Date().toISOString());
         // Refresh just the header (notification bell, sync status) so it doesn't interrupt anyone mid-edit.
@@ -4718,12 +4797,25 @@ async function syncOnBoot(){
   try{
     const row = await cloudPull();
     if(!row || !row.data) { cloudPush(); return; }
+    const cloudUser = session ? row.data.users.find(u=>u.id===session.id) : null;
     DB = mergeDB(DB, row.data);
     backfillMissingKeys(DB);
     ensureAdminAccount();
+    if(cloudUser){
+      const localUser = DB.users.find(u=>u.id===session.id);
+      if(localUser) Object.assign(localUser, cloudUser);
+    }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
     localStorage.setItem('buildsuite_updated_at', new Date().toISOString());
-    if(view) render();
+    if(session){
+      const liveUser = DB.users.find(u=>u.id===session.id);
+      if(liveUser && liveUser.type !== session.type){
+        session = { id: liveUser.id, name: liveUser.name, type: liveUser.type };
+        sessionStorage.setItem('buildsuite_session', JSON.stringify(session));
+        if(session.type !== 'Pending'){ toast('Your account has been approved!'); go('dashboard'); }
+        else { renderPendingScreen(); }
+      } else if(view) { render(); }
+    } else if(view) { render(); }
     cloudPush(); // write the merged, complete picture back so every device converges
   }catch(e){
     cloud.lastError = 'Could not reach the cloud on startup — working from this browser\'s copy.';
