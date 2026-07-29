@@ -27,7 +27,7 @@ input[type="checkbox"]{width:auto}
 label.fl{display:block;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:0 0 5px;font-weight:600}
 .field{margin-bottom:12px}
 h1,h2,h3,h4{margin:0;font-weight:700}
-a{color:var(--accent2)}
+a{color:var(--accent2);cursor:pointer}
 
 /* ===== Header / Nav ===== */
 header{
@@ -554,7 +554,7 @@ function renderHeader(){
     <div style="position:relative">
       <button class="iconbtn" onclick="toggleNotifications()" title="Notifications">🔔${alerts.length?`<span style="position:absolute;top:-3px;right:-3px;background:var(--danger);color:#fff;font-size:10px;font-weight:800;border-radius:999px;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 3px">${alerts.length}</span>`:''}</button>
     </div>
-    <button class="iconbtn" onclick="openSettings()" title="Settings">⚙️</button>
+    ${session.type==='Admin' ? `<button class="iconbtn" onclick="openSettings()" title="Settings">⚙️</button>` : ''}
     <button class="iconbtn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">🌙</button>
     <div class="userchip" style="cursor:pointer" onclick="go('myProfile')"><div class="av">${initials(session.name)}</div>${esc(session.name)}</div>
     <button class="btn ghost sm" onclick="logout()">Log out</button>
@@ -587,11 +587,13 @@ function getAlerts(){
   lowStockMaterials().forEach(g=>{ alerts.push({ type:'Low Stock', label:`${g.name} — ${g.qty} left (reorder at ${g.reorderPoint})`, action:()=>go('inventory',{itab:'materials',matView:'summary'}) }); });
   DB.cashAdvances.filter(a=>a.status==='Outstanding').forEach(a=>{ alerts.push({ type:'Advance', label:`${a.employeeName} owes ${money(a.amount)} (cash advance)`, action:()=>{ const emp=employeeById(a.employeeId); if(emp) go('employees',{empId:emp.id,tab:'advances'}); } }); });
   if(session && session.type==='Admin'){
-    DB.users.filter(u=>u.reviewed===false).forEach(u=>{
-      const label = u.autoMatched ? `${u.name} signed up and matched an existing employee record — review the link` : `${u.name} just created an account (view-only) — assign a role if needed`;
+    DB.users.filter(u=>u.type==='Pending').forEach(u=>{
+      const label = u.autoMatched ? `${u.name} signed up and matched an existing employee record — review and approve` : `${u.name} signed up and is waiting for approval`;
       alerts.push({ type: u.autoMatched?'Name Match':'New Account', label, action:()=>go('users') });
     });
-    DB.users.filter(u=>u.type==='Pending').forEach(u=>{ alerts.push({ type:'New Account', label:`${u.name} is waiting for a role assignment`, action:()=>go('users') }); });
+    DB.users.filter(u=>u.reviewed===false && u.type!=='Pending').forEach(u=>{
+      alerts.push({ type:'Review', label:`${u.name} (${u.type}) is worth a second look`, action:()=>go('users') });
+    });
   }
   accountsReceivable().filter(r=>r.daysOutstanding>30).forEach(r=>{ alerts.push({ type:'Overdue Invoice', label:`#${r.order.id} ${partyName(r.order)} — ${r.daysOutstanding}d overdue`, action:()=>go('orders',{editId:r.order.id}) }); });
   return alerts;
@@ -638,6 +640,7 @@ function closeModal(){
 
 /* ---------- settings ---------- */
 function openSettings(){
+  if(session.type !== 'Admin'){ toast("Only an Admin can open Settings."); return; }
   openModal(`
     <h3>⚙️ Settings</h3>
     <div class="field"><label class="fl">Appearance</label>
@@ -655,7 +658,7 @@ function openSettings(){
           <button class="btn del sm" onclick="disconnectCloud()">Disconnect</button>
         </div>
       ` : `
-        <div class="mut" style="font-size:12.5px;margin-bottom:10px">Your data currently lives only in this browser. Connect a free Supabase database (no credit card) to back it up and access it from any device. <a href="#" onclick="openCloudGuide();return false">See setup steps →</a></div>
+        <div class="mut" style="font-size:12.5px;margin-bottom:10px">Your data currently lives only in this browser. Connect a free Supabase database (no credit card) to back it up and access it from any device. <a onclick="openCloudGuide()">See setup steps →</a></div>
         <input placeholder="Supabase Project URL (https://xxxx.supabase.co)" id="cloudUrl" style="margin-bottom:8px">
         <input placeholder="Supabase anon public key" id="cloudKey" style="margin-bottom:8px">
         <input placeholder="Sync code — any word, used on all your devices" id="cloudCode" style="margin-bottom:8px">
@@ -749,7 +752,7 @@ function renderLogin(){
       <div class="field"><label class="fl">Password</label><input id="loginPw" type="password" placeholder="Password" autocomplete="current-password"></div>
       <button class="btn pri" style="width:100%;justify-content:center" onclick="doLogin()">Sign in</button>
       <div class="loginErr" id="loginErr"></div>
-      <div class="authSwitch">New here? <a href="#" onclick="sub.authMode='signup';renderLogin();return false">Create an account</a></div>
+      <div class="authSwitch">New here? <a onclick="sub.authMode='signup';renderLogin()">Create an account</a></div>
     ` : `
       <h1>Create Your Account</h1>
       <div class="sub">New accounts start with basic access — an Admin can grant more once you're set up.</div>
@@ -769,7 +772,7 @@ function renderLogin(){
       <div class="field"><label class="fl">Company Invite Code</label><input id="suCode" placeholder="Ask your Admin for this" autocomplete="off"></div>
       <button class="btn pri" style="width:100%;justify-content:center" onclick="doSignup()">Create Account</button>
       <div class="loginErr" id="loginErr"></div>
-      <div class="authSwitch">Already have an account? <a href="#" onclick="sub.authMode='signin';renderLogin();return false">Sign in</a></div>
+      <div class="authSwitch">Already have an account? <a onclick="sub.authMode='signin';renderLogin()">Sign in</a></div>
     `}
   </div>`;
   const enterField = document.getElementById(sub.authMode==='signin' ? 'loginPw' : 'suPw2');
@@ -802,17 +805,27 @@ function doSignup(){
     autoMatched = true;
     matchedEmployeeId = matchedEmployee.id;
     position = matchedEmployee.type || position; // trust the existing HR record over the dropdown they picked
+  } else {
+    // No existing HR record — create one automatically so this person shows up in Employees too.
+    const newEmployee = {
+      id: nextId(DB.employees), name, type: position || 'Laborer', payType: TYPE_DEFAULT_PAYTYPE[position] || 'Daily',
+      regAmount: 0, otRate: 0, hourlyCost: 0, phone, email, address, city: '', state: '', zip: '',
+      active: true, govDeductions: false, sssNo: '', philhealthNo: '', pagibigNo: '',
+      licenseType: '', licenseNumber: '', licenseExpiry: '', foremanName: '',
+    };
+    DB.employees.push(newEmployee);
+    matchedEmployeeId = newEmployee.id;
   }
 
   const newUser = {
-    id: nextId(DB.users), name, firstName, middleName, lastName, password: pw, type: 'Employee', position, email, phone, address,
+    id: nextId(DB.users), name, firstName, middleName, lastName, password: pw, type: 'Pending', position, email, phone, address,
     currentSite: '', foremanId: null, foremanName: '', joinedDate: todayISO(), reviewed: false, autoMatched, matchedEmployeeId,
   };
   DB.users.push(newUser);
   saveDB();
   session = { id: newUser.id, name: newUser.name, type: newUser.type };
   sessionStorage.setItem('buildsuite_session', JSON.stringify(session));
-  toast(autoMatched ? `Account created — matched your existing employee record (${matchedEmployee.type})` : 'Account created — you have view-only access until an Admin assigns your role');
+  toast(autoMatched ? `Account created — matched your existing employee record (${matchedEmployee.type})` : 'Account created — waiting for an Admin to approve you');
   enterApp();
 }
 function doLogin(){
@@ -1015,7 +1028,7 @@ function renderReceivables(){
   const ar = accountsReceivable();
   const total = ar.reduce((s,r)=>s+r.balance,0);
   document.getElementById('mainArea').innerHTML = `
-    <div class="crumb"><a href="#" onclick="go('dashboard');return false" style="color:var(--muted);text-decoration:none">Dashboard</a> &nbsp;/&nbsp; <b>Accounts Receivable</b></div>
+    <div class="crumb"><a onclick="go('dashboard')" style="color:var(--muted);text-decoration:none">Dashboard</a> &nbsp;/&nbsp; <b>Accounts Receivable</b></div>
     <div class="cards">
       <div class="kpi"><div class="l">Total Outstanding</div><div class="v danger">${money0(total)}</div></div>
       <div class="kpi"><div class="l">Open Invoices</div><div class="v">${ar.length}</div></div>
@@ -1051,7 +1064,7 @@ function renderProjectReport(projectId, from, to){
   const r = projectReport(projectId, from, to);
   if(!r){ go('dashboard'); return; }
   document.getElementById('mainArea').innerHTML = `
-    <div class="crumb"><a href="#" onclick="go('dashboard');return false" style="color:var(--muted);text-decoration:none">Dashboard</a> &nbsp;/&nbsp; <b>${esc(r.cust.name)} Report</b></div>
+    <div class="crumb"><a onclick="go('dashboard')" style="color:var(--muted);text-decoration:none">Dashboard</a> &nbsp;/&nbsp; <b>${esc(r.cust.name)} Report</b></div>
     <div class="panel">
       <div class="ph">
         <div>
@@ -1187,7 +1200,7 @@ function renderOrderDetail(id){
   const tax = total * taxRateFor(o.type);
 
   document.getElementById('mainArea').innerHTML = `
-    <div class="crumb"><a href="#" onclick="go('orders',{type:sub.type||'ALL'});return false" style="color:var(--muted);text-decoration:none">Orders</a> &nbsp;/&nbsp; <b>${o.id ? '#'+o.id : 'New'}</b></div>
+    <div class="crumb"><a onclick="go('orders',{type:sub.type||'ALL'})" style="color:var(--muted);text-decoration:none">Orders</a> &nbsp;/&nbsp; <b>${o.id ? '#'+o.id : 'New'}</b></div>
     <div class="panel">
       <div class="ph">
         <div class="toggle">
@@ -1559,7 +1572,7 @@ function renderCustomerDetail(id){
   const siteEquipment = equipmentAtSite(c.name);
   const siteVehicles = DB.vehicles.filter(v=>(v.currentSite||'').trim().toLowerCase()===c.name.trim().toLowerCase());
   document.getElementById('mainArea').innerHTML = `
-    <div class="crumb"><a href="#" onclick="go('customers');return false" style="color:var(--muted);text-decoration:none">Projects</a> &nbsp;/&nbsp; <b>${esc(c.name)}</b></div>
+    <div class="crumb"><a onclick="go('customers')" style="color:var(--muted);text-decoration:none">Projects</a> &nbsp;/&nbsp; <b>${esc(c.name)}</b></div>
     <div class="grid2">
       <div class="panel">
         <div class="ph"><h3>Customer Details</h3>${canEdit()?`<button class="btn ghost sm" onclick="editCustomer(${id})">Edit</button>`:''}</div>
@@ -2018,7 +2031,7 @@ function renderEmployeeDetail(id){
   const outstanding = outstandingAdvanceTotal(id);
   const docs = e.documents || [];
   document.getElementById('mainArea').innerHTML = `
-    <div class="crumb"><a href="#" onclick="go('employees');return false" style="color:var(--muted);text-decoration:none">Employees</a> &nbsp;/&nbsp; <b>${esc(e.name)}</b></div>
+    <div class="crumb"><a onclick="go('employees')" style="color:var(--muted);text-decoration:none">Employees</a> &nbsp;/&nbsp; <b>${esc(e.name)}</b></div>
     <div class="panel">
       <div class="ph">
         <div style="display:flex;align-items:center;gap:12px"><div class="avatar" style="width:44px;height:44px;font-size:16px">${initials(e.name)}</div>
@@ -2404,7 +2417,7 @@ function renderVehicleDetail(id){
   const latest = latestMeterReading(id);
 
   document.getElementById('mainArea').innerHTML = `
-    <div class="crumb"><a href="#" onclick="go('fleet');return false" style="color:var(--muted);text-decoration:none">Fleet</a> &nbsp;/&nbsp; <b>${esc(v.name)}</b></div>
+    <div class="crumb"><a onclick="go('fleet')" style="color:var(--muted);text-decoration:none">Fleet</a> &nbsp;/&nbsp; <b>${esc(v.name)}</b></div>
     <div class="panel">
       <div class="ph">
         <div><h3 style="text-transform:none;font-size:18px;color:var(--text);margin:0 0 4px">${esc(v.name)} ${!v.active?'<span class="badge b-status">Inactive</span>':''}</h3>
@@ -3178,7 +3191,7 @@ function render13thMonthReport(year){
   if(!years.includes(String(new Date().getFullYear()))) years.unshift(String(new Date().getFullYear()));
   const total = rows.reduce((s,r)=>s+r.amount,0);
   document.getElementById('mainArea').innerHTML = `
-    <div class="crumb"><a href="#" onclick="go('payroll');return false" style="color:var(--muted);text-decoration:none">Payroll</a> &nbsp;/&nbsp; <b>13th Month Pay Report</b></div>
+    <div class="crumb"><a onclick="go('payroll')" style="color:var(--muted);text-decoration:none">Payroll</a> &nbsp;/&nbsp; <b>13th Month Pay Report</b></div>
     <div class="panel">
       <div class="ph">
         <h3 style="text-transform:none;font-size:18px;color:var(--text)">13th Month Pay — ${year}</h3>
@@ -3400,7 +3413,7 @@ function renderPayrollRun(runId){
   const available = DB.employees.filter(e=>e.active && !paidIds.includes(e.id));
 
   document.getElementById('mainArea').innerHTML = `
-    <div class="crumb"><a href="#" onclick="go('payroll');return false" style="color:var(--muted);text-decoration:none">Payroll</a> &nbsp;/&nbsp; <b>${fmtDate(pr.payDate)}</b></div>
+    <div class="crumb"><a onclick="go('payroll')" style="color:var(--muted);text-decoration:none">Payroll</a> &nbsp;/&nbsp; <b>${fmtDate(pr.payDate)}</b></div>
     <div class="panel">
       <div class="ph">
         <div>
@@ -3696,19 +3709,21 @@ const USER_TYPES = ['Admin','Manager','Sales','Clerk','Employee'];
 function renderUsers(){
   if(session.type !== 'Admin'){ go('dashboard'); return; }
   const pending = DB.users.filter(u=>u.type==='Pending').sort((a,b)=>a.name.localeCompare(b.name));
-  const needsReview = DB.users.filter(u=>u.reviewed===false).sort((a,b)=>a.name.localeCompare(b.name));
+  const needsReview = DB.users.filter(u=>u.reviewed===false && u.type!=='Pending').sort((a,b)=>a.name.localeCompare(b.name));
   const active = DB.users.filter(u=>u.type!=='Pending').sort((a,b)=>a.name.localeCompare(b.name));
   document.getElementById('mainArea').innerHTML = `
     <div class="crumb">Users</div>
     ${pending.length ? `
     <div class="panel" style="border-color:var(--accent)">
       <div class="ph"><h3 style="text-transform:none;font-size:16px;color:var(--accent)">⏳ Waiting for Approval (${pending.length})</h3></div>
-      <div class="mut" style="font-size:12.5px;margin-bottom:10px">These accounts have no access yet. Assign a role to let them in.</div>
+      <div class="mut" style="font-size:12.5px;margin-bottom:10px">These accounts have no access yet. Review their details and assign a role to let them in — they're automatically added to Employees too.</div>
       <div class="twrap"><table>
-        <tr><th>Name</th><th>Assign Role</th><th></th></tr>
+        <tr><th>Name</th><th>Position</th><th>Details</th><th>Assign Role</th><th></th></tr>
         ${pending.map(u=>`
           <tr>
             <td><div style="display:flex;align-items:center;gap:10px"><div class="avatar">${initials(u.name)}</div><b>${esc(u.name)}</b></div></td>
+            <td class="mut">${esc(u.position)||'—'}</td>
+            <td>${u.autoMatched ? `<span class="badge b-Pending">Matched: ${esc((DB.employees.find(e=>e.id===u.matchedEmployeeId)||{}).name||'')}</span>` : `<span class="mut" style="font-size:12px">${esc(u.email)||''} ${esc(u.phone)||''}</span>`}</td>
             <td>
               <div style="display:flex;gap:6px;flex-wrap:wrap">
                 ${USER_TYPES.map(t=>`<button class="btn ${t==='Admin'?'del':'ghost'} sm" onclick="approveUser(${u.id},'${t}')">${t}</button>`).join('')}
@@ -3721,7 +3736,7 @@ function renderUsers(){
     ${needsReview.length ? `
     <div class="panel" style="border-color:var(--accent2)">
       <div class="ph"><h3 style="text-transform:none;font-size:16px;color:var(--accent2)">🔍 Needs Review (${needsReview.length})</h3></div>
-      <div class="mut" style="font-size:12.5px;margin-bottom:10px">New signups with basic view-only access. Check them over, change their role if needed, or dismiss if they look fine as-is.</div>
+      <div class="mut" style="font-size:12.5px;margin-bottom:10px">Accounts already given access that are still worth a second look.</div>
       <div class="twrap"><table>
         <tr><th>Name</th><th>Position</th><th>Details</th><th></th></tr>
         ${needsReview.map(u=>`
@@ -4029,6 +4044,32 @@ function runMigrationV12(){
   saveDB();
 }
 
+const MIGRATION_V13_KEY = 'buildsuite_migration_v13';
+function runMigrationV13(){
+  if(localStorage.getItem(MIGRATION_V13_KEY)) return;
+  DB.users.forEach(u=>{
+    // Un-reviewed self-signups from the "instant access" version go back to a hard approval gate.
+    if(u.type==='Employee' && u.reviewed===false){
+      u.type = 'Pending';
+    }
+    // Every real account should have a matching Employee record, same as newly-created ones now get.
+    if(u.type!=='Pending' && !u.matchedEmployeeId){
+      const existing = DB.employees.find(e=>(e.name||'').trim().toLowerCase()===(u.name||'').trim().toLowerCase());
+      if(existing){
+        u.matchedEmployeeId = existing.id;
+      } else if((u.name||'').trim().toLowerCase()!=='crisantiago003'){
+        const ne = { id: nextId(DB.employees), name: u.name, type: u.position||'Laborer', payType: TYPE_DEFAULT_PAYTYPE[u.position]||'Daily',
+          regAmount:0, otRate:0, hourlyCost:0, phone:u.phone||'', email:u.email||'', address:u.address||'', city:'', state:'', zip:'',
+          active:true, govDeductions:false, sssNo:'', philhealthNo:'', pagibigNo:'', licenseType:'', licenseNumber:'', licenseExpiry:'', foremanName:'' };
+        DB.employees.push(ne);
+        u.matchedEmployeeId = ne.id;
+      }
+    }
+  });
+  localStorage.setItem(MIGRATION_V13_KEY, '1');
+  saveDB();
+}
+
 function mergeDB(local, cloud){
   // Union-merge: never silently drop a record either side added. On a genuine conflict
   // (same id/name edited differently on both sides) local wins, since that's the copy
@@ -4108,6 +4149,7 @@ function boot(){
   runMigrationV10();
   runMigrationV11();
   runMigrationV12();
+  runMigrationV13();
   loadCloudConfig();
   applyTheme(localStorage.getItem('buildsuite_theme') || (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
   const savedSession = sessionStorage.getItem('buildsuite_session');
