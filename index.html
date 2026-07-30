@@ -1161,6 +1161,10 @@ async function syncToGoogleSheets(){
       ['Name','Classification','Item','Contact Person','Phone','City'],
       DB.vendors.map(v=>[v.name, v.classification, v.item, v.contactPerson, v.phone, v.city])
     );
+    await pushSheetTab(url, 'Tools & Equipment',
+      ['Name','Brand','Serial #','Qty','Unit','Status','Current Site'],
+      DB.equipment.map(e=>[e.name, e.brand, e.serial, e.qty, e.unit, e.status, e.site])
+    );
     toast('Synced to Google Sheets successfully');
   }catch(e){
     toast('Could not reach Google Sheets — double check the URL and that it\'s deployed correctly.');
