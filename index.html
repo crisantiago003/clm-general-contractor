@@ -150,6 +150,14 @@ tr.click:hover td{background:var(--panel2)}
 .pillnav button.on{background:var(--accent2);color:#04222a;border-color:var(--accent2)}
 .avatar{width:36px;height:36px;border-radius:8px;background:var(--chip);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:var(--muted)}
 .progress{height:8px;border-radius:5px;background:var(--chip);overflow:hidden}
+.progress-tooltip-wrap{position:relative;cursor:help}
+.progress-tooltip{
+  visibility:hidden;opacity:0;position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);
+  background:var(--panel2,var(--panel));border:1px solid var(--line);border-radius:8px;padding:10px 12px;
+  min-width:220px;max-width:300px;box-shadow:var(--shadow);z-index:50;transition:opacity .12s;font-size:12px;
+}
+.progress-tooltip-wrap:hover .progress-tooltip{visibility:visible;opacity:1}
+.progress-tooltip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:var(--line)}
 .progress > div{height:100%;background:var(--accent2)}
 .stat-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:13.3px}
 .stat-row:last-child{border-bottom:none}
@@ -749,6 +757,8 @@ function foremanSite(){
   const u = linkedUserRecord();
   return u ? (u.currentSite||'') : '';
 }
+const ACTIVITY_COLORS = ['#3fb6c9','#f2a93b','#7c9cf2','#38b775','#e0524f','#c98fe0','#e0a55c','#5cc9b0'];
+function activityColor(index){ return ACTIVITY_COLORS[index % ACTIVITY_COLORS.length]; }
 function projectCompletionPct(c){
   const acts = c.activities || [];
   if(!acts.length) return c.completionPct || 0;
@@ -1916,7 +1926,13 @@ function renderDashboard(){
           return `
           <div class="click" style="padding:8px 0" onclick="go('customers',{custId:${c.id}})">
             <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><b>${esc(c.name)}</b><span class="mut">${pct}%</span></div>
-            <div class="progress"><div style="width:${pct}%;background:${pct>=100?'var(--green)':'var(--accent2)'}"></div></div>
+            <div class="progress-tooltip-wrap">
+              <div class="progress"><div style="width:${pct}%;background:${pct>=100?'var(--green)':'var(--accent2)'}"></div></div>
+              <div class="progress-tooltip" onclick="event.stopPropagation()">
+                <b>${esc(c.name)} — ${pct}%</b>
+                ${(c.activities&&c.activities.length) ? `<div style="margin-top:6px">${c.activities.map((a,i)=>`<div style="display:flex;align-items:center;gap:6px;margin-top:3px"><span style="width:8px;height:8px;border-radius:50%;background:${activityColor(i)};flex-shrink:0"></span><span style="flex:1">${esc(a.name)}</span><span class="mono">${a.pct||0}%</span></div>`).join('')}</div>` : `<div class="mut" style="margin-top:4px">No activities defined yet</div>`}
+              </div>
+            </div>
           </div>
         `;}).join('');
       })()}
@@ -2410,6 +2426,13 @@ function renderProducts(){
   `;
 }
 const BULK_IMPORT_CONFIG = {
+  activities: {
+    label: 'Activities',
+    columns: ['Activity Name', 'Weight', 'Planned Start (YYYY-MM-DD)', 'Planned End (YYYY-MM-DD)'],
+    example: 'Foundation\t20\t2026-08-01\t2026-08-15',
+    build: (cells) => ({ id: uid(), name: cells[0]||'', weight: Number(cells[1])||1, pct: 0, plannedStart: cells[2]||'', plannedEnd: cells[3]||'' }),
+    push: (rec, custId) => { const c = customerById(custId); if(!c.activities) c.activities = []; c.activities.push(rec); },
+  },
   vendors: {
     label: 'Suppliers',
     columns: ['Name', 'Classification', 'Item / Specialty', 'Contact Person', 'Phone', 'Email', 'Address', 'Payment Details'],
@@ -2452,7 +2475,7 @@ const BULK_IMPORT_CONFIG = {
     push: (rec) => { rec.id = nextId(DB.products); DB.products.push(rec); },
   },
 };
-function openBulkImport(module){
+function openBulkImport(module, context){
   const cfg = BULK_IMPORT_CONFIG[module];
   openModal(`
     <h3>Bulk Import — ${cfg.label}</h3>
@@ -2462,7 +2485,7 @@ function openBulkImport(module){
     <textarea id="bulkImportText" rows="8" placeholder="${cfg.example}" style="font-family:var(--mono);font-size:12px"></textarea>
     <div id="bulkImportPreview" class="mut" style="font-size:12px;margin-top:8px"></div>
     <div class="btnrow">
-      <button class="btn save" onclick="runBulkImport('${module}')">Import</button>
+      <button class="btn save" onclick="runBulkImport('${module}'${context!=null?`,${JSON.stringify(context)}`:''})">Import</button>
       <button class="btn ghost" onclick="closeModal()">Cancel</button>
     </div>
   `);
@@ -2471,7 +2494,7 @@ function openBulkImport(module){
     document.getElementById('bulkImportPreview').textContent = lines.length ? `${lines.length} row${lines.length===1?'':'s'} detected` : '';
   });
 }
-function runBulkImport(module){
+function runBulkImport(module, context){
   const cfg = BULK_IMPORT_CONFIG[module];
   const text = document.getElementById('bulkImportText').value;
   const lines = text.split('\n').map(l=>l.trim()).filter(Boolean);
@@ -2481,7 +2504,7 @@ function runBulkImport(module){
     const cells = line.split('\t').map(c=>c.trim());
     if(!cells[0]) return;
     const rec = cfg.build(cells);
-    cfg.push(rec);
+    cfg.push(rec, context);
     imported++;
   });
   saveDB(); closeModal(); toast(`Imported ${imported} ${cfg.label.toLowerCase()}`);
@@ -2489,6 +2512,7 @@ function runBulkImport(module){
   else if(module==='employees') go('employees');
   else if(module==='products') renderProducts();
   else if(module==='vendors') renderVendors();
+  else if(module==='activities') go('customers',{custId:context});
 }
 function editProduct(id){
   const p = id ? productById(id) : {id:null, upc:'', name:'', description:'', purchasePrice:0, salesPrice:0};
@@ -2589,6 +2613,10 @@ function openAddActivity(custId){
     <p style="font-size:13px;color:var(--muted)">Break the project into phases matching your actual Project Program — Foundation, Framing, Roofing, etc. — so progress can be logged against real work, not a guess.</p>
     <div class="field"><label class="fl">Activity Name</label><input id="act_name" placeholder="e.g. Foundation"></div>
     <div class="field"><label class="fl">Weight <span class="mut" style="text-transform:none;font-weight:400">(how much of the whole project this represents — e.g. 20)</span></label><input id="act_weight" type="number" value="10" min="1"></div>
+    <div class="grid2">
+      <div class="field"><label class="fl">Planned Start <span class="mut" style="text-transform:none;font-weight:400">(optional)</span></label><input id="act_pstart" type="date"></div>
+      <div class="field"><label class="fl">Planned End <span class="mut" style="text-transform:none;font-weight:400">(optional)</span></label><input id="act_pend" type="date"></div>
+    </div>
     <div class="btnrow">
       <button class="btn save" onclick="saveActivity(${custId})">Add</button>
       <button class="btn ghost" onclick="closeModal()">Cancel</button>
@@ -2600,8 +2628,10 @@ function saveActivity(custId){
   const name = document.getElementById('act_name').value.trim();
   if(!name){ toast('Please name this activity'); return; }
   const weight = Number(document.getElementById('act_weight').value)||1;
+  const plannedStart = document.getElementById('act_pstart').value;
+  const plannedEnd = document.getElementById('act_pend').value;
   if(!c.activities) c.activities = [];
-  c.activities.push({ id: uid(), name, weight, pct: 0 });
+  c.activities.push({ id: uid(), name, weight, pct: 0, plannedStart, plannedEnd });
   saveDB(); closeModal(); toast('Activity added'); go('customers',{custId});
 }
 function openEditActivity(custId, activityId){
@@ -2613,7 +2643,11 @@ function openEditActivity(custId, activityId){
     <h3>Edit Activity</h3>
     <div class="field"><label class="fl">Activity Name</label><input id="act_name" value="${esc(a.name)}"></div>
     <div class="field"><label class="fl">Weight</label><input id="act_weight" type="number" value="${a.weight}" min="1"></div>
-    <div class="mut" style="font-size:11.5px">Current logged completion: ${a.pct||0}%. Use "Log Update" instead if you just want to record new progress — this is for fixing the name or weight.</div>
+    <div class="grid2">
+      <div class="field"><label class="fl">Planned Start</label><input id="act_pstart" type="date" value="${esc(a.plannedStart)}"></div>
+      <div class="field"><label class="fl">Planned End</label><input id="act_pend" type="date" value="${esc(a.plannedEnd)}"></div>
+    </div>
+    <div class="mut" style="font-size:11.5px">Current logged completion: ${a.pct||0}%. Use "Log Update" instead if you just want to record new progress — this is for fixing the name, weight, or schedule.</div>
     <div class="btnrow">
       <button class="btn save" onclick="saveEditActivity(${custId},'${activityId}')">Save</button>
       <button class="btn ghost" onclick="closeModal()">Cancel</button>
@@ -2630,6 +2664,8 @@ function saveEditActivity(custId, activityId){
   const oldName = a.name;
   a.name = name;
   a.weight = Number(document.getElementById('act_weight').value)||1;
+  a.plannedStart = document.getElementById('act_pstart').value;
+  a.plannedEnd = document.getElementById('act_pend').value;
   // keep the activity log's display name in sync with any rename
   (c.activityLog||[]).forEach(l=>{ if(l.activityId===activityId) l.activityName = name; });
   c.completionPct = projectCompletionPct(c);
@@ -2742,20 +2778,39 @@ function renderCustomerDetail(id){
   document.getElementById('mainArea').innerHTML = `
     <div class="crumb"><a onclick="go('customers')" style="color:var(--muted);text-decoration:none">Projects</a> &nbsp;/&nbsp; <b>${esc(c.name)}</b></div>
     <div class="panel">
-      <div class="ph"><h3>Project Progress</h3>${session.type==='Admin'?`<button class="btn ghost sm" onclick="openAddActivity(${id})">+ Add Activity</button>`:''}</div>
-      <div class="progress" style="margin-top:4px"><div style="width:${projectCompletionPct(c)}%;background:${projectCompletionPct(c)>=100?'var(--green)':'var(--accent2)'}"></div></div>
+      <div class="ph"><h3>Project Progress</h3>${session.type==='Admin'?`<div class="btnrow" style="margin:0"><button class="btn ghost sm" onclick="openBulkImport('activities',${id})">Bulk Import</button><button class="btn ghost sm" onclick="openAddActivity(${id})">+ Add Activity</button></div>`:''}</div>
+      <div class="progress-tooltip-wrap">
+        <div class="progress" style="margin-top:4px"><div style="width:${projectCompletionPct(c)}%;background:${projectCompletionPct(c)>=100?'var(--green)':'var(--accent2)'}"></div></div>
+        <div class="progress-tooltip">
+          <b>${projectCompletionPct(c)}% complete overall</b>
+          ${(c.activities&&c.activities.length) ? `<div style="margin-top:6px">${c.activities.map((a,i)=>`<div style="display:flex;align-items:center;gap:6px;margin-top:3px"><span style="width:8px;height:8px;border-radius:50%;background:${activityColor(i)};flex-shrink:0"></span><span style="flex:1">${esc(a.name)}</span><span class="mono">${a.pct||0}%</span></div>`).join('')}</div>` : `<div class="mut" style="margin-top:4px">No activities defined yet</div>`}
+        </div>
+      </div>
       <div class="mut" style="font-size:12px;margin-top:6px">${projectCompletionPct(c)}% complete${(c.activities&&c.activities.length)?` — weighted across ${c.activities.length} activit${c.activities.length===1?'y':'ies'}`:''}</div>
       ${(c.activities && c.activities.length) ? `
         <div style="margin-top:14px">
-          ${c.activities.map(a=>`
+          ${c.activities.map((a,i)=>{
+            const color = activityColor(i);
+            const recentLogs = (c.activityLog||[]).filter(l=>l.activityId===a.id).sort((x,y)=>(y.date||'').localeCompare(x.date||'')).slice(0,3);
+            const today = todayISO();
+            const behindSchedule = a.plannedEnd && today > a.plannedEnd && (a.pct||0) < 100;
+            return `
             <div style="padding:8px 0;border-top:1px solid var(--line)">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-                <div><b style="font-size:13px">${esc(a.name)}</b> <span class="mut" style="font-size:11px">(weight ${a.weight})</span></div>
+                <div style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:9px;border-radius:50%;background:${color};flex-shrink:0"></span><b style="font-size:13px">${esc(a.name)}</b> <span class="mut" style="font-size:11px">(weight ${a.weight})</span>${behindSchedule?`<span class="badge b-danger" style="font-size:9.5px">Behind Schedule</span>`:''}</div>
                 <div style="display:flex;align-items:center;gap:8px"><span class="mono" style="font-size:12px">${a.pct||0}%</span>${canCreateForSite(c.name)?`<button class="btn ghost sm" onclick="openLogActivityUpdate(${id},'${a.id}')">Log Update</button>`:''}${session.type==='Admin'?`<button class="btn ghost sm" onclick="openEditActivity(${id},'${a.id}')">Edit</button><button class="x" onclick="deleteActivity(${id},'${a.id}')">✕</button>`:''}</div>
               </div>
-              <div class="progress" style="height:6px"><div style="width:${a.pct||0}%;background:${(a.pct||0)>=100?'var(--green)':'var(--accent2)'}"></div></div>
+              ${(a.plannedStart||a.plannedEnd) ? `<div class="mut" style="font-size:10.5px;margin-bottom:4px">Planned: ${a.plannedStart?fmtDate(a.plannedStart):'—'} → ${a.plannedEnd?fmtDate(a.plannedEnd):'—'}</div>` : ''}
+              <div class="progress-tooltip-wrap">
+                <div class="progress" style="height:6px"><div style="width:${a.pct||0}%;background:${color}"></div></div>
+                <div class="progress-tooltip">
+                  <b>${esc(a.name)} — ${a.pct||0}%</b>
+                  ${(a.plannedStart||a.plannedEnd) ? `<div class="mut" style="margin-top:3px">Planned: ${a.plannedStart?fmtDate(a.plannedStart):'—'} → ${a.plannedEnd?fmtDate(a.plannedEnd):'—'}</div>` : ''}
+                  ${recentLogs.length ? `<div style="margin-top:6px;border-top:1px solid var(--line);padding-top:6px">${recentLogs.map(l=>`<div style="margin-top:4px"><div style="display:flex;justify-content:space-between"><b class="mono">${l.pctAfter}%</b><span class="mut" style="font-size:10.5px">${fmtDate(l.date)}</span></div>${l.note?`<div class="mut" style="font-size:11px">${esc(l.note)}</div>`:''}</div>`).join('')}</div>` : `<div class="mut" style="margin-top:6px">No updates logged yet</div>`}
+                </div>
+              </div>
             </div>
-          `).join('')}
+          `;}).join('')}
         </div>
       ` : canCreateForSite(c.name) ? `
         <div class="mut" style="font-size:12px;margin-top:10px">No activities defined yet. ${session.type==='Admin'?'Click "+ Add Activity" to break this project into phases (e.g. Foundation, Framing, Roofing) and log real progress against each — a lot more useful than one flat number.':'Ask your Admin to break this project into activities so you can log progress against them.'}</div>
@@ -2763,13 +2818,16 @@ function renderCustomerDetail(id){
       ${(c.activityLog && c.activityLog.length) ? `
         <div class="mut" style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;font-weight:700;margin:16px 0 8px">Recent Progress Log</div>
         <div style="max-height:220px;overflow-y:auto">
-          ${[...c.activityLog].sort((x,y)=>(y.date||'').localeCompare(x.date||'')).slice(0,15).map(l=>`
+          ${[...c.activityLog].sort((x,y)=>(y.date||'').localeCompare(x.date||'')).slice(0,15).map(l=>{
+            const actIdx = (c.activities||[]).findIndex(a=>a.id===l.activityId);
+            const color = actIdx>=0 ? activityColor(actIdx) : '#888';
+            return `
             <div style="padding:6px 0;border-top:1px solid var(--line);font-size:12.5px">
-              <div style="display:flex;justify-content:space-between"><b>${esc(l.activityName)} → ${l.pctAfter}%</b><span class="mut" style="font-size:11px">${fmtDate(l.date)}</span></div>
-              ${l.note?`<div class="mut" style="margin-top:2px">${esc(l.note)}</div>`:''}
-              <div class="mut" style="font-size:10.5px;margin-top:2px">— ${esc(l.by)}</div>
+              <div style="display:flex;justify-content:space-between;align-items:center"><b style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></span>${esc(l.activityName)} → ${l.pctAfter}%</b><span class="mut" style="font-size:11px">${fmtDate(l.date)}</span></div>
+              ${l.note?`<div class="mut" style="margin-top:2px;margin-left:14px">${esc(l.note)}</div>`:''}
+              <div class="mut" style="font-size:10.5px;margin-top:2px;margin-left:14px">— ${esc(l.by)}</div>
             </div>
-          `).join('')}
+          `;}).join('')}
         </div>
       ` : ''}
     </div>
@@ -5733,6 +5791,18 @@ async function runMigrationV22(){
   localStorage.setItem(MIGRATION_V22_KEY, '1');
   saveDB();
 }
+const MIGRATION_V23_KEY = 'buildsuite_migration_v23';
+function runMigrationV23(){
+  if(localStorage.getItem(MIGRATION_V23_KEY)) return;
+  DB.customers.forEach(c=>{
+    (c.activities||[]).forEach(a=>{
+      if(a.plannedStart===undefined) a.plannedStart = '';
+      if(a.plannedEnd===undefined) a.plannedEnd = '';
+    });
+  });
+  localStorage.setItem(MIGRATION_V23_KEY, '1');
+  saveDB();
+}
 
 function mergeDB(local, cloud){
   // Union-merge: never silently drop a record either side added. On a genuine conflict
@@ -5841,6 +5911,7 @@ async function boot(){
   runMigrationV20();
   runMigrationV21();
   await runMigrationV22();
+  runMigrationV23();
   loadCloudConfig();
   applyTheme(localStorage.getItem('buildsuite_theme') || (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
   const savedSession = sessionStorage.getItem('buildsuite_session');
