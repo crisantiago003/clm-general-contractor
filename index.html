@@ -2827,7 +2827,13 @@ function saveCustomer(id){
   const vals = { name, address:document.getElementById('f_addr').value, city:document.getElementById('f_city').value, state:document.getElementById('f_state').value, zip:document.getElementById('f_zip').value, phone:document.getElementById('f_phone').value, email:document.getElementById('f_email').value,
     budget: document.getElementById('f_budget').value===''?'':Number(document.getElementById('f_budget').value), projectStatus: document.getElementById('f_pstatus').value, completedDate: document.getElementById('f_completed').value, completionPct: Number(document.getElementById('f_completion').value)||0 };
   if(id){ Object.assign(customerById(id), vals); }
-  else { const nc = { id: nextId(DB.customers), ...vals }; DB.customers.push(nc); id = nc.id; }
+  else {
+    const nc = { id: nextId(DB.customers), ...vals };
+    DB.customers.push(nc);
+    id = nc.id;
+    // every project needs a matching Job record — this is what Transactions/Orders/Fuel Logs actually link to
+    DB.jobs.push({ id: nextId(DB.jobs), customerId: id, name: nc.name, address: nc.address, city: nc.city, state: nc.state, zip: nc.zip, contactName: '', phone: nc.phone, email: nc.email });
+  }
   saveDB(); closeModal(); toast('Customer saved');
   if(view === 'projectReport' && sub.projectId === id){
     go('projectReport', { projectId: id, from: sub.from||'', to: sub.to||todayISO() });
@@ -3165,15 +3171,40 @@ function supplierPurchaseHistory(vendorName){
     .map(e=>({ name:e.name, kind:'Equipment', qty:e.qty, unit:e.unit, date:e.date, site:e.site }));
   return [...fromMaterials, ...fromEquipment].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
 }
+function syncPurchaseNoteTransaction(vendorName, note){
+  // Keeps a Transaction record in sync with a purchase note so it counts toward
+  // that project's real expense totals — only when there's both a site and a real amount.
+  const shouldHaveTxn = !!(note.site && note.amount > 0);
+  const job = note.site ? DB.jobs.find(j=>j.name===note.site) : null;
+  if(shouldHaveTxn && job){
+    const vals = { name: `${note.description} (${vendorName})`, amount: note.amount, date: note.date,
+      account: 'Materials Purch', accountType: 'Expense', jobId: job.id, jobName: job.name,
+      notes: `Auto-linked from Manual Purchase Log — ${vendorName}` };
+    if(note.transactionId && DB.transactions.some(t=>t.id===note.transactionId)){
+      Object.assign(DB.transactions.find(t=>t.id===note.transactionId), vals);
+    } else {
+      const t = { id: nextId(DB.transactions), ...vals };
+      DB.transactions.push(t);
+      note.transactionId = t.id;
+    }
+  } else if(note.transactionId){
+    // No longer qualifies (site or amount removed) — remove the linked transaction so nothing stale lingers
+    DB.transactions = DB.transactions.filter(t=>t.id!==note.transactionId);
+    note.transactionId = null;
+  }
+}
 function addPurchaseNote(vendorId){
   const v = vendorById(vendorId);
   const desc = document.getElementById('pn_desc').value.trim();
   if(!desc){ toast('Add a short description first'); return; }
   const date = document.getElementById('pn_date').value || todayISO();
   const amount = Number(document.getElementById('pn_amount').value)||0;
+  const site = document.getElementById('pn_site').value;
   if(!v.purchaseNotes) v.purchaseNotes = [];
-  v.purchaseNotes.push({ id: uid(), date, description: desc, amount, addedBy: session.name });
-  saveDB(); toast('Added'); editVendor(vendorId);
+  const note = { id: uid(), date, description: desc, amount, site, addedBy: session.name, transactionId: null };
+  syncPurchaseNoteTransaction(v.name, note);
+  v.purchaseNotes.push(note);
+  saveDB(); toast(note.transactionId ? 'Added — and counted toward that project\'s expenses' : 'Added'); editVendor(vendorId);
 }
 function openEditPurchaseNote(vendorId, noteId){
   const v = vendorById(vendorId);
@@ -3182,6 +3213,7 @@ function openEditPurchaseNote(vendorId, noteId){
   openModal(`
     <h3>Edit Purchase Entry</h3>
     <div class="field"><label class="fl">Date</label><input id="pn_edate" type="date" value="${esc(n.date)}"></div>
+    <div class="field"><label class="fl">Project Site</label><select id="pn_esite"><option value="">— none —</option>${DB.customers.map(c=>`<option value="${esc(c.name)}" ${n.site===c.name?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div>
     <div class="field"><label class="fl">Description</label><input id="pn_edesc" value="${esc(n.description)}"></div>
     <div class="field"><label class="fl">Amount</label><input id="pn_eamount" type="number" step="0.01" value="${n.amount||''}"></div>
     <div class="btnrow">
@@ -3199,11 +3231,15 @@ function savePurchaseNoteEdit(vendorId, noteId){
   n.date = document.getElementById('pn_edate').value || n.date;
   n.description = desc;
   n.amount = Number(document.getElementById('pn_eamount').value)||0;
+  n.site = document.getElementById('pn_esite').value;
+  syncPurchaseNoteTransaction(v.name, n);
   saveDB(); toast('Updated'); editVendor(vendorId);
 }
 function deletePurchaseNote(vendorId, noteId){
   if(!confirm('Delete this entry?')) return;
   const v = vendorById(vendorId);
+  const n = (v.purchaseNotes||[]).find(x=>x.id===noteId);
+  if(n && n.transactionId){ DB.transactions = DB.transactions.filter(t=>t.id!==n.transactionId); }
   v.purchaseNotes = (v.purchaseNotes||[]).filter(x=>x.id!==noteId);
   saveDB(); toast('Deleted'); editVendor(vendorId);
 }
@@ -3253,8 +3289,11 @@ function editVendor(id){
     </div>
     <div class="field" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
       <label class="fl">Manual Purchase Log <span class="mut" style="text-transform:none;font-weight:400">— quick notes on what you bought, for when you don't have the exact receipt yet</span></label>
-      <div class="grid3" style="margin-bottom:6px">
+      <div class="grid2" style="margin-bottom:6px">
         <input id="pn_date" type="date" value="${todayISO()}" placeholder="Date">
+        <select id="pn_site"><option value="">— Project Site (optional) —</option>${DB.customers.map(c=>`<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('')}</select>
+      </div>
+      <div class="grid2" style="margin-bottom:6px">
         <input id="pn_desc" placeholder="What was bought (e.g. cement, GI sheets)">
         <input id="pn_amount" type="number" step="0.01" placeholder="Amount (optional)">
       </div>
@@ -3263,7 +3302,7 @@ function editVendor(id){
         <div style="margin-top:10px;max-height:180px;overflow-y:auto">
           ${notes.map(n=>`
             <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid var(--line);font-size:12.5px">
-              <div><b>${esc(n.description)}</b>${n.amount?` — ${money(n.amount)}`:''}<div class="mut" style="font-size:11px">${fmtDate(n.date)} · added by ${esc(n.addedBy)}</div></div>
+              <div><b>${esc(n.description)}</b>${n.amount?` — ${money(n.amount)}`:''}${n.site?` <span class="badge b-status" style="font-size:9.5px">${esc(n.site)}</span>`:''}${n.transactionId?` <span class="badge b-Paid" style="font-size:9.5px">Counted in project expenses</span>`:(n.site?` <span class="mut" style="font-size:9.5px">Add an amount to count this toward expenses</span>`:'')}<div class="mut" style="font-size:11px">${fmtDate(n.date)} · added by ${esc(n.addedBy)}</div></div>
               <div style="display:flex;gap:6px"><button class="btn ghost sm" onclick="openEditPurchaseNote(${id},'${n.id}')">Edit</button><button class="x" onclick="deletePurchaseNote(${id},'${n.id}')">✕</button></div>
             </div>
           `).join('')}
@@ -3925,7 +3964,7 @@ function renderVehicleDetail(id){
       ` : sub.vtab==='fuel' ? `
         <div class="ph" style="margin-top:2px"><span></span><button class="btn ghost sm" onclick="editFuelLog(null,${id})">+ Add Fuel</button></div>
         <div class="twrap"><table>
-          <tr><th>Station</th><th>Job</th><th>Date</th><th class="right">Qty</th><th class="right">Amount</th><th></th></tr>
+          <tr><th>Station</th><th>Project Site</th><th>Date</th><th class="right">Qty</th><th class="right">Amount</th><th></th></tr>
           ${fuel.map(f=>`
             <tr class="click" onclick="editFuelLog(${f.id},${id})">
               <td><b>${esc(f.station)||'—'}</b></td><td class="mut">${esc(jobLabelFor(f))}</td><td class="mut">${fmtDate(f.date)}</td>
@@ -4012,7 +4051,7 @@ function editFuelLog(id, vehId){
       <div class="field"><label class="fl">Unit</label><select id="f_unit">${FUEL_UNITS.map(u=>`<option ${f.unit===u?'selected':''}>${u}</option>`).join('')}</select></div>
       <div class="field"><label class="fl">Amount</label><input id="f_amt" type="number" step="0.01" value="${f.amount}"></div>
     </div>
-    <div class="field"><label class="fl">Job (optional)</label><select id="f_job">${jobPickerOptions(f.jobId)}</select></div>
+    <div class="field"><label class="fl">Project Site (optional)</label><select id="f_job">${jobPickerOptions(f.jobId)}</select></div>
     <div class="field"><label class="fl">Notes</label><textarea id="f_notes" rows="2">${esc(f.notes)}</textarea></div>
     <div class="btnrow">
       <button class="btn save" onclick="saveFuelLog(${id},${vehId})">Save</button>
@@ -5978,6 +6017,19 @@ function runMigrationV24(){
   localStorage.setItem(MIGRATION_V24_KEY, '1');
   saveDB();
 }
+const MIGRATION_V25_KEY = 'buildsuite_migration_v25';
+function runMigrationV25(){
+  if(localStorage.getItem(MIGRATION_V25_KEY)) return;
+  DB.customers.forEach(c=>{
+    const hasJob = DB.jobs.some(j=>j.customerId===c.id || j.name===c.name);
+    if(!hasJob){
+      DB.jobs.push({ id: nextId(DB.jobs), customerId: c.id, name: c.name, address: c.address||'', city: c.city||'', state: c.state||'', zip: c.zip||'', contactName: '', phone: c.phone||'', email: c.email||'' });
+    }
+  });
+  DB.vendors.forEach(v=>{ (v.purchaseNotes||[]).forEach(n=>{ if(n.transactionId===undefined) n.transactionId = null; }); });
+  localStorage.setItem(MIGRATION_V25_KEY, '1');
+  saveDB();
+}
 
 function mergeDB(local, cloud){
   // Union-merge: never silently drop a record either side added. On a genuine conflict
@@ -6088,6 +6140,7 @@ async function boot(){
   await runMigrationV22();
   runMigrationV23();
   runMigrationV24();
+  runMigrationV25();
   loadCloudConfig();
   applyTheme(localStorage.getItem('buildsuite_theme') || (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
   const savedSession = sessionStorage.getItem('buildsuite_session');
