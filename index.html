@@ -214,6 +214,21 @@ tr.click:hover td{background:var(--panel2)}
 .stat-strip .s .n{font-size:32px;font-weight:800;color:var(--accent);font-family:var(--mono)}
 .stat-strip .s .l{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:4px}
 .svc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.process-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;margin-top:36px}
+.process-step{position:relative;padding-top:8px}
+.process-step .step-n{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.06em;margin-bottom:10px}
+.process-step h3{font-size:15.5px;margin-bottom:8px}
+.process-step p{font-size:13px;color:var(--muted);line-height:1.6}
+.cta-banner{max-width:1120px;margin:0 auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:32px 36px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.cta-banner h3{font-size:19px;margin-bottom:4px}
+.cta-banner p{font-size:13.5px;color:var(--muted)}
+.faq-list{max-width:760px;margin:0 auto}
+.faq-item{border-bottom:1px solid var(--line);padding:18px 0}
+.faq-item summary{cursor:pointer;font-weight:700;font-size:14.5px;list-style:none;display:flex;justify-content:space-between;align-items:center}
+.faq-item summary::-webkit-details-marker{display:none}
+.faq-item summary::after{content:'+';font-size:20px;font-weight:400;color:var(--accent);flex-shrink:0;margin-left:12px;transition:transform .15s}
+.faq-item[open] summary::after{transform:rotate(45deg)}
+.faq-item p{margin-top:10px;font-size:13.5px;color:var(--muted);line-height:1.65}
 .svc-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:26px}
 .svc-card .ic{width:44px;height:44px;border-radius:10px;background:var(--chip);display:flex;align-items:center;justify-content:center;color:var(--accent);margin-bottom:16px}
 .svc-card .ic svg{width:22px;height:22px}
@@ -229,7 +244,7 @@ tr.click:hover td{background:var(--panel2)}
 .landing-contact{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start}
 .landing-footer{border-top:1px solid var(--line);padding:30px 24px;text-align:center;color:var(--muted);font-size:12.5px}
 .landing-footer a{color:var(--accent2);text-decoration:none}
-@media(max-width:820px){.svc-grid,.proj-grid{grid-template-columns:1fr 1fr}.stat-strip{grid-template-columns:1fr 1fr}.landing-contact{grid-template-columns:1fr}.landing-hero h1{font-size:40px}.landing-section h2{font-size:30px}.landing-nav nav{display:none}}
+@media(max-width:820px){.svc-grid,.proj-grid,.process-grid{grid-template-columns:1fr 1fr}.stat-strip{grid-template-columns:1fr 1fr}.landing-contact{grid-template-columns:1fr}.landing-hero h1{font-size:40px}.landing-section h2{font-size:30px}.landing-nav nav{display:none}.cta-banner{flex-direction:column;text-align:center}}
 </style>
 </head>
 <body>
@@ -1467,8 +1482,10 @@ function renderLanding(){
       <nav>
         <a onclick="document.getElementById('ld-about').scrollIntoView({behavior:'smooth'})">About</a>
         <a onclick="document.getElementById('ld-services').scrollIntoView({behavior:'smooth'})">Services</a>
+        <a onclick="document.getElementById('ld-process').scrollIntoView({behavior:'smooth'})">Process</a>
         <a onclick="document.getElementById('ld-projects').scrollIntoView({behavior:'smooth'})">Projects</a>
         ${DB.testimonials.length?`<a onclick="document.getElementById('ld-testimonials').scrollIntoView({behavior:'smooth'})">Testimonials</a>`:''}
+        <a onclick="document.getElementById('ld-faq').scrollIntoView({behavior:'smooth'})">FAQ</a>
         <a onclick="document.getElementById('ld-contact').scrollIntoView({behavior:'smooth'})">Contact</a>
       </nav>
       <div class="spacer"></div>
@@ -1514,6 +1531,25 @@ function renderLanding(){
       </div>
     </div>
 
+    <div class="landing-section" id="ld-process">
+      <div class="eyebrow">How It Works</div>
+      <h2>From first call to final walkthrough.</h2>
+      <p class="lead">A clear process, so you always know what happens next.</p>
+      <div class="process-grid">
+        <div class="process-step"><div class="step-n">01</div><h3>Site Visit & Consultation</h3><p>We walk the site with you, understand what you need, and talk through what's realistic.</p></div>
+        <div class="process-step"><div class="step-n">02</div><h3>Proposal & Planning</h3><p>A clear scope, budget, and timeline before a single tool touches the ground — no surprises later.</p></div>
+        <div class="process-step"><div class="step-n">03</div><h3>Build & Manage</h3><p>Skilled crews on site, materials tracked, progress logged — you can check in anytime.</p></div>
+        <div class="process-step"><div class="step-n">04</div><h3>Handover & Warranty</h3><p>A final walkthrough, sign-off, and support after we're done — we stand behind the work.</p></div>
+      </div>
+    </div>
+
+    <div class="landing-section" style="padding-top:0">
+      <div class="cta-banner">
+        <div><h3>Have a project in mind?</h3><p>Tell us what you're building and we'll get back to you with a straight answer.</p></div>
+        <button class="btn pri" onclick="document.getElementById('ld-contact').scrollIntoView({behavior:'smooth'})">Get a Quote</button>
+      </div>
+    </div>
+
     <div class="dim-divider"><div class="dim-line"></div><span class="dim-label">Proof of Work</span><div class="dim-line"></div></div>
 
     <div class="landing-section" id="ld-projects">
@@ -1546,6 +1582,19 @@ function renderLanding(){
         `).join('')}
       </div>
     </div>` : ''}
+
+    <div class="landing-section" id="ld-faq">
+      <div class="eyebrow">Good to Know</div>
+      <h2>Questions we hear most.</h2>
+      <p class="lead">Still not sure? Reach out below and we'll walk you through it.</p>
+      <div class="faq-list">
+        <details class="faq-item"><summary>How long does a typical project take?</summary><p>It depends on scope — a renovation might run weeks, a ground-up build several months. We give you a realistic timeline as part of the proposal, before any work starts, and keep you updated if anything shifts.</p></details>
+        <details class="faq-item"><summary>Will I know the full cost before work begins?</summary><p>Yes. You get a clear, itemized proposal before we start — no surprise charges partway through. If something changes on site, we talk it through with you first.</p></details>
+        <details class="faq-item"><summary>Are you licensed and insured?</summary><p>Yes, and so are the subcontractors we bring onto a site. We can provide documentation as part of your proposal if you need it for permitting or your own records.</p></details>
+        <details class="faq-item"><summary>Do you handle permits and paperwork?</summary><p>We manage the permitting process as part of general contracting, so you're not the one chasing approvals or paperwork.</p></details>
+        <details class="faq-item"><summary>What happens after the project is finished?</summary><p>A final walkthrough with you, sign-off, and support afterward — if something needs attention post-handover, you have a direct point of contact, not a call center.</p></details>
+      </div>
+    </div>
 
     <div class="dim-divider"><div class="dim-line"></div><span class="dim-label">Let's Build Something</span><div class="dim-line"></div></div>
 
