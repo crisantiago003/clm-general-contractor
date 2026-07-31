@@ -5682,6 +5682,17 @@ function renderUsers(){
   const active = DB.users.filter(u=>u.type!=='Pending').sort((a,b)=>a.name.localeCompare(b.name));
   document.getElementById('mainArea').innerHTML = `
     <div class="crumb">Users</div>
+    ${cloud.connected ? (() => {
+      const migrated = active.filter(u=>u.authMigrated).length;
+      const total = active.length;
+      const pct = total ? Math.round((migrated/total)*100) : 0;
+      return `
+    <div class="panel">
+      <div class="ph"><h3 style="text-transform:none;font-size:16px">🔒 Backend Security Status</h3><span class="mono" style="font-size:12.5px">${migrated} / ${total} accounts</span></div>
+      <div class="progress"><div style="width:${pct}%;background:${pct>=100?'var(--green)':'var(--accent2)'}"></div></div>
+      <div class="mut" style="font-size:12px;margin-top:8px">${pct>=100 ? 'Everyone has moved to real backend authentication — the shared key alone can no longer write your data.' : `${total-migrated} account${total-migrated===1?'':'s'} will move over automatically the next time they log in normally — nothing for them to do.`}</div>
+    </div>`;
+    })() : ''}
     ${readyToHandOut.length ? `
     <div class="panel" style="border-color:var(--green)">
       <div class="ph">
