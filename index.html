@@ -735,6 +735,7 @@ function logout(){
   sub.authMode = 'signin';
   if(cloudPollTimer) clearInterval(cloudPollTimer);
   stopInactivityWatch();
+  stopNotifyChecks();
   renderLogin();
 }
 
@@ -746,6 +747,7 @@ const EMPLOYEE_TABS = ['dashboard','customers'];
 function roleCanAccessTab(tabKey){
   if(!session) return false;
   if(tabKey==='myProfile') return session.type!=='Pending'; // everyone with real access can manage their own profile
+  if(tabKey==='help') return session.type!=='Pending';
   if(tabKey==='notificationLog') return session.type!=='Employee' && session.type!=='Pending';
   if(tabKey==='trash') return session.type==='Admin';
   const role = session.type;
@@ -855,6 +857,7 @@ function render(){
     myProfile: renderMyProfile,
     notificationLog: renderNotificationLog,
     trash: renderTrash,
+    help: renderHelp,
   };
   (renderers[view] || renderDashboard)();
 }
@@ -870,6 +873,7 @@ function renderHeader(){
       <button class="iconbtn" onclick="toggleNotifications()" title="Notifications">🔔${alerts.length?`<span style="position:absolute;top:-3px;right:-3px;background:var(--danger);color:#fff;font-size:10px;font-weight:800;border-radius:999px;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 3px">${alerts.length}</span>`:''}</button>
     </div>
     ${session.type!=='Pending' ? `<button class="iconbtn" onclick="openGlobalSearch()" title="Search everything">🔍</button>` : ''}
+    ${session.type!=='Pending' ? `<button class="iconbtn" onclick="go('help')" title="Help & Getting Started">❓</button>` : ''}
     ${session.type==='Admin' ? `<button class="iconbtn" onclick="openSettings()" title="Settings">⚙️</button>` : ''}
     <button class="iconbtn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">🌙</button>
     <div class="userchip" style="cursor:pointer" onclick="go('myProfile')"><div class="av">${avatarHtml(DB.users.find(u=>u.id===session.id), 22)}</div><span class="uname">${esc(session.name)}</span></div>
@@ -997,6 +1001,38 @@ function permanentlyDeleteTrash(trashId){
   if(!confirm('Permanently delete this? This cannot be undone — not even the Trash can bring it back after this.')) return;
   DB.trash = DB.trash.filter(x=>x.id!==trashId);
   saveDB(); toast('Permanently deleted'); renderTrash();
+}
+function renderHelp(){
+  if(session.type === 'Pending') return;
+  const isSiteLead = canRequestForSite();
+  const isOffice = canEdit(); // Admin should see this content too, not just Admin-exclusive sections
+  const isAdmin = session.type === 'Admin';
+  document.getElementById('mainArea').innerHTML = `
+    <div class="crumb">Help</div>
+    <div class="panel">
+      <h3 style="text-transform:none;font-size:19px;margin-bottom:6px">👋 Getting Started with BuildSuite</h3>
+      <p class="mut" style="font-size:13px;margin-bottom:20px">A quick reference for what you can do here, based on your role (${esc(session.type)}${isSiteLead && session.type==='Employee' ? ' — Site Lead access' : ''}). Click any section to expand it.</p>
+      <div class="faq-list" style="max-width:none">
+        <details class="faq-item" open><summary>What is BuildSuite?</summary><p>One system for the whole operation — projects, payroll, materials, suppliers, and your team, instead of scattered spreadsheets. Everything you do here saves automatically and syncs across devices if cloud sync is connected (check the dot next to "Cloud synced" in the header).</p></details>
+        <details class="faq-item"><summary>Getting around</summary><p>The tabs across the top take you to each section. The <b>🔍 search icon</b> in the header finds anything — an employee, an order, a supplier — instantly, without hunting through tabs. The <b>🔔 bell</b> shows anything that needs attention right now (low stock, overdue reminders, pending approvals). Click your name/photo in the top-right anytime to get to <b>My Profile</b>.</p></details>
+        <details class="faq-item"><summary>Your profile & payslip</summary><p>Click your name in the header to open My Profile. You can update your contact info, upload a photo, and change your password there — no need to ask an Admin. If you're paid through BuildSuite, your payroll history and printable payslips are there too, under "My Payroll."</p></details>
+        ${isSiteLead ? `
+        <details class="faq-item"><summary>Requesting materials & tools for your site</summary><p>Go to <b>Orders</b> or <b>Inventory → Purchase Requests</b> — your site is pre-filled automatically, and you won't see other sites' financial numbers. This keeps requests fast without giving you access to things outside your project.</p></details>
+        <details class="faq-item"><summary>Logging real project progress</summary><p>Open your project under <b>Projects</b> — if your Admin has broken it into activities (Foundation, Framing, etc.), click <b>"Log Update"</b> on the relevant one, write a quick note on what got done, and set the new percentage. This is what actually drives the progress bar — the more often it's updated, the more useful it is for everyone checking the project's status.</p></details>
+        ` : ''}
+        ${isOffice ? `
+        <details class="faq-item"><summary>Projects, Orders & Suppliers</summary><p><b>Projects</b> holds every job site — click into one for its budget, progress, and expense breakdown. <b>Orders</b> covers invoices, purchases, and work orders. <b>Suppliers</b> keeps contact info and a running purchase history per vendor — including a manual log for jotting down a purchase before you have the exact receipt.</p></details>
+        <details class="faq-item"><summary>Bulk Import — paste instead of typing</summary><p>Adding a lot of records at once (materials, employees, suppliers)? Look for a "Bulk Import" button — copy cells straight from Excel or Google Sheets and paste them in, instead of typing each one by hand.</p></details>
+        ` : ''}
+        ${isAdmin ? `
+        <details class="faq-item"><summary>Managing your team (Users)</summary><p><b>Users</b> is where new signups wait for approval, where you assign roles, reset passwords, and grant special access like letting a Project Engineer request materials for their site. New accounts always start as "Pending" until you approve them — nobody gets in without your say-so.</p></details>
+        <details class="faq-item"><summary>Settings — the control room</summary><p>Company info, tax rates, announcements, the landing page gallery and testimonials, Google Sheets mirror, and browser notifications all live in <b>⚙️ Settings</b>. This is also where you'll find <b>🗑️ Trash</b> — anything deleted across the whole app sits there for 30 days before it's really gone, so an accidental delete is always recoverable.</p></details>
+        <details class="faq-item"><summary>Keeping an eye on things</summary><p>The <b>Notification Log</b> (bell icon, or Settings) keeps a permanent record of deletions, price changes, new accounts, and progress updates — who did what, and when. Worth checking periodically, especially as your team grows.</p></details>
+        ` : ''}
+        <details class="faq-item"><summary>Something feels off, or a number looks wrong?</summary><p>Real people update this system every day, and honest mistakes happen. If something looks incorrect, it's always safe to ask whoever manages BuildSuite for your company rather than guessing — nothing here is permanent (see Trash, above, if you're an Admin) and it's always fixable.</p></details>
+      </div>
+    </div>
+  `;
 }
 function renderTrash(){
   if(session.type !== 'Admin'){ go('dashboard'); return; }
@@ -1159,6 +1195,11 @@ function openSettings(){
     <div class="field" style="border-top:1px solid var(--line);padding-top:14px">
       <label class="fl">Client Testimonials <span class="mut" style="text-transform:none;font-weight:400">(shown to potential clients on your public homepage)</span></label>
       <button class="btn ghost sm" onclick="closeModal();openManageTestimonials()">⭐ Manage Testimonials (${DB.testimonials.length})</button>
+    </div>
+    <div class="field" style="border-top:1px solid var(--line);padding-top:14px">
+      <label class="fl">Browser Notifications <span class="mut" style="text-transform:none;font-weight:400">(low stock, overdue reminders, pending accounts)</span></label>
+      <div class="mut" style="font-size:12px;margin-bottom:8px">Pops up a real notification on this device when something needs attention — but only while this app is open in a tab (even in the background). It won't reach you if the tab or browser is fully closed.</div>
+      ${browserNotificationsEnabled() ? `<button class="btn ghost sm" onclick="disableBrowserNotifications()">🔕 Turn Off</button>` : `<button class="btn ghost sm" onclick="enableBrowserNotifications()">🔔 Turn On</button>`}
     </div>
     <div class="field" style="border-top:1px solid var(--line);padding-top:14px">
       <label class="fl">Trash <span class="mut" style="text-transform:none;font-weight:400">(deleted items, kept for 30 days)</span></label>
@@ -1776,6 +1817,7 @@ function enterApp(){
   }
   if(cloud.connected) startCloudPolling();
   startInactivityWatch();
+  startNotifyChecks();
 }
 function renderPendingScreen(){
   document.getElementById('headerBar').innerHTML = `
@@ -6134,6 +6176,46 @@ function mergeDB(local, cloud){
   return merged;
 }
 let cloudPollTimer = null;
+/* ---------- browser notifications (client-side, requires the app tab to be open/running) ---------- */
+let notifyCheckTimer = null;
+function browserNotificationsEnabled(){ return localStorage.getItem('buildsuite_notify_enabled') === '1'; }
+async function enableBrowserNotifications(){
+  if(!('Notification' in window)){ toast('Your browser doesn\'t support notifications.'); return; }
+  const perm = await Notification.requestPermission();
+  if(perm !== 'granted'){ toast('Notifications blocked — you can allow them in your browser settings.'); return; }
+  localStorage.setItem('buildsuite_notify_enabled', '1');
+  toast('Notifications enabled');
+  startNotifyChecks();
+  if(typeof openSettings === 'function' && document.querySelector('.modal-bg')) openSettings();
+}
+function disableBrowserNotifications(){
+  localStorage.setItem('buildsuite_notify_enabled', '0');
+  stopNotifyChecks();
+  toast('Notifications turned off');
+  if(document.querySelector('.modal-bg')) openSettings();
+}
+function startNotifyChecks(){
+  if(notifyCheckTimer) clearInterval(notifyCheckTimer);
+  if(!browserNotificationsEnabled() || !session) return;
+  checkForNewAlerts(); // check once immediately, then on an interval
+  notifyCheckTimer = setInterval(checkForNewAlerts, 45000);
+}
+function stopNotifyChecks(){
+  if(notifyCheckTimer) clearInterval(notifyCheckTimer);
+  notifyCheckTimer = null;
+}
+function checkForNewAlerts(){
+  if(!browserNotificationsEnabled() || !session || Notification.permission !== 'granted') return;
+  let seen;
+  try{ seen = JSON.parse(localStorage.getItem('buildsuite_notified_alerts')||'[]'); }catch(e){ seen = []; }
+  const current = getAlerts();
+  const currentLabels = current.map(a=>a.label);
+  const freshOnes = current.filter(a=>!seen.includes(a.label));
+  freshOnes.slice(0,5).forEach(a=>{ // cap at 5 per check so a bad backlog doesn't spam a wall of popups
+    try{ new Notification('BuildSuite — ' + a.type, { body: a.label, tag: a.label }); }catch(e){}
+  });
+  localStorage.setItem('buildsuite_notified_alerts', JSON.stringify(currentLabels));
+}
 function startCloudPolling(){
   if(cloudPollTimer) clearInterval(cloudPollTimer);
   if(!cloud.connected) return;
@@ -6239,6 +6321,7 @@ async function boot(){
     else { go('dashboard'); }
     if(cloud.connected){ syncOnBoot(); startCloudPolling(); }
     startInactivityWatch();
+    startNotifyChecks();
   } else {
     renderLanding();
   }
