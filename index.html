@@ -356,10 +356,19 @@ async function cloudPush(){
       headers: { ...cloudHeaders(), 'Prefer': 'resolution=merge-duplicates' },
       body: JSON.stringify([{ id: cloud.code, data: DB, updated_at: updatedAt }]),
     });
-    if(!res.ok){ throw new Error('HTTP '+res.status); }
+    if(!res.ok){
+      const body = await res.text().catch(()=>'');
+      console.error('cloudPush failed — HTTP', res.status, body);
+      if(res.status === 401 || res.status === 403){
+        cloud.lastError = cloud.authToken ? 'Sync blocked — your session may have expired. Try logging out and back in.' : 'Sync blocked — this account hasn\'t completed backend sign-in yet. Try logging out and back in once more.';
+      } else {
+        cloud.lastError = `Sync failed (HTTP ${res.status}) — check your connection or Supabase settings.`;
+      }
+      throw new Error('HTTP '+res.status);
+    }
     cloud.lastError = '';
   }catch(e){
-    cloud.lastError = 'Sync failed — check your connection or Supabase settings.';
+    if(!cloud.lastError) cloud.lastError = 'Sync failed — check your connection or Supabase settings.';
     console.error('cloudPush failed', e);
   }
   cloud.syncing = false;
@@ -1879,6 +1888,7 @@ async function doLogin(){
       } else {
         // Not signed up on the real backend yet (or wrong password) — fall back to reading
         // with whatever access we already have, and let local verification decide below.
+        console.debug('Real backend sign-in did not succeed yet (expected if not migrated):', signInResult.error);
         const row = await cloudPull();
         if(row && row.data){
           DB = mergeDB(DB, row.data);
@@ -1910,6 +1920,8 @@ async function doLogin(){
         res.user.authMigrated = true;
         res.user.authUserId = signUpResult.userId;
         saveDB();
+      } else {
+        console.warn('Backend migration did not complete for this account:', signUpResult.error);
       }
       // If this fails — e.g. their password is shorter than the backend's minimum — we simply
       // don't migrate them this time. Local login still works exactly as it does today, and
