@@ -5001,6 +5001,16 @@ function employeeHasAccount(empId){
   return DB.users.some(u=>u.matchedEmployeeId===empId);
 }
 async function generateAccountForEmployee(empId, role){
+  if(cloud.connected){
+    try{
+      const row = await cloudPull();
+      if(row && row.data){
+        DB = mergeDB(DB, row.data);
+        backfillMissingKeys(DB);
+        saveDB();
+      }
+    }catch(e){ /* if this fails, proceed with whatever we have locally — better than blocking entirely */ }
+  }
   const e = employeeById(empId);
   if(!e) return null;
   if(employeeHasAccount(empId)) return null;
@@ -5712,6 +5722,25 @@ function renderUsers(){
       <div class="mut" style="font-size:12px;margin-top:8px">${pct>=100 ? 'Everyone has moved to real backend authentication — the shared key alone can no longer write your data.' : `${total-migrated} account${total-migrated===1?'':'s'} will move over automatically the next time they log in normally — nothing for them to do.`}</div>
     </div>`;
     })() : ''}
+    ${(() => {
+      const byEmployee = {};
+      active.forEach(u=>{ if(u.matchedEmployeeId){ (byEmployee[u.matchedEmployeeId] = byEmployee[u.matchedEmployeeId] || []).push(u); } });
+      const duplicates = Object.values(byEmployee).filter(list=>list.length > 1);
+      if(!duplicates.length) return '';
+      return `
+    <div class="panel" style="border-color:var(--danger)">
+      <div class="ph"><h3 style="text-transform:none;font-size:16px;color:var(--danger)">⚠️ Duplicate Accounts Detected</h3></div>
+      <div class="mut" style="font-size:12px;margin-bottom:10px">These likely happened when two devices each created an account for the same person before syncing with each other. Keep whichever one they're actually using, and delete the other — it's safe, the deleted one goes to Trash first.</div>
+      ${duplicates.map(list=>`
+        <div style="padding:8px 0;border-top:1px solid var(--line)">
+          <b style="font-size:13px">${esc(employeeById(list[0].matchedEmployeeId)?.name || 'Unknown employee')}</b> — ${list.length} accounts
+          <div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:8px">
+            ${list.map(u=>`<span class="badge b-status">${esc(u.username||u.name)}</span>`).join('')}
+          </div>
+        </div>
+      `).join('')}
+    </div>`;
+    })()}
     ${readyToHandOut.length ? `
     <div class="panel" style="border-color:var(--green)">
       <div class="ph">
