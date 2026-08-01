@@ -341,6 +341,13 @@ async function supabaseAuthSignIn(email, password){
   return { ok:true, accessToken: data.access_token, refreshToken: data.refresh_token, userId: data.user ? data.user.id : null };
 }
 let pushTimer = null;
+async function saveDBAndConfirmSync(){
+  saveDB();
+  if(!cloud.connected) return { synced: true, offline: true };
+  clearTimeout(pushTimer); // don't wait for the debounce — push this one immediately since we need to know if it worked
+  await cloudPush();
+  return { synced: !cloud.lastError, error: cloud.lastError };
+}
 function scheduleCloudPush(){
   if(!cloud.connected) return;
   clearTimeout(pushTimer);
@@ -2698,14 +2705,14 @@ function removeLabor(id, lId){
   o.laborCosts = o.laborCosts.filter(x=>x.id!==lId);
   saveDB(); go('orders',{editId:id});
 }
-function deleteOrder(id){
+async function deleteOrder(id){
   if(!guardDelete()) return;
   if(!confirm('Move this order to Trash? You can restore it within 30 days.')) return;
   const o = DB.orders.find(x=>x.id===id);
   if(o) moveToTrash('order', o);
   DB.orders = DB.orders.filter(o=>o.id!==id);
   logNotification('Deletion', `Order #${id} (${o?orderTypeLabel(o.type):''} — ${o?partyName(o):''}) moved to Trash`, 'trash');
-  saveDB(); toast('Order moved to Trash'); go('orders');
+  const r = await saveDBAndConfirmSync(); toast(r.synced ? 'Order moved to Trash' : `⚠️ Deleted here, but failed to sync — ${r.error||'check your connection'}`); go('orders');
 }
 /* ============================================================ PRODUCTS ============================================================ */
 function renderProducts(){
@@ -2858,14 +2865,14 @@ function saveProduct(id){
   else { DB.products.push({ id: nextId(DB.products), ...vals }); }
   saveDB(); closeModal(); toast('Product saved'); renderProducts();
 }
-function deleteProduct(id){
+async function deleteProduct(id){
   if(!guardDelete()) return;
   if(!confirm('Move this product to Trash? You can restore it within 30 days.')) return;
   const p0 = productById(id);
   if(p0) moveToTrash('product', p0);
   DB.products = DB.products.filter(p=>p.id!==id);
   logNotification('Deletion', `Product "${p0?p0.name:id}" moved to Trash`, 'trash');
-  saveDB(); toast('Product moved to Trash'); renderProducts();
+  const r = await saveDBAndConfirmSync(); toast(r.synced ? 'Product moved to Trash' : `⚠️ Deleted here, but failed to sync — ${r.error||'check your connection'}`); renderProducts();
 }
 
 /* ============================================================ CUSTOMERS + JOBS ============================================================ */
@@ -3074,14 +3081,14 @@ function saveCustomer(id){
     go('customers',{custId:id});
   }
 }
-function deleteCustomer(id){
+async function deleteCustomer(id){
   if(!guardDelete()) return;
   if(!confirm('Move this project to Trash? Their jobs will remain but become unassigned. You can restore it within 30 days.')) return;
   const c0 = DB.customers.find(x=>x.id===id);
   if(c0) moveToTrash('customer', c0);
   DB.customers = DB.customers.filter(c=>c.id!==id);
   logNotification('Deletion', `Project "${c0?c0.name:id}" moved to Trash`, 'trash');
-  saveDB(); toast('Project moved to Trash'); renderCustomers();
+  const r = await saveDBAndConfirmSync(); toast(r.synced ? 'Project moved to Trash' : `⚠️ Deleted here, but failed to sync — ${r.error||'check your connection'}`); renderCustomers();
 }
 function renderCustomerDetail(id){
   const c = customerById(id);
@@ -3559,14 +3566,14 @@ function saveVendor(id){
   else { DB.vendors.push({ id: nextId(DB.vendors), purchaseNotes: [], ...vals }); }
   saveDB(); closeModal(); toast('Supplier saved'); renderVendors();
 }
-function deleteVendor(id){
+async function deleteVendor(id){
   if(!guardDelete()) return;
   if(!confirm('Move this supplier to Trash? You can restore it within 30 days.')) return;
   const v0 = DB.vendors.find(x=>x.id===id);
   if(v0) moveToTrash('vendor', v0);
   DB.vendors = DB.vendors.filter(v=>v.id!==id);
   logNotification('Deletion', `Supplier "${v0?v0.name:id}" moved to Trash`, 'trash');
-  saveDB(); toast('Supplier moved to Trash'); renderVendors();
+  const r = await saveDBAndConfirmSync(); toast(r.synced ? 'Supplier moved to Trash' : `⚠️ Deleted here, but failed to sync — ${r.error||'check your connection'}`); renderVendors();
 }
 /* ============================================================ EMPLOYEES + TIMESHEETS ============================================================ */
 const EMP_TYPE_GROUPS = {
@@ -3723,14 +3730,14 @@ function saveEmployee(id){
   window.__pendingForeman = '';
   saveDB(); closeModal(); toast('Employee saved'); go('employees',{empId:id});
 }
-function deleteEmployee(id){
+async function deleteEmployee(id){
   if(!guardDelete()) return;
   if(!confirm('Move this employee to Trash? You can restore them within 30 days.')) return;
   const e0 = employeeById(id);
   if(e0) moveToTrash('employee', e0);
   DB.employees = DB.employees.filter(e=>e.id!==id);
   logNotification('Deletion', `Employee "${e0?e0.name:id}" moved to Trash`, 'trash');
-  saveDB(); toast('Employee moved to Trash'); renderEmployees();
+  const r = await saveDBAndConfirmSync(); toast(r.synced ? 'Employee moved to Trash' : `⚠️ Deleted here, but failed to sync — ${r.error||'check your connection'}`); renderEmployees();
 }
 function thirteenthMonthPay(empId, year){
   const total = DB.paidEmployees
@@ -4554,14 +4561,14 @@ function saveMaterial(id){
   }
   saveDB(); closeModal(); toast('Material saved'); renderInventory();
 }
-function deleteMaterial(id){
+async function deleteMaterial(id){
   if(!guardDelete()) return;
   if(!confirm('Move this material record to Trash? You can restore it within 30 days.')) return;
   const m0 = DB.materials.find(x=>x.id===id);
   if(m0) moveToTrash('material', m0);
   DB.materials = DB.materials.filter(x=>x.id!==id);
   logNotification('Deletion', `Material "${m0?m0.name:id}" (${m0?m0.qty:''} ${m0?m0.unit:''}) moved to Trash`, 'trash');
-  saveDB(); closeModal(); toast('Material moved to Trash'); renderInventory();
+  const r = await saveDBAndConfirmSync(); closeModal(); toast(r.synced ? 'Material moved to Trash' : `⚠️ Deleted here, but failed to sync — ${r.error||'check your connection'}`); renderInventory();
 }
 
 /* ---------------- EQUIPMENT ---------------- */
@@ -4778,14 +4785,14 @@ function saveEquipment(id){
   else { DB.equipment.push({ id: nextId(DB.equipment), ...vals }); }
   saveDB(); closeModal(); toast('Equipment saved'); renderInventory();
 }
-function deleteEquipment(id){
+async function deleteEquipment(id){
   if(!guardDelete()) return;
   if(!confirm('Move this equipment record to Trash? You can restore it within 30 days.')) return;
   const eq0 = DB.equipment.find(x=>x.id===id);
   if(eq0) moveToTrash('equipment', eq0);
   DB.equipment = DB.equipment.filter(x=>x.id!==id);
   logNotification('Deletion', `Equipment "${eq0?eq0.name:id}" moved to Trash`, 'trash');
-  saveDB(); closeModal(); toast('Equipment moved to Trash'); renderInventory();
+  const r = await saveDBAndConfirmSync(); closeModal(); toast(r.synced ? 'Equipment moved to Trash' : `⚠️ Deleted here, but failed to sync — ${r.error||'check your connection'}`); renderInventory();
 }
 
 /* ---------------- PURCHASE REQUESTS (site -> HQ) ---------------- */
@@ -5309,7 +5316,7 @@ function savePayrollRun(){
   saveDB(); closeModal(); toast('Payroll run created');
   go('payroll',{runId:pr.id});
 }
-function deletePayrollRun(id){
+async function deletePayrollRun(id){
   if(!guardDelete()) return;
   if(!confirm('Move this payroll run and all its paid employee records to Trash? You can restore it within 30 days.')) return;
   const pr0 = DB.payrolls.find(x=>x.id===id);
@@ -5318,7 +5325,7 @@ function deletePayrollRun(id){
   DB.payrolls = DB.payrolls.filter(p=>p.id!==id);
   DB.paidEmployees = DB.paidEmployees.filter(p=>p.payrollId!==id);
   logNotification('Deletion', `Payroll run "${pr0?fmtDate(pr0.payDate):id}" (${pr0?pr0.site:''}) moved to Trash`, 'trash');
-  saveDB(); toast('Payroll run moved to Trash'); renderPayroll();
+  const r = await saveDBAndConfirmSync(); toast(r.synced ? 'Payroll run moved to Trash' : `⚠️ Deleted here, but failed to sync — ${r.error||'check your connection'}`); renderPayroll();
 }
 
 function calcHoursForEmployee(empId, fromDate, toDate){
@@ -5674,14 +5681,14 @@ function saveTransaction(id){
   else { DB.transactions.push({ id: nextId(DB.transactions), ...vals }); }
   saveDB(); closeModal(); toast('Transaction saved'); renderTransactions();
 }
-function deleteTransaction(id){
+async function deleteTransaction(id){
   if(!guardDelete()) return;
   if(!confirm('Move this transaction to Trash? You can restore it within 30 days.')) return;
   const t0 = DB.transactions.find(x=>x.id===id);
   if(t0) moveToTrash('transaction', t0);
   DB.transactions = DB.transactions.filter(t=>t.id!==id);
   logNotification('Deletion', `Transaction "${t0?t0.description:id}" (${t0?money(t0.amount):''}) moved to Trash`, 'trash');
-  saveDB(); toast('Transaction moved to Trash'); renderTransactions();
+  const r = await saveDBAndConfirmSync(); toast(r.synced ? 'Transaction moved to Trash' : `⚠️ Deleted here, but failed to sync — ${r.error||'check your connection'}`); renderTransactions();
 }
 
 /* ============================================================ USERS ============================================================ */
@@ -5898,7 +5905,7 @@ async function saveUser(id){
   else { DB.users.push({ id: nextId(DB.users), ...vals }); }
   saveDB(); closeModal(); toast('User saved'); renderUsers();
 }
-function deleteUser(id){
+async function deleteUser(id){
   if(!guardDelete()) return;
   if(DB.users.length <= 1){ toast('You must keep at least one user'); return; }
   if(!confirm('Move this user account to Trash? You can restore it within 30 days.')) return;
@@ -5906,7 +5913,7 @@ function deleteUser(id){
   if(u0) moveToTrash('user', u0);
   DB.users = DB.users.filter(u=>u.id!==id);
   logNotification('Deletion', `User account "${u0?u0.name:id}" moved to Trash`, 'trash');
-  saveDB(); closeModal(); toast('User moved to Trash'); renderUsers();
+  const r = await saveDBAndConfirmSync(); closeModal(); toast(r.synced ? 'User moved to Trash' : `⚠️ Deleted here, but failed to sync — ${r.error||'check your connection'}`); renderUsers();
 }
 
 /* ============================================================ BOOT ============================================================ */
