@@ -4269,7 +4269,7 @@ function editVehicle(id){
       <div class="field"><label class="fl" for="f_driver">Assigned Driver / Operator</label>
         <select id="f_driver"><option value="">— unassigned —</option>${DB.employees.filter(e=>e.active).map(e=>`<option value="${e.id}" ${v.assignedDriverId==e.id?'selected':''}>${esc(e.name)}</option>`).join('')}</select>
       </div>
-      <div class="field"><label class="fl" for="f_currentsite">Current Project Site</label><input id="f_currentsite" value="${esc(v.currentSite)}" list="siteList" placeholder="e.g. Binangonan">${siteDatalist()}</div>
+      <div class="field"><label class="fl" for="f_currentsite">Current Project Site</label><select id="f_currentsite">${siteSelectOptions(v.currentSite)}</select></div>
     </div>
     <div class="field"><label class="fl" for="f_notes">Notes</label><textarea id="f_notes" rows="2">${esc(v.notes)}</textarea></div>
     <div class="field"><label style="display:flex;align-items:center;gap:8px;font-size:13.5px"><input type="checkbox" id="f_active" ${v.active?'checked':''}> Active / in service</label></div>
@@ -4559,6 +4559,30 @@ function deleteReminder(id, vehId){
 const MATERIAL_UNITS = ['PCS','SET','ROLL','BAG','KG','SACK','M','PACK','BOX','GAL','LTR'];
 const EQUIPMENT_STATUSES = ['Working','Not Working','Under Repair','Retired'];
 
+function normalizeForMatch(s){
+  return String(s||'').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // strip accents (ñ -> n)
+    .replace(/[.,]/g, ' ') // turn punctuation into a space, not remove — "STO.NINO" shouldn't become "STONINO"
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+function matchSiteToCanonical(raw, canonicalList){
+  if(!raw) return null;
+  const normRaw = normalizeForMatch(raw);
+  for(const c of canonicalList){ if(normalizeForMatch(c) === normRaw) return c; }
+  let best = null, bestLen = 0;
+  for(const c of canonicalList){
+    const normC = normalizeForMatch(c);
+    if((normRaw.includes(normC) || normC.startsWith(normRaw)) && normC.length > bestLen){ best = c; bestLen = normC.length; }
+  }
+  return best;
+}
+function canonicalSiteList(){
+  return [...DB.customers.map(c=>c.name), 'HQ'];
+}
+function siteSelectOptions(selected){
+  return `<option value="">— select a site —</option>` + canonicalSiteList().map(s=>`<option value="${esc(s)}" ${s===selected?'selected':''}>${esc(s)}</option>`).join('');
+}
 function allSites(){
   const s = new Set();
   DB.materials.forEach(m=>{ if(m.site) s.add(m.site); });
@@ -4696,7 +4720,7 @@ function openTransferMaterial(id){
     <div class="stat-row"><span class="mut">Currently at</span><span>${esc(m.site)||'—'}</span></div>
     <div class="stat-row"><span class="mut">Available</span><span class="mono">${m.qty} ${esc(m.unit)}</span></div>
     <div class="field"><label class="fl" for="tr_qty">Quantity to Transfer</label><input id="tr_qty" type="number" step="0.01" max="${m.qty}" value="${m.qty}"></div>
-    <div class="field"><label class="fl" for="tr_to">Deliver To</label><input id="tr_to" list="siteList" placeholder="e.g. VET, or another project site"></div>
+    <div class="field"><label class="fl" for="tr_to">Deliver To</label><select id="tr_to">${siteSelectOptions('')}</select></div>
     <div class="field"><label class="fl" for="tr_note">Note (optional)</label><input id="tr_note" placeholder="e.g. Requested by Foreman for tie-down work"></div>
     ${siteDatalist()}
     <div class="btnrow">
@@ -4764,7 +4788,7 @@ function editMaterial(id){
       <div class="field"><label class="fl" for="f_price">Unit Price</label><input id="f_price" type="number" step="0.01" value="${m.unitPrice}"></div>
     </div>
     <div class="grid2">
-      <div class="field"><label class="fl" for="f_site">Site</label><input id="f_site" value="${esc(m.site)}" list="siteList" placeholder="e.g. VET"></div>
+      <div class="field"><label class="fl" for="f_site">Site</label><select id="f_site">${siteSelectOptions(m.site)}</select></div>
       <div class="field"><label class="fl" for="f_date">Date</label><input id="f_date" type="date" value="${esc(m.date)}"></div>
     </div>
     <div class="field"><label class="fl" for="f_from">Received From</label><input id="f_from" value="${esc(m.receivedFrom)}"></div>
@@ -5001,7 +5025,7 @@ function editEquipment(id){
       <div class="field"><label class="fl" for="f_status">Status</label><select id="f_status">${EQUIPMENT_STATUSES.map(s=>`<option ${e.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
     </div>
     <div class="grid2">
-      <div class="field"><label class="fl" for="f_site">Site</label><input id="f_site" value="${esc(e.site)}" list="siteList" placeholder="e.g. HQ"></div>
+      <div class="field"><label class="fl" for="f_site">Site</label><select id="f_site">${siteSelectOptions(e.site)}</select></div>
       <div class="field"><label class="fl" for="f_date">Date</label><input id="f_date" type="date" value="${esc(e.date)}"></div>
     </div>
     <div class="field"><label class="fl" for="f_from">Received From</label><input id="f_from" value="${esc(e.receivedFrom)}"></div>
@@ -5072,7 +5096,7 @@ function editPurchaseRequest(id){
   openModal(`
     <h3>${id?'Edit':'New'} Purchase Request</h3>
     <div class="grid2">
-      <div class="field"><label class="fl" for="f_site">Project Site</label><input id="f_site" value="${esc(r.site)}" list="siteList" placeholder="e.g. VET" ${foremanOnly?'disabled':''}></div>
+      <div class="field"><label class="fl" for="f_site">Project Site</label><select id="f_site" ${foremanOnly?'disabled':''}>${siteSelectOptions(r.site)}</select></div>
       <div class="field"><label class="fl" for="f_reqby">Requested By</label><input id="f_reqby" value="${esc(r.requestedBy)}"></div>
     </div>
     ${siteDatalist()}
@@ -5544,7 +5568,7 @@ function renderPayroll(){
 function newPayrollRun(){
   openModal(`
     <h3>New Payroll Run</h3>
-    <div class="field"><label class="fl" for="f_site">Project Site</label><input id="f_site" list="siteList" placeholder="e.g. VET, Estanzia..."></div>
+    <div class="field"><label class="fl" for="f_site">Project Site</label><select id="f_site">${siteSelectOptions('')}</select></div>
     ${siteDatalist()}
     <div class="field"><label class="fl" for="f_paydate">Pay Date</label><input id="f_paydate" type="date" value="${todayISO()}"></div>
     <div class="grid2">
@@ -5647,7 +5671,7 @@ function renderPayrollRun(runId){
       </div>
       <div class="field" style="max-width:320px;margin-bottom:0">
         <label class="fl">Project Site — where these employees worked</label>
-        <input value="${esc(pr.site)}" list="siteList" placeholder="e.g. VET, Estanzia..." onchange="updPayrollSite(${pr.id},this.value)">
+        <select onchange="updPayrollSite(${pr.id},this.value)">${siteSelectOptions(pr.site)}</select>
         ${siteDatalist()}
       </div>
       <div class="cards" style="margin-bottom:0;margin-top:14px">
@@ -6135,7 +6159,7 @@ function openAssignSiteModal(userId){
     ${payrollSite && payrollSite.site ? `
       <div class="stat-row"><span class="mut">According to payroll (last paid ${fmtDate(payrollSite.date)})</span><span><span class="badge b-Pending">${esc(payrollSite.site)}</span>${payrollSite.site!==u.currentSite?` <button class="btn ghost sm" onclick="document.getElementById('assignSiteInput').value='${esc(payrollSite.site).replace(/'/g,"\\'")}'">Use this</button>`:''}</span></div>
     ` : `<div class="mut" style="font-size:11.5px;margin-top:4px">No payroll records found yet to cross-check against.</div>`}
-    <div class="field" style="margin-top:10px"><label class="fl" for="assignSiteInput">Move to</label><input id="assignSiteInput" list="siteList" placeholder="e.g. Binangonan">${siteDatalist()}</div>
+    <div class="field" style="margin-top:10px"><label class="fl" for="assignSiteInput">Move to</label><select id="assignSiteInput">${siteSelectOptions('')}</select></div>
     <button class="btn save" onclick="assignUserSite(${userId})">Assign</button>
     ${history.length ? `
       <div class="mut" style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;font-weight:700;margin:16px 0 8px">Assignment History</div>
@@ -6666,6 +6690,32 @@ function runMigrationV27(){
   localStorage.setItem(MIGRATION_V27_KEY, '1');
   saveDB();
 }
+const MIGRATION_V28_KEY = 'buildsuite_migration_v28';
+function runMigrationV28(){
+  if(localStorage.getItem(MIGRATION_V28_KEY)) return;
+  const canonical = canonicalSiteList();
+  let fixed = 0;
+  const unmatched = new Set();
+  const normalizeField = (rec, field) => {
+    if(!rec[field]) return;
+    if(canonical.some(c=>c===rec[field])) return; // already exactly correct, nothing to do
+    const match = matchSiteToCanonical(rec[field], canonical);
+    if(match && match !== rec[field]){ rec[field] = match; fixed++; }
+    else if(!match){ unmatched.add(rec[field]); }
+  };
+  DB.materials.forEach(m=>normalizeField(m,'site'));
+  DB.equipment.forEach(e=>normalizeField(e,'site'));
+  DB.payrolls.forEach(p=>normalizeField(p,'site'));
+  DB.vehicles.forEach(v=>normalizeField(v,'currentSite'));
+  if(fixed > 0){
+    logNotification('Cleanup', `Cleaned up ${fixed} inconsistent site name${fixed===1?'':'s'} (e.g. "BINANGONAN" / "Binangonan" merged to one correct name)`, null);
+  }
+  if(unmatched.size){
+    console.warn('Some site values could not be confidently matched to a real project and were left as-is:', [...unmatched]);
+  }
+  localStorage.setItem(MIGRATION_V28_KEY, '1');
+  saveDB();
+}
 
 function mergeDB(local, cloud){
   // Union-merge: never silently drop a record either side added. On a genuine conflict
@@ -6819,6 +6869,7 @@ async function boot(){
   runMigrationV25();
   runMigrationV26();
   runMigrationV27();
+  runMigrationV28();
   loadCloudConfig();
   await restoreAuthSession();
   applyTheme(localStorage.getItem('buildsuite_theme') || (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
