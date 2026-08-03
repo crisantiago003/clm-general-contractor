@@ -6722,6 +6722,18 @@ function mergeDB(local, cloud){
   // (same id/name edited differently on both sides) local wins, since that's the copy
   // the person is actively looking at right now.
   const merged = JSON.parse(JSON.stringify(local));
+
+  // Anything sitting in local Trash was DELIBERATELY deleted — if the cloud's copy hasn't
+  // caught up yet (push still in flight, or it failed), a plain union-merge would otherwise
+  // treat that stale cloud record as "new" and resurrect something the person just removed.
+  const trashedIds = {};
+  (merged.trash || []).forEach(t => {
+    const arrKey = t.type === 'payrollRun' ? 'payrolls' : TRASH_TYPE_ARRAYS[t.type];
+    if(!arrKey) return;
+    if(!trashedIds[arrKey]) trashedIds[arrKey] = new Set();
+    trashedIds[arrKey].add(t.type === 'payrollRun' ? t.data.run.id : t.data.id);
+  });
+
   Object.keys(cloud).forEach(key => {
     const cloudVal = cloud[key];
     if(Array.isArray(cloudVal)){
@@ -6731,7 +6743,12 @@ function mergeDB(local, cloud){
         cloudVal.forEach(u=>{ if(!localNames.has((u.name||'').trim().toLowerCase())) merged.users.push(u); });
       } else {
         const localIds = new Set(merged[key].map(r=>r.id));
-        cloudVal.forEach(rec=>{ if(!localIds.has(rec.id)) merged[key].push(rec); });
+        const deleted = trashedIds[key] || new Set();
+        cloudVal.forEach(rec=>{
+          if(localIds.has(rec.id)) return;
+          if(deleted.has(rec.id)) return; // deliberately deleted locally — don't resurrect it from a stale cloud copy
+          merged[key].push(rec);
+        });
       }
     } else if(cloudVal && typeof cloudVal === 'object'){
       merged[key] = { ...cloudVal, ...(merged[key]||{}) }; // cloud fills gaps, local settings take priority on conflict
