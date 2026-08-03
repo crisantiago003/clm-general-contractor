@@ -5504,6 +5504,7 @@ function renderPayrollRun(runId){
             ${['Pending','Approved','Completed','Paid'].map(s=>`<option ${pr.status===s?'selected':''}>${s}</option>`).join('')}
           </select>
           <button class="btn ghost sm" onclick="exportPayrollRunCSV(${pr.id})">Export CSV</button>
+          <button class="btn ghost sm" onclick="printPayrollSummary(${pr.id})">🖨 Print Summary (1 page)</button>
           <button class="btn ghost sm" onclick="printWholeRun(${pr.id})">🖨 Print Whole Run</button>
           <button class="btn del sm" onclick="deletePayrollRun(${pr.id})">Delete Run</button>
         </div>
@@ -5608,6 +5609,49 @@ function openPayslip(paidId){
       <button class="btn ghost" onclick="closeModal()">Close</button>
     </div>
   `);
+}
+function printPayrollSummary(runId){
+  const paidList = DB.paidEmployees.filter(p=>p.payrollId===runId);
+  if(!paidList.length){ toast('No paid employees in this run to print'); return; }
+  const pr = DB.payrolls.find(x=>x.id===runId);
+  const rows = paidList.map((p,i)=>{
+    const rate = p.regHours > 0 ? Math.round((p.regPay / p.regHours) * 100) / 100 : p.regPay;
+    return `
+      <tr>
+        <td class="num">${i+1}</td>
+        <td class="name">${esc(p.employeeName)}</td>
+        <td class="num">${money0(rate)}</td>
+        <td class="num">${p.payType==='Daily' ? p.regHours : ''}</td>
+        <td class="num">${p.otHours||''}</td>
+        <td class="num">${p.otPay?money0(p.otPay):''}</td>
+        <td class="num total">${money0(p.netPay)}</td>
+      </tr>`;
+  }).join('');
+  const grandTotal = paidList.reduce((s,p)=>s+(Number(p.netPay)||0), 0);
+  const w = window.open('', '_blank');
+  w.document.write(`<html><head><title>Payroll Summary — ${esc(pr&&pr.site)||''}</title><style>
+    @page { size: portrait; margin: 12mm; }
+    body{font-family:-apple-system,Arial,sans-serif;margin:0;padding:0;color:#111}
+    h1{font-size:13px;margin:0 0 2px}
+    .sub{font-size:11px;margin:0 0 10px;color:#333}
+    table{width:100%;border-collapse:collapse;font-size:11px}
+    th,td{border:1px solid #999;padding:4px 6px}
+    th{background:#e8e8e8;text-align:center;font-size:10.5px}
+    td.name{text-align:left}
+    td.num{text-align:right;font-variant-numeric:tabular-nums}
+    td.total{font-weight:700}
+    tfoot td{font-weight:800;border-top:2px solid #333}
+  </style></head><body>
+    <h1>PROJECT SITE: ${esc((pr&&pr.site)||'—').toUpperCase()}</h1>
+    <div class="sub">DATE COVERAGE: ${pr?fmtDate(pr.fromDate).toUpperCase():''} - ${pr?fmtDate(pr.toDate).toUpperCase():''}</div>
+    <table>
+      <thead><tr><th></th><th>NAME</th><th>RATE</th><th># OF DAYS</th><th># OF OT</th><th>OT</th><th>TOTAL PAY</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr><td colspan="6" style="text-align:right">TOTAL</td><td class="num">${money0(grandTotal)}</td></tr></tfoot>
+    </table>
+  </body></html>`);
+  w.document.close();
+  setTimeout(()=>w.print(), 300);
 }
 function printWholeRun(runId){
   const paidList = DB.paidEmployees.filter(p=>p.payrollId===runId);
