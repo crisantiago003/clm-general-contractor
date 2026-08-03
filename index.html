@@ -600,7 +600,7 @@ function openPrepareForResale(){
       • But this copy will still be <b>connected to that same Supabase project</b> unless you disconnect it. Set up a brand new, separate Supabase project for the new client <b>first</b>, then connect this cleaned copy to it — never reuse your own company's project for a client.<br>
       • This action cannot be undone on this device.
     </div>
-    <div class="field"><label class="fl">Type DELETE to confirm</label><input id="resaleConfirm" placeholder="DELETE"></div>
+    <div class="field"><label class="fl" for="resaleConfirm">Type DELETE to confirm</label><input id="resaleConfirm" placeholder="DELETE"></div>
     <div class="btnrow">
       <button class="btn del" onclick="runPrepareForResale()">Wipe This Copy</button>
       <button class="btn ghost" onclick="closeModal()">Cancel</button>
@@ -706,7 +706,7 @@ function initials(name){ return (name||'?').split(' ').filter(Boolean).slice(0,2
 function avatarHtml(user, size){
   const s = size || 22;
   if(user && user.profilePicture){
-    return `<img src="${user.profilePicture}" style="width:${s}px;height:${s}px;border-radius:50%;object-fit:cover;display:block">`;
+    return `<img src="${user.profilePicture}" alt="${esc(user.name)}'s profile photo" style="width:${s}px;height:${s}px;border-radius:50%;object-fit:cover;display:block">`;
   }
   return initials(user ? user.name : '');
 }
@@ -1397,8 +1397,8 @@ function openSettings(){
       <label class="fl">Tax Rates</label>
       <div class="mut" style="font-size:12px;margin-bottom:8px">Applied automatically on Invoices and Purchase Orders. Enter as a percentage.</div>
       <div class="grid2">
-        <div class="field"><label class="fl">Sales Tax (Invoices)</label><input id="taxSales" type="number" step="0.1" value="${((DB.settings.salesTaxRate||0)*100).toFixed(1)}"></div>
-        <div class="field"><label class="fl">PO Tax (Purchases)</label><input id="taxPO" type="number" step="0.1" value="${((DB.settings.poTaxRate||0)*100).toFixed(1)}"></div>
+        <div class="field"><label class="fl" for="taxSales">Sales Tax (Invoices)</label><input id="taxSales" type="number" step="0.1" value="${((DB.settings.salesTaxRate||0)*100).toFixed(1)}"></div>
+        <div class="field"><label class="fl" for="taxPO">PO Tax (Purchases)</label><input id="taxPO" type="number" step="0.1" value="${((DB.settings.poTaxRate||0)*100).toFixed(1)}"></div>
       </div>
       <button class="btn ghost sm" onclick="saveTaxRates()">Save Tax Rates</button>
     </div>
@@ -1429,7 +1429,7 @@ function openManageAnnouncements(){
   const list = [...DB.announcements].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   openModal(`
     <h3>📣 Manage Announcements</h3>
-    <div class="field"><label class="fl">New Announcement</label>
+    <div class="field"><label class="fl" for="annTitle">New Announcement</label>
       <input id="annTitle" placeholder="Title" style="margin-bottom:8px">
       <textarea id="annBody" rows="3" placeholder="Message"></textarea>
     </div>
@@ -1542,9 +1542,9 @@ function openManageTestimonials(){
   openModal(`
     <h3>⭐ Client Testimonials</h3>
     <p style="font-size:13px;color:var(--muted)">A few honest words from real clients go a long way on a public homepage — only add ones you actually received.</p>
-    <div class="field"><label class="fl">Client Name</label><input id="tm_client" placeholder="e.g. Engr. Maria Santos"></div>
-    <div class="field"><label class="fl">Project</label><input id="tm_project" placeholder="e.g. Binangonan Residential Build"></div>
-    <div class="field"><label class="fl">Quote</label><textarea id="tm_quote" rows="3" placeholder="What they said about working with you"></textarea></div>
+    <div class="field"><label class="fl" for="tm_client">Client Name</label><input id="tm_client" placeholder="e.g. Engr. Maria Santos"></div>
+    <div class="field"><label class="fl" for="tm_project">Project</label><input id="tm_project" placeholder="e.g. Binangonan Residential Build"></div>
+    <div class="field"><label class="fl" for="tm_quote">Quote</label><textarea id="tm_quote" rows="3" placeholder="What they said about working with you"></textarea></div>
     <button class="btn save" onclick="saveTestimonial()">Add Testimonial</button>
     <div class="mut" style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;font-weight:700;margin:16px 0 8px">Posted</div>
     <div style="max-height:240px;overflow-y:auto">
@@ -1583,7 +1583,7 @@ function openManageGallery(){
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px;max-height:340px;overflow-y:auto">
       ${photos.map(p=>`
         <div style="position:relative">
-          <img src="${p.url}" style="width:100%;height:90px;object-fit:cover;border-radius:8px;border:1px solid var(--line)">
+          <img src="${p.url}" alt="${esc(p.caption)||'Gallery photo'}" style="width:100%;height:90px;object-fit:cover;border-radius:8px;border:1px solid var(--line)">
           <input value="${esc(p.caption)}" placeholder="Caption" onchange="updateGalleryCaption(${p.id}, this.value)" style="margin-top:4px;font-size:11px;padding:5px 7px">
           <button class="x" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);border-radius:50%" onclick="deleteGalleryPhoto(${p.id})">✕</button>
         </div>
@@ -1749,7 +1749,7 @@ function renderLanding(){
       <p class="lead">${DB.galleryPhotos.length ? 'A look at some of our completed and ongoing work.' : 'A track record across a range of build types and site conditions.'}</p>
       <div class="proj-grid">
         ${DB.galleryPhotos.length ? [...DB.galleryPhotos].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(p=>`
-          <div class="proj-card"><div class="ph" style="background:none;padding:0"><img src="${p.url}" style="width:100%;height:100%;object-fit:cover"></div><div class="info"><h4>${esc(p.caption)||'Project'}</h4></div></div>
+          <div class="proj-card"><div class="ph" style="background:none;padding:0"><img src="${p.url}" alt="${esc(p.caption)||'Completed project photo'}" style="width:100%;height:100%;object-fit:cover"></div><div class="info"><h4>${esc(p.caption)||'Project'}</h4></div></div>
         `).join('') : `
         <div class="proj-card"><div class="ph">🏠</div><div class="info"><h4>Residential</h4><span>Homes, subdivisions & renovations</span></div></div>
         <div class="proj-card"><div class="ph">🏢</div><div class="info"><h4>Commercial</h4><span>Retail, office & mixed-use builds</span></div></div>
@@ -1795,9 +1795,9 @@ function renderLanding(){
       <p class="lead">Reach out for a quote, a site consultation, or just to ask a question.</p>
       <div class="landing-contact">
         <div class="panel">
-          <div class="field"><label class="fl">Your Name</label><input id="ldName" placeholder="Juan Dela Cruz"></div>
-          <div class="field"><label class="fl">Email</label><input id="ldEmail" type="email" placeholder="you@email.com"></div>
-          <div class="field"><label class="fl">Tell us about your project</label><textarea id="ldMessage" rows="4" placeholder="Project type, location, timeline..."></textarea></div>
+          <div class="field"><label class="fl" for="ldName">Your Name</label><input id="ldName" placeholder="Juan Dela Cruz"></div>
+          <div class="field"><label class="fl" for="ldEmail">Email</label><input id="ldEmail" type="email" placeholder="you@email.com"></div>
+          <div class="field"><label class="fl" for="ldMessage">Tell us about your project</label><textarea id="ldMessage" rows="4" placeholder="Project type, location, timeline..."></textarea></div>
           <button class="btn pri" onclick="submitContactForm()" style="width:100%;justify-content:center">Send Message</button>
         </div>
         <div class="panel">
@@ -1823,9 +1823,9 @@ function renderFirstTimeSetup(){
     <div class="mark">${companyMark()}</div>
     <h1>Welcome — let's set this up</h1>
     <div class="sub">This looks like a brand new workspace. Set your company name and create the first Admin account — this is the only login that exists until you create more.</div>
-    <div class="field"><label class="fl">Company Name</label><input id="fts_company" placeholder="e.g. ABC Builders Corporation"></div>
-    <div class="field"><label class="fl">Your Full Name</label><input id="fts_name" placeholder="e.g. Juan Dela Cruz"></div>
-    <div class="field"><label class="fl">Choose a Username</label><input id="fts_username" placeholder="e.g. admin" autocomplete="username"></div>
+    <div class="field"><label class="fl" for="fts_company">Company Name</label><input id="fts_company" placeholder="e.g. ABC Builders Corporation"></div>
+    <div class="field"><label class="fl" for="fts_name">Your Full Name</label><input id="fts_name" placeholder="e.g. Juan Dela Cruz"></div>
+    <div class="field"><label class="fl" for="fts_username">Choose a Username</label><input id="fts_username" placeholder="e.g. admin" autocomplete="username"></div>
     ${pwField('fts_pw','Choose a Password','At least 6 characters','new-password')}
     ${pwField('fts_pw2','Confirm Password','Re-enter password','new-password')}
     <div id="ftsErr" style="color:var(--danger);font-size:13px;min-height:18px"></div>
@@ -1891,7 +1891,7 @@ function renderLogin(){
     ${sub.authMode==='signin' ? `
       <h1>${esc(companyDisplayName())}</h1>
       <div class="sub">Sign in to your construction management workspace</div>
-      <div class="field"><label class="fl">Username</label><input id="loginUser" placeholder="Your username" autocomplete="username"></div>
+      <div class="field"><label class="fl" for="loginUser">Username</label><input id="loginUser" placeholder="Your username" autocomplete="username"></div>
       ${pwField('loginPw','Password','Password','current-password')}
       <button class="btn pri" style="width:100%;justify-content:center" onclick="doLogin()">Sign in</button>
       <div class="loginErr" id="loginErr"></div>
@@ -1900,20 +1900,20 @@ function renderLogin(){
       <h1>Create Your Account</h1>
       <div class="sub">New accounts start with basic access — an Admin can grant more once you're set up.</div>
       <div class="grid3">
-        <div class="field"><label class="fl">First Name</label><input id="suFirstName" placeholder="Juan" autocomplete="given-name"></div>
-        <div class="field"><label class="fl">Middle Name</label><input id="suMiddleName" placeholder="(optional)" autocomplete="additional-name"></div>
-        <div class="field"><label class="fl">Last Name</label><input id="suLastName" placeholder="Dela Cruz" autocomplete="family-name"></div>
+        <div class="field"><label class="fl" for="suFirstName">First Name</label><input id="suFirstName" placeholder="Juan" autocomplete="given-name"></div>
+        <div class="field"><label class="fl" for="suMiddleName">Middle Name</label><input id="suMiddleName" placeholder="(optional)" autocomplete="additional-name"></div>
+        <div class="field"><label class="fl" for="suLastName">Last Name</label><input id="suLastName" placeholder="Dela Cruz" autocomplete="family-name"></div>
       </div>
       <div class="field"><label class="fl">Username <span class="mut" style="text-transform:none;font-weight:400">(this is what you'll type to log in)</span></label><input id="suUsername" placeholder="e.g. jdelacruz" autocomplete="username"></div>
-      <div class="field"><label class="fl">Position</label><select id="suPosition">${empTypeOptions('')}</select></div>
+      <div class="field"><label class="fl" for="suPosition">Position</label><select id="suPosition">${empTypeOptions('')}</select></div>
       <div class="grid2">
         ${pwField('suPw','Password','At least 4 characters','new-password')}
         ${pwField('suPw2','Confirm Password','Retype password','new-password')}
       </div>
-      <div class="field"><label class="fl">Personal Email</label><input id="suEmail" type="email" placeholder="you@email.com" autocomplete="email"></div>
-      <div class="field"><label class="fl">Phone Number</label><input id="suPhone" placeholder="09XX XXX XXXX" autocomplete="tel"></div>
-      <div class="field"><label class="fl">Address</label><input id="suAddress" placeholder="Street, Barangay, City" autocomplete="street-address"></div>
-      <div class="field"><label class="fl">Company Invite Code</label><input id="suCode" placeholder="Ask your Admin for this" autocomplete="off"></div>
+      <div class="field"><label class="fl" for="suEmail">Personal Email</label><input id="suEmail" type="email" placeholder="you@email.com" autocomplete="email"></div>
+      <div class="field"><label class="fl" for="suPhone">Phone Number</label><input id="suPhone" placeholder="09XX XXX XXXX" autocomplete="tel"></div>
+      <div class="field"><label class="fl" for="suAddress">Address</label><input id="suAddress" placeholder="Street, Barangay, City" autocomplete="street-address"></div>
+      <div class="field"><label class="fl" for="suCode">Company Invite Code</label><input id="suCode" placeholder="Ask your Admin for this" autocomplete="off"></div>
       <button class="btn pri" style="width:100%;justify-content:center" onclick="doSignup()">Create Account</button>
       <div class="loginErr" id="loginErr"></div>
       <div class="authSwitch">Already have an account? <a onclick="sub.authMode='signin';renderLogin()">Sign in</a></div>
@@ -2360,14 +2360,14 @@ function renderDashboard(){
       <div class="ph"><h3>Project Profit & Expense Report</h3>${canEdit()?'<button class="btn ghost sm" onclick="editCustomer(null)">+ New Project</button>':''}</div>
       <div class="mut" style="font-size:12.5px;margin-bottom:12px">Pick a project and a date range to see its revenue, costs, and profit pulled from orders, payroll, materials, fuel, and other expenses.</div>
       <div class="grid3">
-        <div class="field"><label class="fl">Project Site</label>
+        <div class="field"><label class="fl" for="dashProjSelect">Project Site</label>
           <select id="dashProjSelect">
             <option value="">— select a project —</option>
             ${[...DB.customers].sort((a,b)=>a.name.localeCompare(b.name)).map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}
           </select>
         </div>
-        <div class="field"><label class="fl">From</label><input id="dashProjFrom" type="date"></div>
-        <div class="field"><label class="fl">To</label><input id="dashProjTo" type="date" value="${todayISO()}"></div>
+        <div class="field"><label class="fl" for="dashProjFrom">From</label><input id="dashProjFrom" type="date"></div>
+        <div class="field"><label class="fl" for="dashProjTo">To</label><input id="dashProjTo" type="date" value="${todayISO()}"></div>
       </div>
       <button class="btn pri" onclick="viewProjectReport()">View Report</button>
     </div>
@@ -3010,13 +3010,13 @@ function editProduct(id){
   const p = id ? productById(id) : {id:null, upc:'', name:'', description:'', purchasePrice:0, salesPrice:0};
   openModal(`
     <h3>${id?'Edit':'New'} Product</h3>
-    <div class="field"><label class="fl">Product Name *</label><input id="f_name" value="${esc(p.name)}"></div>
-    <div class="field"><label class="fl">Description</label><textarea id="f_desc" rows="2">${esc(p.description)}</textarea></div>
+    <div class="field"><label class="fl" for="f_name">Product Name *</label><input id="f_name" value="${esc(p.name)}"></div>
+    <div class="field"><label class="fl" for="f_desc">Description</label><textarea id="f_desc" rows="2">${esc(p.description)}</textarea></div>
     <div class="grid2">
-      <div class="field"><label class="fl">Purchase Price</label><input id="f_pp" type="number" step="0.01" value="${p.purchasePrice}"></div>
-      <div class="field"><label class="fl">Sales Price</label><input id="f_sp" type="number" step="0.01" value="${p.salesPrice}"></div>
+      <div class="field"><label class="fl" for="f_pp">Purchase Price</label><input id="f_pp" type="number" step="0.01" value="${p.purchasePrice}"></div>
+      <div class="field"><label class="fl" for="f_sp">Sales Price</label><input id="f_sp" type="number" step="0.01" value="${p.salesPrice}"></div>
     </div>
-    <div class="field"><label class="fl">UPC / SKU</label><input id="f_upc" value="${esc(p.upc)}"></div>
+    <div class="field"><label class="fl" for="f_upc">UPC / SKU</label><input id="f_upc" value="${esc(p.upc)}"></div>
     ${id?`<div class="mut" style="font-size:12.5px">Stock (${stockFor(id)}) and value on hand are calculated automatically from purchase and invoice history.</div>`:''}
     <div class="btnrow">
       <button class="btn save" onclick="saveProduct(${id})">Save</button>
@@ -3103,7 +3103,7 @@ function openAddActivity(custId){
   openModal(`
     <h3>Add Project Activity</h3>
     <p style="font-size:13px;color:var(--muted)">Break the project into phases matching your actual Project Program — Foundation, Framing, Roofing, etc. — so progress can be logged against real work, not a guess.</p>
-    <div class="field"><label class="fl">Activity Name</label><input id="act_name" placeholder="e.g. Foundation"></div>
+    <div class="field"><label class="fl" for="act_name">Activity Name</label><input id="act_name" placeholder="e.g. Foundation"></div>
     <div class="field"><label class="fl">Weight <span class="mut" style="text-transform:none;font-weight:400">(how much of the whole project this represents — e.g. 20)</span></label><input id="act_weight" type="number" value="10" min="1"></div>
     <div class="grid2">
       <div class="field"><label class="fl">Planned Start <span class="mut" style="text-transform:none;font-weight:400">(optional)</span></label><input id="act_pstart" type="date"></div>
@@ -3133,11 +3133,11 @@ function openEditActivity(custId, activityId){
   if(!a) return;
   openModal(`
     <h3>Edit Activity</h3>
-    <div class="field"><label class="fl">Activity Name</label><input id="act_name" value="${esc(a.name)}"></div>
-    <div class="field"><label class="fl">Weight</label><input id="act_weight" type="number" value="${a.weight}" min="1"></div>
+    <div class="field"><label class="fl" for="act_name">Activity Name</label><input id="act_name" value="${esc(a.name)}"></div>
+    <div class="field"><label class="fl" for="act_weight">Weight</label><input id="act_weight" type="number" value="${a.weight}" min="1"></div>
     <div class="grid2">
-      <div class="field"><label class="fl">Planned Start</label><input id="act_pstart" type="date" value="${esc(a.plannedStart)}"></div>
-      <div class="field"><label class="fl">Planned End</label><input id="act_pend" type="date" value="${esc(a.plannedEnd)}"></div>
+      <div class="field"><label class="fl" for="act_pstart">Planned Start</label><input id="act_pstart" type="date" value="${esc(a.plannedStart)}"></div>
+      <div class="field"><label class="fl" for="act_pend">Planned End</label><input id="act_pend" type="date" value="${esc(a.plannedEnd)}"></div>
     </div>
     <div class="mut" style="font-size:11.5px">Current logged completion: ${a.pct||0}%. Use "Log Update" instead if you just want to record new progress — this is for fixing the name, weight, or schedule.</div>
     <div class="btnrow">
@@ -3178,8 +3178,8 @@ function openLogActivityUpdate(custId, activityId){
   if(!a) return;
   openModal(`
     <h3>Log Update — ${esc(a.name)}</h3>
-    <div class="field"><label class="fl">What was done</label><textarea id="log_note" rows="3" placeholder="e.g. Finished pouring the second floor slab today"></textarea></div>
-    <div class="field"><label class="fl">New Completion for this activity</label><input id="log_pct" type="range" min="0" max="100" step="5" value="${a.pct||0}" oninput="document.getElementById('logPctLabel').textContent=this.value+'%'"><div class="mut" style="text-align:right;font-size:12px" id="logPctLabel">${a.pct||0}%</div></div>
+    <div class="field"><label class="fl" for="log_note">What was done</label><textarea id="log_note" rows="3" placeholder="e.g. Finished pouring the second floor slab today"></textarea></div>
+    <div class="field"><label class="fl" for="log_pct">New Completion for this activity</label><input id="log_pct" type="range" min="0" max="100" step="5" value="${a.pct||0}" oninput="document.getElementById('logPctLabel').textContent=this.value+'%'"><div class="mut" style="text-align:right;font-size:12px" id="logPctLabel">${a.pct||0}%</div></div>
     <div class="btnrow">
       <button class="btn save" onclick="saveActivityLogUpdate(${custId},'${activityId}')">Save Update</button>
       <button class="btn ghost" onclick="closeModal()">Cancel</button>
@@ -3205,23 +3205,23 @@ function editCustomer(id){
   const c = id ? customerById(id) : {id:null,name:'',address:'',city:'',state:'',zip:'',phone:'',email:'',budget:'',projectStatus:'Active',completedDate:'',completionPct:0};
   openModal(`
     <h3>${id?'Edit':'New'} Project</h3>
-    <div class="field"><label class="fl">Project / Customer Name *</label><input id="f_name" value="${esc(c.name)}"></div>
-    <div class="field"><label class="fl">Address</label><input id="f_addr" value="${esc(c.address)}"></div>
+    <div class="field"><label class="fl" for="f_name">Project / Customer Name *</label><input id="f_name" value="${esc(c.name)}"></div>
+    <div class="field"><label class="fl" for="f_addr">Address</label><input id="f_addr" value="${esc(c.address)}"></div>
     <div class="grid3">
-      <div class="field"><label class="fl">City</label><input id="f_city" value="${esc(c.city)}"></div>
-      <div class="field"><label class="fl">State</label><input id="f_state" value="${esc(c.state)}"></div>
-      <div class="field"><label class="fl">Zip</label><input id="f_zip" value="${esc(c.zip)}"></div>
+      <div class="field"><label class="fl" for="f_city">City</label><input id="f_city" value="${esc(c.city)}"></div>
+      <div class="field"><label class="fl" for="f_state">State</label><input id="f_state" value="${esc(c.state)}"></div>
+      <div class="field"><label class="fl" for="f_zip">Zip</label><input id="f_zip" value="${esc(c.zip)}"></div>
     </div>
     <div class="grid2">
-      <div class="field"><label class="fl">Phone</label><input id="f_phone" value="${esc(c.phone)}"></div>
-      <div class="field"><label class="fl">Email</label><input id="f_email" value="${esc(c.email)}"></div>
+      <div class="field"><label class="fl" for="f_phone">Phone</label><input id="f_phone" value="${esc(c.phone)}"></div>
+      <div class="field"><label class="fl" for="f_email">Email</label><input id="f_email" value="${esc(c.email)}"></div>
     </div>
     <div class="grid3">
-      <div class="field"><label class="fl">Project Budget</label><input id="f_budget" type="number" step="0.01" value="${c.budget||''}" placeholder="Total approved budget"></div>
-      <div class="field"><label class="fl">Project Status</label><select id="f_pstatus" onchange="onProjectStatusChange()">${['Active','On Hold','Completed','Cancelled'].map(s=>`<option ${c.projectStatus===s?'selected':''}>${s}</option>`).join('')}</select></div>
-      <div class="field"><label class="fl">Completed Date</label><input id="f_completed" type="date" value="${esc(c.completedDate)}"></div>
+      <div class="field"><label class="fl" for="f_budget">Project Budget</label><input id="f_budget" type="number" step="0.01" value="${c.budget||''}" placeholder="Total approved budget"></div>
+      <div class="field"><label class="fl" for="f_pstatus">Project Status</label><select id="f_pstatus" onchange="onProjectStatusChange()">${['Active','On Hold','Completed','Cancelled'].map(s=>`<option ${c.projectStatus===s?'selected':''}>${s}</option>`).join('')}</select></div>
+      <div class="field"><label class="fl" for="f_completed">Completed Date</label><input id="f_completed" type="date" value="${esc(c.completedDate)}"></div>
     </div>
-    <div class="field"><label class="fl">Completion</label><input id="f_completion" type="range" min="0" max="100" step="5" value="${c.completionPct||0}" oninput="document.getElementById('completionLabel').textContent=this.value+'%'"><div class="mut" style="text-align:right;font-size:12px" id="completionLabel">${c.completionPct||0}%</div></div>
+    <div class="field"><label class="fl" for="f_completion">Completion</label><input id="f_completion" type="range" min="0" max="100" step="5" value="${c.completionPct||0}" oninput="document.getElementById('completionLabel').textContent=this.value+'%'"><div class="mut" style="text-align:right;font-size:12px" id="completionLabel">${c.completionPct||0}%</div></div>
     <div class="btnrow">
       <button class="btn save" onclick="saveCustomer(${id})">Save</button>
       <button class="btn ghost" onclick="closeModal()">Cancel</button>
@@ -3491,17 +3491,17 @@ function editJob(id, custId){
   const j = id ? jobById(id) : {id:null, customerId:custId, name:'', address:'', city:'', state:'', zip:'', contactName:'', phone:'', email:''};
   openModal(`
     <h3>${id?'Edit':'New'} Job</h3>
-    <div class="field"><label class="fl">Job Name *</label><input id="f_name" value="${esc(j.name)}"></div>
-    <div class="field"><label class="fl">Job Address</label><input id="f_addr" value="${esc(j.address)}"></div>
+    <div class="field"><label class="fl" for="f_name">Job Name *</label><input id="f_name" value="${esc(j.name)}"></div>
+    <div class="field"><label class="fl" for="f_addr">Job Address</label><input id="f_addr" value="${esc(j.address)}"></div>
     <div class="grid3">
-      <div class="field"><label class="fl">City</label><input id="f_city" value="${esc(j.city)}"></div>
-      <div class="field"><label class="fl">State</label><input id="f_state" value="${esc(j.state)}"></div>
-      <div class="field"><label class="fl">Zip</label><input id="f_zip" value="${esc(j.zip)}"></div>
+      <div class="field"><label class="fl" for="f_city">City</label><input id="f_city" value="${esc(j.city)}"></div>
+      <div class="field"><label class="fl" for="f_state">State</label><input id="f_state" value="${esc(j.state)}"></div>
+      <div class="field"><label class="fl" for="f_zip">Zip</label><input id="f_zip" value="${esc(j.zip)}"></div>
     </div>
-    <div class="field"><label class="fl">Job Site Contact</label><input id="f_contact" value="${esc(j.contactName)}"></div>
+    <div class="field"><label class="fl" for="f_contact">Job Site Contact</label><input id="f_contact" value="${esc(j.contactName)}"></div>
     <div class="grid2">
-      <div class="field"><label class="fl">Phone</label><input id="f_phone" value="${esc(j.phone)}"></div>
-      <div class="field"><label class="fl">Email</label><input id="f_email" value="${esc(j.email)}"></div>
+      <div class="field"><label class="fl" for="f_phone">Phone</label><input id="f_phone" value="${esc(j.phone)}"></div>
+      <div class="field"><label class="fl" for="f_email">Email</label><input id="f_email" value="${esc(j.email)}"></div>
     </div>
     <div class="btnrow">
       <button class="btn save" onclick="saveJob(${id},${custId})">Save</button>
@@ -3625,10 +3625,10 @@ function openEditPurchaseNote(vendorId, noteId){
   if(!n) return;
   openModal(`
     <h3>Edit Purchase Entry</h3>
-    <div class="field"><label class="fl">Date</label><input id="pn_edate" type="date" value="${esc(n.date)}"></div>
-    <div class="field"><label class="fl">Project Site</label><select id="pn_esite"><option value="">— none —</option>${DB.customers.map(c=>`<option value="${esc(c.name)}" ${n.site===c.name?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div>
-    <div class="field"><label class="fl">Description</label><input id="pn_edesc" value="${esc(n.description)}"></div>
-    <div class="field"><label class="fl">Amount</label><input id="pn_eamount" type="number" step="0.01" value="${n.amount||''}"></div>
+    <div class="field"><label class="fl" for="pn_edate">Date</label><input id="pn_edate" type="date" value="${esc(n.date)}"></div>
+    <div class="field"><label class="fl" for="pn_esite">Project Site</label><select id="pn_esite"><option value="">— none —</option>${DB.customers.map(c=>`<option value="${esc(c.name)}" ${n.site===c.name?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div>
+    <div class="field"><label class="fl" for="pn_edesc">Description</label><input id="pn_edesc" value="${esc(n.description)}"></div>
+    <div class="field"><label class="fl" for="pn_eamount">Amount</label><input id="pn_eamount" type="number" step="0.01" value="${n.amount||''}"></div>
     <div class="btnrow">
       <button class="btn save" onclick="savePurchaseNoteEdit(${vendorId},'${noteId}')">Save</button>
       <button class="btn ghost" onclick="editVendor(${vendorId})">Cancel</button>
@@ -3660,32 +3660,32 @@ function editVendor(id){
   const v = id ? vendorById(id) : {id:null,name:'',address:'',city:'',state:'',zip:'',phone:'',email:'',contactPerson:'',item:'',classification:'',paymentDetails:'',pcabNumber:'',pcabCategory:'',pcabExpiry:''};
   openModal(`
     <h3>${id?'Edit':'New'} Supplier</h3>
-    <div class="field"><label class="fl">Name *</label><input id="f_name" value="${esc(v.name)}"></div>
+    <div class="field"><label class="fl" for="f_name">Name *</label><input id="f_name" value="${esc(v.name)}"></div>
     <div class="grid2">
-      <div class="field"><label class="fl">Category</label><select id="f_class"><option value="">—</option>${VENDOR_CLASSIFICATIONS.map(c=>`<option ${v.classification===c?'selected':''}>${c}</option>`).join('')}</select></div>
-      <div class="field"><label class="fl">Item / Specialty</label><input id="f_item" value="${esc(v.item)}" placeholder="e.g. Panel Lights, Pipes"></div>
+      <div class="field"><label class="fl" for="f_class">Category</label><select id="f_class"><option value="">—</option>${VENDOR_CLASSIFICATIONS.map(c=>`<option ${v.classification===c?'selected':''}>${c}</option>`).join('')}</select></div>
+      <div class="field"><label class="fl" for="f_item">Item / Specialty</label><input id="f_item" value="${esc(v.item)}" placeholder="e.g. Panel Lights, Pipes"></div>
     </div>
-    <div class="field"><label class="fl">Address</label><input id="f_addr" value="${esc(v.address)}"></div>
+    <div class="field"><label class="fl" for="f_addr">Address</label><input id="f_addr" value="${esc(v.address)}"></div>
     <div class="grid3">
-      <div class="field"><label class="fl">City</label><input id="f_city" value="${esc(v.city)}"></div>
-      <div class="field"><label class="fl">State</label><input id="f_state" value="${esc(v.state)}"></div>
-      <div class="field"><label class="fl">Zip</label><input id="f_zip" value="${esc(v.zip)}"></div>
+      <div class="field"><label class="fl" for="f_city">City</label><input id="f_city" value="${esc(v.city)}"></div>
+      <div class="field"><label class="fl" for="f_state">State</label><input id="f_state" value="${esc(v.state)}"></div>
+      <div class="field"><label class="fl" for="f_zip">Zip</label><input id="f_zip" value="${esc(v.zip)}"></div>
     </div>
     <div class="grid2">
-      <div class="field"><label class="fl">Contact Person</label><input id="f_contact" value="${esc(v.contactPerson)}"></div>
-      <div class="field"><label class="fl">Payment Details</label><input id="f_paydetails" value="${esc(v.paymentDetails)}" placeholder="e.g. Bank Deposit, GCash"></div>
+      <div class="field"><label class="fl" for="f_contact">Contact Person</label><input id="f_contact" value="${esc(v.contactPerson)}"></div>
+      <div class="field"><label class="fl" for="f_paydetails">Payment Details</label><input id="f_paydetails" value="${esc(v.paymentDetails)}" placeholder="e.g. Bank Deposit, GCash"></div>
     </div>
     <div class="grid2">
-      <div class="field"><label class="fl">Phone</label><input id="f_phone" value="${esc(v.phone)}"></div>
-      <div class="field"><label class="fl">Email</label><input id="f_email" value="${esc(v.email)}"></div>
+      <div class="field"><label class="fl" for="f_phone">Phone</label><input id="f_phone" value="${esc(v.phone)}"></div>
+      <div class="field"><label class="fl" for="f_email">Email</label><input id="f_email" value="${esc(v.email)}"></div>
     </div>
     <div class="field" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
       <label class="fl">PCAB License (for contractors / subcontractors)</label>
     </div>
     <div class="grid3">
-      <div class="field"><label class="fl">License #</label><input id="f_pcabnum" value="${esc(v.pcabNumber)}" placeholder="e.g. 12345"></div>
-      <div class="field"><label class="fl">Category</label><select id="f_pcabcat"><option value="">—</option>${PCAB_CATEGORIES.map(c=>`<option ${v.pcabCategory===c?'selected':''}>${c}</option>`).join('')}</select></div>
-      <div class="field"><label class="fl">Expiry Date</label><input id="f_pcabexp" type="date" value="${esc(v.pcabExpiry)}"></div>
+      <div class="field"><label class="fl" for="f_pcabnum">License #</label><input id="f_pcabnum" value="${esc(v.pcabNumber)}" placeholder="e.g. 12345"></div>
+      <div class="field"><label class="fl" for="f_pcabcat">Category</label><select id="f_pcabcat"><option value="">—</option>${PCAB_CATEGORIES.map(c=>`<option ${v.pcabCategory===c?'selected':''}>${c}</option>`).join('')}</select></div>
+      <div class="field"><label class="fl" for="f_pcabexp">Expiry Date</label><input id="f_pcabexp" type="date" value="${esc(v.pcabExpiry)}"></div>
     </div>
     ${id ? (() => {
       const bought = supplierPurchaseHistory(v.name);
@@ -3834,49 +3834,49 @@ function editEmployee(id){
   const e = id ? employeeById(id) : {id:null,name:'',type:EMP_TYPES[0],payType:'Hourly',regAmount:0,otRate:0,hourlyCost:0,phone:'',email:'',address:'',city:'',state:'',zip:'',active:true,govDeductions:false,tin:'',sssNo:'',philhealthNo:'',pagibigNo:'',licenseType:'',licenseNumber:'',licenseExpiry:'',foremanName:window.__pendingForeman||''};
   openModal(`
     <h3>${id?'Edit':'New'} Employee</h3>
-    <div class="field"><label class="fl">Name *</label><input id="f_name" value="${esc(e.name)}"></div>
+    <div class="field"><label class="fl" for="f_name">Name *</label><input id="f_name" value="${esc(e.name)}"></div>
     <div class="grid2">
-      <div class="field"><label class="fl">Position / Type</label><select id="f_type" onchange="${id?'':'suggestPayType()'}">${empTypeOptions(e.type)}</select></div>
-      <div class="field"><label class="fl">Pay Type</label><select id="f_paytype">${PAY_TYPES.map(t=>`<option ${e.payType===t?'selected':''}>${t}</option>`).join('')}</select></div>
+      <div class="field"><label class="fl" for="f_type">Position / Type</label><select id="f_type" onchange="${id?'':'suggestPayType()'}">${empTypeOptions(e.type)}</select></div>
+      <div class="field"><label class="fl" for="f_paytype">Pay Type</label><select id="f_paytype">${PAY_TYPES.map(t=>`<option ${e.payType===t?'selected':''}>${t}</option>`).join('')}</select></div>
     </div>
-    <div class="field"><label class="fl">Foreman</label>
+    <div class="field"><label class="fl" for="f_foreman">Foreman</label>
       <select id="f_foreman"><option value="">— none —</option>${foremanOptions().map(f=>`<option value="${esc(f.name)}" ${e.foremanName===f.name?'selected':''}>${esc(f.name)}</option>`).join('')}</select>
     </div>
     <div class="grid3">
-      <div class="field"><label class="fl">Reg. Rate/Salary</label><input id="f_reg" type="number" step="0.01" value="${e.regAmount}"></div>
-      <div class="field"><label class="fl">OT Rate</label><input id="f_ot" type="number" step="0.01" value="${e.otRate}"></div>
-      <div class="field"><label class="fl">Hourly Cost (job costing)</label><input id="f_hc" type="number" step="0.01" value="${e.hourlyCost}"></div>
+      <div class="field"><label class="fl" for="f_reg">Reg. Rate/Salary</label><input id="f_reg" type="number" step="0.01" value="${e.regAmount}"></div>
+      <div class="field"><label class="fl" for="f_ot">OT Rate</label><input id="f_ot" type="number" step="0.01" value="${e.otRate}"></div>
+      <div class="field"><label class="fl" for="f_hc">Hourly Cost (job costing)</label><input id="f_hc" type="number" step="0.01" value="${e.hourlyCost}"></div>
     </div>
     <div class="grid2">
-      <div class="field"><label class="fl">Phone</label><input id="f_phone" value="${esc(e.phone)}"></div>
-      <div class="field"><label class="fl">Email</label><input id="f_email" value="${esc(e.email)}"></div>
+      <div class="field"><label class="fl" for="f_phone">Phone</label><input id="f_phone" value="${esc(e.phone)}"></div>
+      <div class="field"><label class="fl" for="f_email">Email</label><input id="f_email" value="${esc(e.email)}"></div>
     </div>
-    <div class="field"><label class="fl">Address</label><input id="f_addr" value="${esc(e.address)}"></div>
+    <div class="field"><label class="fl" for="f_addr">Address</label><input id="f_addr" value="${esc(e.address)}"></div>
     <div class="grid3">
-      <div class="field"><label class="fl">City</label><input id="f_city" value="${esc(e.city)}"></div>
-      <div class="field"><label class="fl">State</label><input id="f_state" value="${esc(e.state)}"></div>
-      <div class="field"><label class="fl">Zip</label><input id="f_zip" value="${esc(e.zip)}"></div>
+      <div class="field"><label class="fl" for="f_city">City</label><input id="f_city" value="${esc(e.city)}"></div>
+      <div class="field"><label class="fl" for="f_state">State</label><input id="f_state" value="${esc(e.state)}"></div>
+      <div class="field"><label class="fl" for="f_zip">Zip</label><input id="f_zip" value="${esc(e.zip)}"></div>
     </div>
     <div class="field"><label style="display:flex;align-items:center;gap:8px;font-size:13.5px"><input type="checkbox" id="f_active" ${e.active?'checked':''}> Active employee</label></div>
     <div class="field" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
       <label class="fl">License / Certification <span class="mut" style="text-transform:none;font-weight:400">(TESDA, PRC, driver's license, COSH, etc.)</span></label>
     </div>
     <div class="grid3">
-      <div class="field"><label class="fl">Type</label><select id="f_lictype">${LICENSE_TYPES.map(t=>`<option ${e.licenseType===t?'selected':''}>${t||'— none —'}</option>`).join('')}</select></div>
-      <div class="field"><label class="fl">Number</label><input id="f_licnum" value="${esc(e.licenseNumber)}"></div>
-      <div class="field"><label class="fl">Expiry Date</label><input id="f_licexp" type="date" value="${esc(e.licenseExpiry)}"></div>
+      <div class="field"><label class="fl" for="f_lictype">Type</label><select id="f_lictype">${LICENSE_TYPES.map(t=>`<option ${e.licenseType===t?'selected':''}>${t||'— none —'}</option>`).join('')}</select></div>
+      <div class="field"><label class="fl" for="f_licnum">Number</label><input id="f_licnum" value="${esc(e.licenseNumber)}"></div>
+      <div class="field"><label class="fl" for="f_licexp">Expiry Date</label><input id="f_licexp" type="date" value="${esc(e.licenseExpiry)}"></div>
     </div>
     <div class="field" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
       <label style="display:flex;align-items:center;gap:8px;font-size:13.5px"><input type="checkbox" id="f_govded" ${e.govDeductions?'checked':''}> Apply government-mandated deductions (SSS / PhilHealth / Pag-IBIG) on payroll</label>
       <div class="mut" style="font-size:11.5px;margin-top:4px">Off by default for daily/casual labor. Turn on for formally employed staff.</div>
     </div>
     <div class="grid3">
-      <div class="field"><label class="fl">TIN</label><input id="f_tin" value="${esc(e.tin)}"></div>
-      <div class="field"><label class="fl">SSS No.</label><input id="f_sss" value="${esc(e.sssNo)}"></div>
-      <div class="field"><label class="fl">PhilHealth No.</label><input id="f_philhealth" value="${esc(e.philhealthNo)}"></div>
+      <div class="field"><label class="fl" for="f_tin">TIN</label><input id="f_tin" value="${esc(e.tin)}"></div>
+      <div class="field"><label class="fl" for="f_sss">SSS No.</label><input id="f_sss" value="${esc(e.sssNo)}"></div>
+      <div class="field"><label class="fl" for="f_philhealth">PhilHealth No.</label><input id="f_philhealth" value="${esc(e.philhealthNo)}"></div>
     </div>
     <div class="grid3">
-      <div class="field"><label class="fl">Pag-IBIG No.</label><input id="f_pagibig" value="${esc(e.pagibigNo)}"></div>
+      <div class="field"><label class="fl" for="f_pagibig">Pag-IBIG No.</label><input id="f_pagibig" value="${esc(e.pagibigNo)}"></div>
     </div>
     <div class="btnrow">
       <button class="btn save" onclick="saveEmployee(${id})">Save</button>
@@ -4034,10 +4034,10 @@ function addTimesheet(empId){
   const e = employeeById(empId);
   openModal(`
     <h3>New Timesheet Entry</h3>
-    <div class="field"><label class="fl">Date</label><input id="f_date" type="date" value="${todayISO()}"></div>
+    <div class="field"><label class="fl" for="f_date">Date</label><input id="f_date" type="date" value="${todayISO()}"></div>
     <div class="grid2">
-      <div class="field"><label class="fl">Clock In</label><input id="f_from" type="time" value="08:00"></div>
-      <div class="field"><label class="fl">Clock Out</label><input id="f_to" type="time" value="16:30"></div>
+      <div class="field"><label class="fl" for="f_from">Clock In</label><input id="f_from" type="time" value="08:00"></div>
+      <div class="field"><label class="fl" for="f_to">Clock Out</label><input id="f_to" type="time" value="16:30"></div>
     </div>
     <div class="btnrow">
       <button class="btn save" onclick="saveTimesheet(${empId})">Save</button>
@@ -4068,10 +4068,10 @@ function addCashAdvance(empId){
   openModal(`
     <h3>New Cash Advance — ${esc(e.name)}</h3>
     <div class="grid2">
-      <div class="field"><label class="fl">Amount</label><input id="f_amt" type="number" step="0.01" value="0"></div>
-      <div class="field"><label class="fl">Date</label><input id="f_date" type="date" value="${todayISO()}"></div>
+      <div class="field"><label class="fl" for="f_amt">Amount</label><input id="f_amt" type="number" step="0.01" value="0"></div>
+      <div class="field"><label class="fl" for="f_date">Date</label><input id="f_date" type="date" value="${todayISO()}"></div>
     </div>
-    <div class="field"><label class="fl">Reason</label><input id="f_reason" placeholder="e.g. Emergency, tools, transportation"></div>
+    <div class="field"><label class="fl" for="f_reason">Reason</label><input id="f_reason" placeholder="e.g. Emergency, tools, transportation"></div>
     <div class="mut" style="font-size:12px;margin-bottom:10px">This will show as outstanding until deducted from a future payroll, or written off.</div>
     <div class="btnrow">
       <button class="btn save" onclick="saveCashAdvance(${empId})">Save</button>
@@ -4248,30 +4248,30 @@ function editVehicle(id){
   const v = id ? vehicleById(id) : {id:null,name:'',plate:'',make:'',model:'',type:VEH_TYPES[0],seats:'',assignedDriverId:'',notes:'',active:true,serialNumber:'',engineType:'',engineNumber:'',currentSite:''};
   openModal(`
     <h3>${id?'Edit':'New'} Vehicle</h3>
-    <div class="field"><label class="fl">Vehicle Name *</label><input id="f_name" value="${esc(v.name)}" placeholder="e.g. Dump Truck 2"></div>
+    <div class="field"><label class="fl" for="f_name">Vehicle Name *</label><input id="f_name" value="${esc(v.name)}" placeholder="e.g. Dump Truck 2"></div>
     <div class="grid2">
-      <div class="field"><label class="fl">Make</label><input id="f_make" value="${esc(v.make)}"></div>
-      <div class="field"><label class="fl">Model</label><input id="f_model" value="${esc(v.model)}"></div>
+      <div class="field"><label class="fl" for="f_make">Make</label><input id="f_make" value="${esc(v.make)}"></div>
+      <div class="field"><label class="fl" for="f_model">Model</label><input id="f_model" value="${esc(v.model)}"></div>
     </div>
     <div class="grid2">
-      <div class="field"><label class="fl">Plate #</label><input id="f_plate" value="${esc(v.plate)}"></div>
-      <div class="field"><label class="fl">Type</label><select id="f_type">${VEH_TYPES.map(t=>`<option ${v.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
+      <div class="field"><label class="fl" for="f_plate">Plate #</label><input id="f_plate" value="${esc(v.plate)}"></div>
+      <div class="field"><label class="fl" for="f_type">Type</label><select id="f_type">${VEH_TYPES.map(t=>`<option ${v.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
     </div>
     <div class="grid2">
-      <div class="field"><label class="fl">Serial No.</label><input id="f_serial" value="${esc(v.serialNumber)}" placeholder="e.g. #30637"></div>
-      <div class="field"><label class="fl">Seats / Capacity</label><input id="f_seats" type="number" value="${v.seats}"></div>
+      <div class="field"><label class="fl" for="f_serial">Serial No.</label><input id="f_serial" value="${esc(v.serialNumber)}" placeholder="e.g. #30637"></div>
+      <div class="field"><label class="fl" for="f_seats">Seats / Capacity</label><input id="f_seats" type="number" value="${v.seats}"></div>
     </div>
     <div class="grid2">
-      <div class="field"><label class="fl">Engine</label><input id="f_engine" value="${esc(v.engineType)}" placeholder="e.g. KOMATSU 3D88E-6BPDA"></div>
-      <div class="field"><label class="fl">Engine No.</label><input id="f_engineno" value="${esc(v.engineNumber)}" placeholder="e.g. 08249"></div>
+      <div class="field"><label class="fl" for="f_engine">Engine</label><input id="f_engine" value="${esc(v.engineType)}" placeholder="e.g. KOMATSU 3D88E-6BPDA"></div>
+      <div class="field"><label class="fl" for="f_engineno">Engine No.</label><input id="f_engineno" value="${esc(v.engineNumber)}" placeholder="e.g. 08249"></div>
     </div>
     <div class="grid2">
-      <div class="field"><label class="fl">Assigned Driver / Operator</label>
+      <div class="field"><label class="fl" for="f_driver">Assigned Driver / Operator</label>
         <select id="f_driver"><option value="">— unassigned —</option>${DB.employees.filter(e=>e.active).map(e=>`<option value="${e.id}" ${v.assignedDriverId==e.id?'selected':''}>${esc(e.name)}</option>`).join('')}</select>
       </div>
-      <div class="field"><label class="fl">Current Project Site</label><input id="f_currentsite" value="${esc(v.currentSite)}" list="siteList" placeholder="e.g. Binangonan">${siteDatalist()}</div>
+      <div class="field"><label class="fl" for="f_currentsite">Current Project Site</label><input id="f_currentsite" value="${esc(v.currentSite)}" list="siteList" placeholder="e.g. Binangonan">${siteDatalist()}</div>
     </div>
-    <div class="field"><label class="fl">Notes</label><textarea id="f_notes" rows="2">${esc(v.notes)}</textarea></div>
+    <div class="field"><label class="fl" for="f_notes">Notes</label><textarea id="f_notes" rows="2">${esc(v.notes)}</textarea></div>
     <div class="field"><label style="display:flex;align-items:center;gap:8px;font-size:13.5px"><input type="checkbox" id="f_active" ${v.active?'checked':''}> Active / in service</label></div>
     <div class="btnrow">
       <button class="btn save" onclick="saveVehicle(${id})">Save</button>
@@ -4418,16 +4418,16 @@ function editVehicleExpense(id, vehId){
   const e = id ? DB.vehicleExpenses.find(x=>x.id===id) : {id:null,vehicleId:vehId,name:'',date:todayISO(),amount:0,expenseType:EXPENSE_TYPES[0],jobId:'',notes:''};
   openModal(`
     <h3>${id?'Edit':'New'} Vehicle Expense</h3>
-    <div class="field"><label class="fl">Expense Name *</label><input id="f_name" value="${esc(e.name)}" placeholder="e.g. Brake pads"></div>
+    <div class="field"><label class="fl" for="f_name">Expense Name *</label><input id="f_name" value="${esc(e.name)}" placeholder="e.g. Brake pads"></div>
     <div class="grid2">
-      <div class="field"><label class="fl">Amount</label><input id="f_amt" type="number" step="0.01" value="${e.amount}"></div>
-      <div class="field"><label class="fl">Date</label><input id="f_date" type="date" value="${esc(e.date)}"></div>
+      <div class="field"><label class="fl" for="f_amt">Amount</label><input id="f_amt" type="number" step="0.01" value="${e.amount}"></div>
+      <div class="field"><label class="fl" for="f_date">Date</label><input id="f_date" type="date" value="${esc(e.date)}"></div>
     </div>
     <div class="grid2">
-      <div class="field"><label class="fl">Expense Type</label><select id="f_type">${EXPENSE_TYPES.map(t=>`<option ${e.expenseType===t?'selected':''}>${t}</option>`).join('')}</select></div>
-      <div class="field"><label class="fl">Job (optional)</label><select id="f_job">${jobPickerOptions(e.jobId)}</select></div>
+      <div class="field"><label class="fl" for="f_type">Expense Type</label><select id="f_type">${EXPENSE_TYPES.map(t=>`<option ${e.expenseType===t?'selected':''}>${t}</option>`).join('')}</select></div>
+      <div class="field"><label class="fl" for="f_job">Job (optional)</label><select id="f_job">${jobPickerOptions(e.jobId)}</select></div>
     </div>
-    <div class="field"><label class="fl">Notes</label><textarea id="f_notes" rows="2">${esc(e.notes)}</textarea></div>
+    <div class="field"><label class="fl" for="f_notes">Notes</label><textarea id="f_notes" rows="2">${esc(e.notes)}</textarea></div>
     <div class="btnrow">
       <button class="btn save" onclick="saveVehicleExpense(${id},${vehId})">Save</button>
       <button class="btn ghost" onclick="closeModal()">Cancel</button>
@@ -4456,16 +4456,16 @@ function editFuelLog(id, vehId){
   openModal(`
     <h3>${id?'Edit':'New'} Fuel Entry</h3>
     <div class="grid2">
-      <div class="field"><label class="fl">Station</label><input id="f_station" value="${esc(f.station)}"></div>
-      <div class="field"><label class="fl">Date</label><input id="f_date" type="date" value="${esc(f.date)}"></div>
+      <div class="field"><label class="fl" for="f_station">Station</label><input id="f_station" value="${esc(f.station)}"></div>
+      <div class="field"><label class="fl" for="f_date">Date</label><input id="f_date" type="date" value="${esc(f.date)}"></div>
     </div>
     <div class="grid3">
-      <div class="field"><label class="fl">Quantity</label><input id="f_qty" type="number" step="0.01" value="${f.qty}"></div>
-      <div class="field"><label class="fl">Unit</label><select id="f_unit">${FUEL_UNITS.map(u=>`<option ${f.unit===u?'selected':''}>${u}</option>`).join('')}</select></div>
-      <div class="field"><label class="fl">Amount</label><input id="f_amt" type="number" step="0.01" value="${f.amount}"></div>
+      <div class="field"><label class="fl" for="f_qty">Quantity</label><input id="f_qty" type="number" step="0.01" value="${f.qty}"></div>
+      <div class="field"><label class="fl" for="f_unit">Unit</label><select id="f_unit">${FUEL_UNITS.map(u=>`<option ${f.unit===u?'selected':''}>${u}</option>`).join('')}</select></div>
+      <div class="field"><label class="fl" for="f_amt">Amount</label><input id="f_amt" type="number" step="0.01" value="${f.amount}"></div>
     </div>
-    <div class="field"><label class="fl">Project Site (optional)</label><select id="f_job">${jobPickerOptions(f.jobId)}</select></div>
-    <div class="field"><label class="fl">Notes</label><textarea id="f_notes" rows="2">${esc(f.notes)}</textarea></div>
+    <div class="field"><label class="fl" for="f_job">Project Site (optional)</label><select id="f_job">${jobPickerOptions(f.jobId)}</select></div>
+    <div class="field"><label class="fl" for="f_notes">Notes</label><textarea id="f_notes" rows="2">${esc(f.notes)}</textarea></div>
     <div class="btnrow">
       <button class="btn save" onclick="saveFuelLog(${id},${vehId})">Save</button>
       <button class="btn ghost" onclick="closeModal()">Cancel</button>
@@ -4493,12 +4493,12 @@ function editMeterLog(id, vehId){
   openModal(`
     <h3>${id?'Edit':'New'} Odometer Reading</h3>
     <div class="grid2">
-      <div class="field"><label class="fl">Date</label><input id="f_date" type="date" value="${esc(m.date)}"></div>
-      <div class="field"><label class="fl">Type</label><select id="f_type">${METER_TYPES.map(t=>`<option ${m.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
+      <div class="field"><label class="fl" for="f_date">Date</label><input id="f_date" type="date" value="${esc(m.date)}"></div>
+      <div class="field"><label class="fl" for="f_type">Type</label><select id="f_type">${METER_TYPES.map(t=>`<option ${m.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
     </div>
-    <div class="field"><label class="fl">Reading</label><input id="f_reading" type="number" step="1" value="${m.reading}"></div>
-    <div class="field"><label class="fl">Job (optional)</label><select id="f_job">${jobPickerOptions(m.jobId)}</select></div>
-    <div class="field"><label class="fl">Notes</label><textarea id="f_notes" rows="2">${esc(m.notes)}</textarea></div>
+    <div class="field"><label class="fl" for="f_reading">Reading</label><input id="f_reading" type="number" step="1" value="${m.reading}"></div>
+    <div class="field"><label class="fl" for="f_job">Job (optional)</label><select id="f_job">${jobPickerOptions(m.jobId)}</select></div>
+    <div class="field"><label class="fl" for="f_notes">Notes</label><textarea id="f_notes" rows="2">${esc(m.notes)}</textarea></div>
     <div class="btnrow">
       <button class="btn save" onclick="saveMeterLog(${id},${vehId})">Save</button>
       <button class="btn ghost" onclick="closeModal()">Cancel</button>
@@ -4524,16 +4524,16 @@ function editReminder(id, vehId){
   const r = id ? DB.vehicleReminders.find(x=>x.id===id) : {id:null,vehicleId:vehId,name:'',remDate:todayISO(),freq:'Monthly',nextDate:'',status:'Active',notes:''};
   openModal(`
     <h3>${id?'Edit':'New'} Maintenance Reminder</h3>
-    <div class="field"><label class="fl">Reminder Name *</label><input id="f_name" value="${esc(r.name)}" placeholder="e.g. Oil Change"></div>
+    <div class="field"><label class="fl" for="f_name">Reminder Name *</label><input id="f_name" value="${esc(r.name)}" placeholder="e.g. Oil Change"></div>
     <div class="grid2">
-      <div class="field"><label class="fl">Last Done</label><input id="f_remdate" type="date" value="${esc(r.remDate)}"></div>
-      <div class="field"><label class="fl">Frequency</label><select id="f_freq">${REMINDER_FREQ.map(f=>`<option ${r.freq===f?'selected':''}>${f}</option>`).join('')}</select></div>
+      <div class="field"><label class="fl" for="f_remdate">Last Done</label><input id="f_remdate" type="date" value="${esc(r.remDate)}"></div>
+      <div class="field"><label class="fl" for="f_freq">Frequency</label><select id="f_freq">${REMINDER_FREQ.map(f=>`<option ${r.freq===f?'selected':''}>${f}</option>`).join('')}</select></div>
     </div>
     <div class="grid2">
-      <div class="field"><label class="fl">Next Due</label><input id="f_nextdate" type="date" value="${esc(r.nextDate)}"></div>
-      <div class="field"><label class="fl">Status</label><select id="f_status">${REMINDER_STATUSES.map(s=>`<option ${r.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
+      <div class="field"><label class="fl" for="f_nextdate">Next Due</label><input id="f_nextdate" type="date" value="${esc(r.nextDate)}"></div>
+      <div class="field"><label class="fl" for="f_status">Status</label><select id="f_status">${REMINDER_STATUSES.map(s=>`<option ${r.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
     </div>
-    <div class="field"><label class="fl">Notes</label><textarea id="f_notes" rows="2">${esc(r.notes)}</textarea></div>
+    <div class="field"><label class="fl" for="f_notes">Notes</label><textarea id="f_notes" rows="2">${esc(r.notes)}</textarea></div>
     <div class="btnrow">
       <button class="btn save" onclick="saveReminder(${id},${vehId})">Save</button>
       <button class="btn ghost" onclick="closeModal()">Cancel</button>
@@ -4688,17 +4688,17 @@ function editMaterial(id){
   const m = id ? DB.materials.find(x=>x.id===id) : {id:null,name:'',qty:'',unit:'PCS',unitPrice:'',site:'',receivedFrom:'',date:todayISO(),reorderPoint:''};
   openModal(`
     <h3>${id?'Edit':'Add'} Material</h3>
-    <div class="field"><label class="fl">Material Name *</label><input id="f_name" value="${esc(m.name)}" placeholder="e.g. G.I. PIPE 2x6M"></div>
+    <div class="field"><label class="fl" for="f_name">Material Name *</label><input id="f_name" value="${esc(m.name)}" placeholder="e.g. G.I. PIPE 2x6M"></div>
     <div class="grid3">
-      <div class="field"><label class="fl">Quantity</label><input id="f_qty" type="number" step="0.01" value="${m.qty}"></div>
-      <div class="field"><label class="fl">Unit</label><select id="f_unit">${MATERIAL_UNITS.map(u=>`<option ${m.unit===u?'selected':''}>${u}</option>`).join('')}</select></div>
-      <div class="field"><label class="fl">Unit Price</label><input id="f_price" type="number" step="0.01" value="${m.unitPrice}"></div>
+      <div class="field"><label class="fl" for="f_qty">Quantity</label><input id="f_qty" type="number" step="0.01" value="${m.qty}"></div>
+      <div class="field"><label class="fl" for="f_unit">Unit</label><select id="f_unit">${MATERIAL_UNITS.map(u=>`<option ${m.unit===u?'selected':''}>${u}</option>`).join('')}</select></div>
+      <div class="field"><label class="fl" for="f_price">Unit Price</label><input id="f_price" type="number" step="0.01" value="${m.unitPrice}"></div>
     </div>
     <div class="grid2">
-      <div class="field"><label class="fl">Site</label><input id="f_site" value="${esc(m.site)}" list="siteList" placeholder="e.g. VET"></div>
-      <div class="field"><label class="fl">Date</label><input id="f_date" type="date" value="${esc(m.date)}"></div>
+      <div class="field"><label class="fl" for="f_site">Site</label><input id="f_site" value="${esc(m.site)}" list="siteList" placeholder="e.g. VET"></div>
+      <div class="field"><label class="fl" for="f_date">Date</label><input id="f_date" type="date" value="${esc(m.date)}"></div>
     </div>
-    <div class="field"><label class="fl">Received From</label><input id="f_from" value="${esc(m.receivedFrom)}"></div>
+    <div class="field"><label class="fl" for="f_from">Received From</label><input id="f_from" value="${esc(m.receivedFrom)}"></div>
     <div class="field"><label class="fl">Reorder Point <span class="mut" style="text-transform:none;font-weight:400">(optional — alerts when total stock of this material falls below it)</span></label><input id="f_reorder" type="number" step="1" value="${m.reorderPoint}"></div>
     ${siteDatalist()}
     <div class="btnrow">
@@ -4890,12 +4890,12 @@ function equipReminderRows(toolName){
 function addEquipReminder(toolName){
   openModal(`
     <h3>New Maintenance Reminder — ${esc(toolName)}</h3>
-    <div class="field"><label class="fl">Reminder Name *</label><input id="f_name" placeholder="e.g. Blade replacement, servicing"></div>
+    <div class="field"><label class="fl" for="f_name">Reminder Name *</label><input id="f_name" placeholder="e.g. Blade replacement, servicing"></div>
     <div class="grid2">
-      <div class="field"><label class="fl">Last Done</label><input id="f_remdate" type="date" value="${todayISO()}"></div>
-      <div class="field"><label class="fl">Frequency</label><select id="f_freq">${REMINDER_FREQ.map(f=>`<option>${f}</option>`).join('')}</select></div>
+      <div class="field"><label class="fl" for="f_remdate">Last Done</label><input id="f_remdate" type="date" value="${todayISO()}"></div>
+      <div class="field"><label class="fl" for="f_freq">Frequency</label><select id="f_freq">${REMINDER_FREQ.map(f=>`<option>${f}</option>`).join('')}</select></div>
     </div>
-    <div class="field"><label class="fl">Next Due</label><input id="f_nextdate" type="date"></div>
+    <div class="field"><label class="fl" for="f_nextdate">Next Due</label><input id="f_nextdate" type="date"></div>
     <div class="btnrow">
       <button class="btn save" onclick="saveEquipReminder('${esc(toolName).replace(/'/g,"\\'")}')">Save</button>
       <button class="btn ghost" onclick="closeModal();openToolHistory('${esc(toolName).replace(/'/g,"\\'")}')">Cancel</button>
@@ -4921,21 +4921,21 @@ function editEquipment(id){
   openModal(`
     <h3>${id?'Edit':'Add'} Equipment</h3>
     ${id && histCount>1 ? `<button class="btn ghost sm" style="margin-bottom:12px" onclick="closeModal();openToolHistory('${esc(e.name).replace(/'/g,"\\'")}')">📜 View full history (${histCount} records)</button>` : ''}
-    <div class="field"><label class="fl">Equipment Name *</label><input id="f_name" value="${esc(e.name)}" placeholder="e.g. Angle Grinder"></div>
+    <div class="field"><label class="fl" for="f_name">Equipment Name *</label><input id="f_name" value="${esc(e.name)}" placeholder="e.g. Angle Grinder"></div>
     <div class="grid2">
-      <div class="field"><label class="fl">Brand</label><input id="f_brand" value="${esc(e.brand)}"></div>
-      <div class="field"><label class="fl">Serial #</label><input id="f_serial" value="${esc(e.serial)}"></div>
+      <div class="field"><label class="fl" for="f_brand">Brand</label><input id="f_brand" value="${esc(e.brand)}"></div>
+      <div class="field"><label class="fl" for="f_serial">Serial #</label><input id="f_serial" value="${esc(e.serial)}"></div>
     </div>
     <div class="grid3">
-      <div class="field"><label class="fl">Quantity</label><input id="f_qty" type="number" step="1" value="${e.qty}"></div>
-      <div class="field"><label class="fl">Unit</label><select id="f_unit">${MATERIAL_UNITS.map(u=>`<option ${e.unit===u?'selected':''}>${u}</option>`).join('')}</select></div>
-      <div class="field"><label class="fl">Status</label><select id="f_status">${EQUIPMENT_STATUSES.map(s=>`<option ${e.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
+      <div class="field"><label class="fl" for="f_qty">Quantity</label><input id="f_qty" type="number" step="1" value="${e.qty}"></div>
+      <div class="field"><label class="fl" for="f_unit">Unit</label><select id="f_unit">${MATERIAL_UNITS.map(u=>`<option ${e.unit===u?'selected':''}>${u}</option>`).join('')}</select></div>
+      <div class="field"><label class="fl" for="f_status">Status</label><select id="f_status">${EQUIPMENT_STATUSES.map(s=>`<option ${e.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
     </div>
     <div class="grid2">
-      <div class="field"><label class="fl">Site</label><input id="f_site" value="${esc(e.site)}" list="siteList" placeholder="e.g. HQ"></div>
-      <div class="field"><label class="fl">Date</label><input id="f_date" type="date" value="${esc(e.date)}"></div>
+      <div class="field"><label class="fl" for="f_site">Site</label><input id="f_site" value="${esc(e.site)}" list="siteList" placeholder="e.g. HQ"></div>
+      <div class="field"><label class="fl" for="f_date">Date</label><input id="f_date" type="date" value="${esc(e.date)}"></div>
     </div>
-    <div class="field"><label class="fl">Received From</label><input id="f_from" value="${esc(e.receivedFrom)}"></div>
+    <div class="field"><label class="fl" for="f_from">Received From</label><input id="f_from" value="${esc(e.receivedFrom)}"></div>
     ${siteDatalist()}
     <div class="btnrow">
       <button class="btn save" onclick="saveEquipment(${id})">Save</button>
@@ -5003,13 +5003,13 @@ function editPurchaseRequest(id){
   openModal(`
     <h3>${id?'Edit':'New'} Purchase Request</h3>
     <div class="grid2">
-      <div class="field"><label class="fl">Project Site</label><input id="f_site" value="${esc(r.site)}" list="siteList" placeholder="e.g. VET" ${foremanOnly?'disabled':''}></div>
-      <div class="field"><label class="fl">Requested By</label><input id="f_reqby" value="${esc(r.requestedBy)}"></div>
+      <div class="field"><label class="fl" for="f_site">Project Site</label><input id="f_site" value="${esc(r.site)}" list="siteList" placeholder="e.g. VET" ${foremanOnly?'disabled':''}></div>
+      <div class="field"><label class="fl" for="f_reqby">Requested By</label><input id="f_reqby" value="${esc(r.requestedBy)}"></div>
     </div>
     ${siteDatalist()}
     <div class="grid2">
-      <div class="field"><label class="fl">Date</label><input id="f_date" type="date" value="${esc(r.date)}"></div>
-      <div class="field"><label class="fl">Status</label><select id="f_status">${REQUEST_STATUSES.map(s=>`<option ${r.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
+      <div class="field"><label class="fl" for="f_date">Date</label><input id="f_date" type="date" value="${esc(r.date)}"></div>
+      <div class="field"><label class="fl" for="f_status">Status</label><select id="f_status">${REQUEST_STATUSES.map(s=>`<option ${r.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
     </div>
     <label class="fl">Items Requested</label>
     <div id="reqItems">
@@ -5021,7 +5021,7 @@ function editPurchaseRequest(id){
         </div>`).join('')}
     </div>
     <button class="btn ghost sm" style="margin-bottom:10px" onclick="addReqItemRow()">+ Add Item</button>
-    <div class="field"><label class="fl">Notes</label><textarea id="f_notes" rows="2">${esc(r.notes)}</textarea></div>
+    <div class="field"><label class="fl" for="f_notes">Notes</label><textarea id="f_notes" rows="2">${esc(r.notes)}</textarea></div>
     <div class="btnrow">
       <button class="btn save" onclick="savePurchaseRequest(${id})">Save</button>
       ${id?`<button class="btn del" onclick="deletePurchaseRequest(${id})">Delete</button>`:''}
@@ -5206,7 +5206,7 @@ function generateAccountsModal(){
   openModal(`
     <h3>Generate Login Accounts</h3>
     <p style="font-size:13.5px;color:var(--muted)">${missing.length} employee${missing.length===1?'':'s'} in your roster don't have a login account yet. This creates a username and password for each, ready for you to hand out personally.</p>
-    <div class="field"><label class="fl">Access Level to Assign</label>
+    <div class="field"><label class="fl" for="genRole">Access Level to Assign</label>
       <select id="genRole">${USER_TYPES.map(t=>`<option ${t==='Employee'?'selected':''}>${t}</option>`).join('')}</select>
     </div>
     <div class="mut" style="font-size:12px;margin-bottom:10px">You can change any individual's access later from Users.</div>
@@ -5278,10 +5278,10 @@ function renderMyProfile(){
         <div class="field"><label class="fl">Position <span class="mut" style="text-transform:none;font-weight:400">(set by your Admin)</span></label><input value="${esc(u.position)||'Not yet set'}" disabled></div>
         <div class="field"><label class="fl">Current Project Site <span class="mut" style="text-transform:none;font-weight:400">(set by your Admin)</span></label><input value="${esc(u.currentSite)||'Not yet assigned'}" disabled></div>
         ${payrollSite && payrollSite.site ? `<div class="field"><label class="fl">According to Payroll <span class="mut" style="text-transform:none;font-weight:400">(last paid ${fmtDate(payrollSite.date)})</span></label><input value="${esc(payrollSite.site)}" disabled></div>` : ''}
-        <div class="field"><label class="fl">Personal Email</label><input id="pf_email" type="email" value="${esc(u.email)}"></div>
-        <div class="field"><label class="fl">Phone Number</label><input id="pf_phone" value="${esc(u.phone)}"></div>
-        <div class="field" style="grid-column:1/-1"><label class="fl">Address</label><input id="pf_address" value="${esc(u.address)}"></div>
-        <div class="field"><label class="fl">Reports To (Foreman / PM / PE)</label>
+        <div class="field"><label class="fl" for="pf_email">Personal Email</label><input id="pf_email" type="email" value="${esc(u.email)}"></div>
+        <div class="field"><label class="fl" for="pf_phone">Phone Number</label><input id="pf_phone" value="${esc(u.phone)}"></div>
+        <div class="field" style="grid-column:1/-1"><label class="fl" for="pf_address">Address</label><input id="pf_address" value="${esc(u.address)}"></div>
+        <div class="field"><label class="fl" for="pf_foreman">Reports To (Foreman / PM / PE)</label>
           <select id="pf_foreman"><option value="">— none —</option>${foremanOptions().map(f=>`<option value="${esc(f.name)}" ${u.foremanName===f.name?'selected':''}>${esc(f.name)}</option>`).join('')}</select>
         </div>
         <div class="field"><label class="fl">Username</label><input value="${esc(u.username)||esc(u.name)}" disabled></div>
@@ -5475,12 +5475,12 @@ function renderPayroll(){
 function newPayrollRun(){
   openModal(`
     <h3>New Payroll Run</h3>
-    <div class="field"><label class="fl">Project Site</label><input id="f_site" list="siteList" placeholder="e.g. VET, Estanzia..."></div>
+    <div class="field"><label class="fl" for="f_site">Project Site</label><input id="f_site" list="siteList" placeholder="e.g. VET, Estanzia..."></div>
     ${siteDatalist()}
-    <div class="field"><label class="fl">Pay Date</label><input id="f_paydate" type="date" value="${todayISO()}"></div>
+    <div class="field"><label class="fl" for="f_paydate">Pay Date</label><input id="f_paydate" type="date" value="${todayISO()}"></div>
     <div class="grid2">
-      <div class="field"><label class="fl">Period From</label><input id="f_from" type="date"></div>
-      <div class="field"><label class="fl">Period To</label><input id="f_to" type="date" value="${todayISO()}"></div>
+      <div class="field"><label class="fl" for="f_from">Period From</label><input id="f_from" type="date"></div>
+      <div class="field"><label class="fl" for="f_to">Period To</label><input id="f_to" type="date" value="${todayISO()}"></div>
     </div>
     <div class="btnrow">
       <button class="btn save" onclick="savePayrollRun()">Create</button>
@@ -5762,15 +5762,15 @@ function addEmployeeToPayroll(runId){
     <div class="mut" style="font-size:12.5px;margin-bottom:16px">${esc(e.payType)} · Period ${fmtDate(pr.fromDate)} – ${fmtDate(pr.toDate)}</div>
     ${e.payType==='Hourly' ? `
       <div class="grid2">
-        <div class="field"><label class="fl">Regular Hours</label><input id="f_reg" type="number" step="0.25" value="${reg.toFixed(2)}"></div>
-        <div class="field"><label class="fl">Overtime Hours</label><input id="f_ot" type="number" step="0.25" value="${ot.toFixed(2)}"></div>
+        <div class="field"><label class="fl" for="f_reg">Regular Hours</label><input id="f_reg" type="number" step="0.25" value="${reg.toFixed(2)}"></div>
+        <div class="field"><label class="fl" for="f_ot">Overtime Hours</label><input id="f_ot" type="number" step="0.25" value="${ot.toFixed(2)}"></div>
       </div>
       <div class="mut" style="font-size:12px;margin-bottom:6px">Pulled from timesheet entries in this period at ${money(e.regAmount)}/hr regular, ${money(e.otRate)}/hr overtime. Adjust if needed.</div>
     ` : e.payType==='Daily' ? `
-      <div class="field"><label class="fl">Days Worked</label><input id="f_days" type="number" step="1" min="0" value="${days}"></div>
+      <div class="field"><label class="fl" for="f_days">Days Worked</label><input id="f_days" type="number" step="1" min="0" value="${days}"></div>
       <div class="mut" style="font-size:12px;margin-bottom:6px">${days>0 ? `Found ${days} timesheet day(s) logged for ${esc(e.name)} in this period.` : `No timesheet entries found for ${esc(e.name)} in this period — enter the number of days worked manually.`} Daily rate: ${money(e.regAmount)}/day.</div>
     ` : `
-      <div class="field"><label class="fl">Amount</label><input id="f_flat" type="number" step="0.01" value="${e.regAmount}"></div>
+      <div class="field"><label class="fl" for="f_flat">Amount</label><input id="f_flat" type="number" step="0.01" value="${e.regAmount}"></div>
       <div class="mut" style="font-size:12px;margin-bottom:6px">${esc(e.payType)} pay is entered as a flat amount for this run.</div>
     `}
     <div class="stat-row"><span class="mut">Gross Pay</span><span id="reviewGross" class="mono">${money(e.payType==='Hourly'?reg*(Number(e.regAmount)||0)+ot*(Number(e.otRate)||0):e.payType==='Daily'?days*(Number(e.regAmount)||0):e.regAmount)}</span></div>
@@ -5899,19 +5899,19 @@ function editTransaction(id){
   const t = id ? DB.transactions.find(x=>x.id===id) : {id:null,name:'',date:todayISO(),amount:0,account:ACCOUNTS[0],accountType:'Expense',jobId:'',jobName:'',notes:''};
   openModal(`
     <h3>${id?'Edit':'New'} Transaction</h3>
-    <div class="field"><label class="fl">Name *</label><input id="f_name" value="${esc(t.name)}"></div>
+    <div class="field"><label class="fl" for="f_name">Name *</label><input id="f_name" value="${esc(t.name)}"></div>
     <div class="grid2">
-      <div class="field"><label class="fl">Amount</label><input id="f_amt" type="number" step="0.01" value="${t.amount}"></div>
-      <div class="field"><label class="fl">Date</label><input id="f_date" type="date" value="${esc(t.date)}"></div>
+      <div class="field"><label class="fl" for="f_amt">Amount</label><input id="f_amt" type="number" step="0.01" value="${t.amount}"></div>
+      <div class="field"><label class="fl" for="f_date">Date</label><input id="f_date" type="date" value="${esc(t.date)}"></div>
     </div>
     <div class="grid2">
-      <div class="field"><label class="fl">Account</label><select id="f_acct">${ACCOUNTS.map(a=>`<option ${t.account===a?'selected':''}>${a}</option>`).join('')}</select></div>
-      <div class="field"><label class="fl">Account Type</label><select id="f_type">${ACCOUNT_TYPES.map(a=>`<option ${t.accountType===a?'selected':''}>${a}</option>`).join('')}</select></div>
+      <div class="field"><label class="fl" for="f_acct">Account</label><select id="f_acct">${ACCOUNTS.map(a=>`<option ${t.account===a?'selected':''}>${a}</option>`).join('')}</select></div>
+      <div class="field"><label class="fl" for="f_type">Account Type</label><select id="f_type">${ACCOUNT_TYPES.map(a=>`<option ${t.accountType===a?'selected':''}>${a}</option>`).join('')}</select></div>
     </div>
-    <div class="field"><label class="fl">Job (optional)</label>
+    <div class="field"><label class="fl" for="f_job">Job (optional)</label>
       <select id="f_job"><option value="">— none —</option>${DB.jobs.map(j=>`<option value="${j.id}" ${t.jobId==j.id?'selected':''}>${esc(j.name)}</option>`).join('')}</select>
     </div>
-    <div class="field"><label class="fl">Notes</label><textarea id="f_notes" rows="2">${esc(t.notes)}</textarea></div>
+    <div class="field"><label class="fl" for="f_notes">Notes</label><textarea id="f_notes" rows="2">${esc(t.notes)}</textarea></div>
     <div class="btnrow">
       <button class="btn save" onclick="saveTransaction(${id})">Save</button>
       <button class="btn ghost" onclick="closeModal()">Cancel</button>
@@ -6066,7 +6066,7 @@ function openAssignSiteModal(userId){
     ${payrollSite && payrollSite.site ? `
       <div class="stat-row"><span class="mut">According to payroll (last paid ${fmtDate(payrollSite.date)})</span><span><span class="badge b-Pending">${esc(payrollSite.site)}</span>${payrollSite.site!==u.currentSite?` <button class="btn ghost sm" onclick="document.getElementById('assignSiteInput').value='${esc(payrollSite.site).replace(/'/g,"\\'")}'">Use this</button>`:''}</span></div>
     ` : `<div class="mut" style="font-size:11.5px;margin-top:4px">No payroll records found yet to cross-check against.</div>`}
-    <div class="field" style="margin-top:10px"><label class="fl">Move to</label><input id="assignSiteInput" list="siteList" placeholder="e.g. Binangonan">${siteDatalist()}</div>
+    <div class="field" style="margin-top:10px"><label class="fl" for="assignSiteInput">Move to</label><input id="assignSiteInput" list="siteList" placeholder="e.g. Binangonan">${siteDatalist()}</div>
     <button class="btn save" onclick="assignUserSite(${userId})">Assign</button>
     ${history.length ? `
       <div class="mut" style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;font-weight:700;margin:16px 0 8px">Assignment History</div>
@@ -6117,21 +6117,21 @@ function editUser(id){
   const u = id ? DB.users.find(x=>x.id===id) : {id:null,name:'',username:'',password:'',type:'Clerk',position:'',canRequestForSite:false,customTabs:[]};
   openModal(`
     <h3>${id?'Edit':'New'} User</h3>
-    <div class="field"><label class="fl">Full Name *</label><input id="f_name" value="${esc(u.name)}"></div>
+    <div class="field"><label class="fl" for="f_name">Full Name *</label><input id="f_name" value="${esc(u.name)}"></div>
     <div class="field"><label class="fl">Username * <span class="mut" style="text-transform:none;font-weight:400">(what they type to log in)</span></label><input id="f_username" value="${esc(u.username)||esc(u.name)}"></div>
     <div class="field"><label class="fl">${id?'Set New Password':'Password *'} <span class="mut" style="text-transform:none;font-weight:400">${id?'(leave blank to keep their current password)':''}</span></label><input id="f_pw" placeholder="${id?'Leave blank to keep unchanged':''}"></div>
-    <div class="field"><label class="fl">Position</label><select id="f_position">${empTypeOptions(u.position)}</select></div>
+    <div class="field"><label class="fl" for="f_position">Position</label><select id="f_position">${empTypeOptions(u.position)}</select></div>
     ${id ? `
     <div class="field"><label class="fl">Profile Photo</label>
       ${u.profilePicture ? `
         <div style="display:flex;align-items:center;gap:10px">
-          <img src="${u.profilePicture}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:1px solid var(--line)">
+          <img src="${u.profilePicture}" alt="${esc(u.name)}'s profile photo" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:1px solid var(--line)">
           <button class="btn ghost sm" onclick="removeUserProfilePicture(${id})">Remove Photo</button>
         </div>
       ` : `<div class="mut" style="font-size:12px">No photo on file</div>`}
     </div>` : ''}
     <div class="field"><label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:400;text-transform:none;cursor:pointer"><input type="checkbox" id="f_canrequest" ${u.canRequestForSite?'checked':''}> Can request materials/tools and create orders for their assigned site <span class="mut">(only applies at Employee access level — Foreman, Project Manager, and Project Engineer get this automatically)</span></label></div>
-    <div class="field"><label class="fl">User Type</label><select id="f_type" onchange="document.getElementById('customTabsBox').style.display=this.value==='Custom'?'block':'none'">${USER_TYPES.map(t=>`<option ${u.type===t?'selected':''}>${t}</option>`).join('')}<option ${u.type==='Custom'?'selected':''}>Custom</option></select></div>
+    <div class="field"><label class="fl" for="f_type">User Type</label><select id="f_type" onchange="document.getElementById('customTabsBox').style.display=this.value==='Custom'?'block':'none'">${USER_TYPES.map(t=>`<option ${u.type===t?'selected':''}>${t}</option>`).join('')}<option ${u.type==='Custom'?'selected':''}>Custom</option></select></div>
     <div id="customTabsBox" style="display:${u.type==='Custom'?'block':'none'}">
       <label class="fl">Custom Access — pick exactly which sections this account can open</label>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">
