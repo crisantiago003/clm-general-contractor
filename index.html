@@ -5504,6 +5504,7 @@ function renderPayrollRun(runId){
             ${['Pending','Approved','Completed','Paid'].map(s=>`<option ${pr.status===s?'selected':''}>${s}</option>`).join('')}
           </select>
           <button class="btn ghost sm" onclick="exportPayrollRunCSV(${pr.id})">Export CSV</button>
+          <button class="btn ghost sm" onclick="printWholeRun(${pr.id})">🖨 Print Whole Run</button>
           <button class="btn del sm" onclick="deletePayrollRun(${pr.id})">Delete Run</button>
         </div>
       </div>
@@ -5553,15 +5554,14 @@ function renderPayrollRun(runId){
     </div>
   `;
 }
-function openPayslip(paidId){
+function buildPayslipContent(paidId){
   const p = DB.paidEmployees.find(x=>x.id==paidId);
-  if(!p) return;
+  if(!p) return '';
   const pr = DB.payrolls.find(x=>x.id===p.payrollId);
   const e = employeeById(p.employeeId);
   const s = DB.settings || {};
   const db_ = p.deductionBreakdown;
-  openModal(`
-    <div id="payslipPrint">
+  return `
       <div style="text-align:center;margin-bottom:14px">
         <div style="font-weight:800;font-size:16px">${esc(s.companyName)||'CLM General Contractor & Services, Inc.'}</div>
         ${s.companyAddress?`<div class="mut" style="font-size:11px">${esc(s.companyAddress)}</div>`:''}
@@ -5596,12 +5596,34 @@ function openPayslip(paidId){
         <div style="text-align:center;width:45%"><div style="border-top:1px solid #888;padding-top:4px">Prepared By</div></div>
         <div style="text-align:center;width:45%"><div style="border-top:1px solid #888;padding-top:4px">Employee Signature</div></div>
       </div>
-    </div>
+  `;
+}
+function openPayslip(paidId){
+  const p = DB.paidEmployees.find(x=>x.id==paidId);
+  if(!p) return;
+  openModal(`
+    <div id="payslipPrint">${buildPayslipContent(paidId)}</div>
     <div class="btnrow noprint">
       <button class="btn pri" onclick="printPayslip()">🖨 Print</button>
       <button class="btn ghost" onclick="closeModal()">Close</button>
     </div>
   `);
+}
+function printWholeRun(runId){
+  const paidList = DB.paidEmployees.filter(p=>p.payrollId===runId);
+  if(!paidList.length){ toast('No paid employees in this run to print'); return; }
+  const pr = DB.payrolls.find(x=>x.id===runId);
+  const allSlips = paidList.map(p=>`<div class="payslip-page">${buildPayslipContent(p.id)}</div>`).join('');
+  const w = window.open('', '_blank');
+  w.document.write(`<html><head><title>Payroll — ${esc(pr&&pr.site)||''} ${pr?fmtDate(pr.payDate):''}</title><style>
+    body{font-family:-apple-system,sans-serif;margin:0}
+    .payslip-page{padding:30px;max-width:420px;margin:0 auto;page-break-after:always}
+    .payslip-page:last-child{page-break-after:auto}
+    .stat-row{display:flex;justify-content:space-between;padding:6px 0;font-size:14px}
+    .mut{color:#888} .mono{font-family:monospace}
+  </style></head><body>${allSlips}</body></html>`);
+  w.document.close();
+  setTimeout(()=>w.print(), 300);
 }
 function printPayslip(){
   const content = document.getElementById('payslipPrint').outerHTML;
