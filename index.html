@@ -372,7 +372,7 @@ function scheduleCloudPush(){
   clearTimeout(pushTimer);
   pushTimer = setTimeout(cloudPush, 1200);
 }
-async function cloudPush(){
+async function cloudPush(alreadyRetried){
   if(!cloud.connected) return;
   cloud.syncing = true;
   try{
@@ -385,6 +385,14 @@ async function cloudPush(){
     if(!res.ok){
       const body = await res.text().catch(()=>'');
       console.error('cloudPush failed — HTTP', res.status, body);
+      if((res.status === 401 || res.status === 403) && !alreadyRetried){
+        // Session tokens expire after a while (commonly ~1 hour) — if someone's been working in the
+        // app that whole time without reloading, this is expected, not a real error. Silently refresh
+        // using the stored refresh token and retry once before bothering anyone with a warning.
+        cloud.syncing = false;
+        await restoreAuthSession();
+        return cloudPush(true);
+      }
       if(res.status === 401 || res.status === 403){
         cloud.lastError = cloud.authToken ? 'Sync blocked — your session may have expired. Try logging out and back in.' : 'Sync blocked — this account hasn\'t completed backend sign-in yet. Try logging out and back in once more.';
       } else {
