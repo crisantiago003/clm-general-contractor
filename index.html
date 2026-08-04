@@ -3772,6 +3772,20 @@ function suggestPayType(){
   const suggestion = TYPE_DEFAULT_PAYTYPE[type];
   if(suggestion) document.getElementById('f_paytype').value = suggestion;
 }
+function suggestPositionFromRate(isExisting){
+  const payType = document.getElementById('f_paytype').value;
+  const rate = Number(document.getElementById('f_reg').value)||0;
+  const typeField = document.getElementById('f_type');
+  const current = typeField.value;
+  if(payType !== 'Daily') return;
+  // For an EXISTING employee, only auto-set if the position is currently blank or already one of
+  // these two generic labels — never overwrite a more specific role (Foreman, Electrician, etc.)
+  // just because the rate matches. A brand-new employee has no existing role to protect, so we
+  // can suggest freely there.
+  if(isExisting && current && current !== 'Laborer' && current !== 'Skilled Worker') return;
+  if(rate === 550) typeField.value = 'Laborer';
+  else if(rate === 650) typeField.value = 'Skilled Worker';
+}
 const LICENSE_TYPES = ['','TESDA NC I','TESDA NC II','TESDA NC III','PRC License','Driver\'s License','Heavy Equipment Operator Certificate','COSH Certificate','Other'];
 function employeeLicenseStatus(e){
   if(!e.licenseNumber && !e.licenseType) return null;
@@ -3837,13 +3851,13 @@ function editEmployee(id){
     <div class="field"><label class="fl" for="f_name">Name *</label><input id="f_name" value="${esc(e.name)}"></div>
     <div class="grid2">
       <div class="field"><label class="fl" for="f_type">Position / Type</label><select id="f_type" onchange="${id?'':'suggestPayType()'}">${empTypeOptions(e.type)}</select></div>
-      <div class="field"><label class="fl" for="f_paytype">Pay Type</label><select id="f_paytype">${PAY_TYPES.map(t=>`<option ${e.payType===t?'selected':''}>${t}</option>`).join('')}</select></div>
+      <div class="field"><label class="fl" for="f_paytype">Pay Type</label><select id="f_paytype" onchange="suggestPositionFromRate(${id?'true':'false'})">${PAY_TYPES.map(t=>`<option ${e.payType===t?'selected':''}>${t}</option>`).join('')}</select></div>
     </div>
     <div class="field"><label class="fl" for="f_foreman">Foreman</label>
       <select id="f_foreman"><option value="">— none —</option>${foremanOptions().map(f=>`<option value="${esc(f.name)}" ${e.foremanName===f.name?'selected':''}>${esc(f.name)}</option>`).join('')}</select>
     </div>
     <div class="grid3">
-      <div class="field"><label class="fl" for="f_reg">Reg. Rate/Salary</label><input id="f_reg" type="number" step="0.01" value="${e.regAmount}"></div>
+      <div class="field"><label class="fl" for="f_reg">Reg. Rate/Salary</label><input id="f_reg" type="number" step="0.01" value="${e.regAmount}" oninput="suggestPositionFromRate(${id?'true':'false'})"></div>
       <div class="field"><label class="fl" for="f_ot">OT Rate</label><input id="f_ot" type="number" step="0.01" value="${e.otRate}"></div>
       <div class="field"><label class="fl" for="f_hc">Hourly Cost (job costing)</label><input id="f_hc" type="number" step="0.01" value="${e.hourlyCost}"></div>
     </div>
@@ -3898,8 +3912,17 @@ function saveEmployee(id){
     tin: document.getElementById('f_tin').value, sssNo: document.getElementById('f_sss').value, philhealthNo: document.getElementById('f_philhealth').value, pagibigNo: document.getElementById('f_pagibig').value,
     licenseType: document.getElementById('f_lictype').value, licenseNumber: document.getElementById('f_licnum').value, licenseExpiry: document.getElementById('f_licexp').value,
   };
-  if(id){ Object.assign(employeeById(id), vals); }
-  else { const ne = { id: nextId(DB.employees), ...vals }; DB.employees.push(ne); id = ne.id; }
+  if(id){
+    const existing = employeeById(id);
+    const oldRate = Number(existing.regAmount)||0;
+    const newRate = vals.regAmount;
+    if(newRate !== oldRate){
+      if(!existing.rateHistory) existing.rateHistory = [];
+      existing.rateHistory.push({ id: uid(), date: todayISO(), oldRate, newRate, changedBy: session.name });
+    }
+    Object.assign(existing, vals);
+  }
+  else { const ne = { id: nextId(DB.employees), rateHistory: [], ...vals }; DB.employees.push(ne); id = ne.id; }
   window.__pendingForeman = '';
   saveDB(); closeModal(); toast('Employee saved'); go('employees',{empId:id});
 }
@@ -3952,6 +3975,7 @@ function renderEmployeeDetail(id){
         <button class="${sub.tab==='info'?'on':''}" onclick="sub.tab='info';renderEmployees()">Info</button>
         <button class="${sub.tab==='timesheets'?'on':''}" onclick="sub.tab='timesheets';renderEmployees()">Timesheets (${ts.length})</button>
         <button class="${sub.tab==='sites'?'on':''}" onclick="sub.tab='sites';renderEmployees()">Project Site History (${siteHistory.length})</button>
+        <button class="${sub.tab==='rates'?'on':''}" onclick="sub.tab='rates';renderEmployees()">Rate History (${(e.rateHistory||[]).length})</button>
         <button class="${sub.tab==='advances'?'on':''}" onclick="sub.tab='advances';renderEmployees()">Cash Advances ${outstanding>0?`(${money(outstanding)} owed)`:''}</button>
         <button class="${sub.tab==='docs'?'on':''}" onclick="sub.tab='docs';renderEmployees()">Documents (${docs.length})</button>
       </div>
@@ -4000,6 +4024,19 @@ function renderEmployeeDetail(id){
               <td class="num mono">${money(pe.netPay)}</td>
               <td><span class="mut" style="font-size:12px">View run →</span></td>
             </tr>`).join('') || `<tr><td colspan="5" class="empty">No payroll history yet</td></tr>`}
+        </table></div>
+      ` : sub.tab==='rates' ? `
+        <div class="mut" style="font-size:12px;margin-bottom:10px">Every change to this employee's rate — useful for tracking salary increases over time.</div>
+        <div class="twrap"><table>
+          <tr><th>Date</th><th class="right">Old Rate</th><th class="right">New Rate</th><th class="right">Change</th><th>Changed By</th></tr>
+          ${[...(e.rateHistory||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(h=>`
+            <tr>
+              <td class="mut">${fmtDate(h.date)}</td>
+              <td class="num mono mut">${money(h.oldRate)}</td>
+              <td class="num mono"><b>${money(h.newRate)}</b></td>
+              <td class="num mono" style="color:${h.newRate>h.oldRate?'var(--green)':'var(--danger)'}">${h.newRate>h.oldRate?'+':''}${money(h.newRate-h.oldRate)}</td>
+              <td class="mut">${esc(h.changedBy)}</td>
+            </tr>`).join('') || `<tr><td colspan="5" class="empty">No rate changes recorded yet — this starts tracking automatically the next time their rate is updated.</td></tr>`}
         </table></div>
       ` : sub.tab==='advances' ? `
         <div class="ph" style="margin-top:6px"><span class="mut" style="font-size:12.5px">Outstanding balance: <b style="color:${outstanding>0?'var(--danger)':'var(--green)'}">${money(outstanding)}</b></span><button class="btn ghost sm" onclick="addCashAdvance(${id})">+ New Advance</button></div>
@@ -5630,8 +5667,11 @@ function openEditPaidEmployee(paidId){
       </div>
       <div class="mut" style="font-size:12px;margin-bottom:6px">${money(e.regAmount)}/hr regular, ${money(e.otRate)}/hr overtime.</div>
     ` : e.payType==='Daily' ? `
-      <div class="field"><label class="fl" for="f_days">Days Worked</label><input id="f_days" type="number" step="1" min="0" value="${Number(p.regHours)||0}"></div>
-      <div class="mut" style="font-size:12px;margin-bottom:6px">Daily rate: ${money(e.regAmount)}/day.</div>
+      <div class="grid2">
+        <div class="field"><label class="fl" for="f_days">Days Worked</label><input id="f_days" type="number" step="1" min="0" value="${Number(p.regHours)||0}"></div>
+        <div class="field"><label class="fl" for="f_ot">Overtime Hours</label><input id="f_ot" type="number" step="0.25" min="0" value="${(Number(p.otHours)||0)}"></div>
+      </div>
+      <div class="mut" style="font-size:12px;margin-bottom:6px">Daily rate: ${money(e.regAmount)}/day. Overtime pays ${money((Number(e.regAmount)||0)/8)}/hr (rate ÷ 8), matching your payroll sheet.</div>
     ` : `
       <div class="field"><label class="fl" for="f_flat">Amount</label><input id="f_flat" type="number" step="0.01" value="${p.regPay}"></div>
     `}
@@ -5657,7 +5697,7 @@ function openEditPaidEmployee(paidId){
     if(e.payType==='Hourly'){
       gross = (Number(document.getElementById('f_reg').value)||0)*(Number(e.regAmount)||0) + (Number(document.getElementById('f_ot').value)||0)*(Number(e.otRate)||0);
     } else if(e.payType==='Daily'){
-      gross = (Number(document.getElementById('f_days').value)||0) * (Number(e.regAmount)||0);
+      gross = (Number(document.getElementById('f_days').value)||0) * (Number(e.regAmount)||0) + (Number(document.getElementById('f_ot').value)||0) * ((Number(e.regAmount)||0)/8);
     } else {
       gross = Number(document.getElementById('f_flat').value)||0;
     }
@@ -5688,8 +5728,9 @@ function confirmEditPaidEmployee(paidId){
     regPay = c.regPay; otPay = c.otPay;
   } else if(e.payType==='Daily'){
     regHours = Number(document.getElementById('f_days').value)||0;
-    const c = computePay(e, 0, 0, regHours);
-    regPay = c.regPay;
+    otHours = Number(document.getElementById('f_ot').value)||0;
+    const c = computePay(e, 0, otHours, regHours);
+    regPay = c.regPay; otPay = c.otPay;
   } else {
     regPay = Number(document.getElementById('f_flat').value)||0;
   }
@@ -5701,21 +5742,30 @@ function confirmEditPaidEmployee(paidId){
   Object.assign(p, { regHours, otHours, regPay, otPay, grossPay: gross, govDeductions: deductions, deductionBreakdown, advanceDeducted, netPay: gross - deductions - advanceDeducted });
   saveDB(); closeModal(); toast('Pay updated'); go('payroll',{runId:p.payrollId});
 }
+function periodLengthDays(fromDate, toDate){
+  if(!fromDate || !toDate) return 0;
+  const ms = new Date(toDate) - new Date(fromDate);
+  return isNaN(ms) ? 0 : Math.round(ms / 86400000) + 1;
+}
 function autoPopulatePayrollRun(pr){
   // Bring in everyone whose MOST RECENT payroll record puts them at this site — employees don't
   // have a static "current site" field of their own; where they last worked/got paid is the real signal.
   const matches = employeesCurrentlyAtSite(pr.site).map(x=>x.e).filter(e=>e.active !== false);
+  const fallbackDays = periodLengthDays(pr.fromDate, pr.toDate);
   matches.forEach(e=>{
     const { reg, ot } = calcHoursForEmployee(e.id, pr.fromDate, pr.toDate);
-    const days = daysWorkedFor(e.id, pr.fromDate, pr.toDate);
+    const daysFromTimesheet = daysWorkedFor(e.id, pr.fromDate, pr.toDate);
     let regHours=0, otHours=0, regPay=0, otPay=0;
     if(e.payType==='Hourly'){
       regHours = reg; otHours = ot;
       const c = computePay(e, reg, ot, 0);
       regPay = c.regPay; otPay = c.otPay;
     } else if(e.payType==='Daily'){
-      regHours = days;
-      const c = computePay(e, 0, 0, days);
+      // No timesheet entries logged? Default to the full period length rather than 0 — most
+      // workers work the whole period, and it's less correction to reduce a wrong-but-close
+      // default than to fill in every single auto-added row from scratch.
+      regHours = daysFromTimesheet > 0 ? daysFromTimesheet : fallbackDays;
+      const c = computePay(e, 0, 0, regHours);
       regPay = c.regPay;
     } else {
       regPay = Number(e.regAmount)||0;
@@ -5731,11 +5781,32 @@ function autoPopulatePayrollRun(pr){
   });
   return matches.length;
 }
+function siteSearchField(selected){
+  return `
+  <div class="field" style="position:relative">
+    <label class="fl" for="siteSearchInput">Project Site</label>
+    <input id="siteSearchInput" placeholder="Search project site..." autocomplete="off" value="${esc(selected||'')}" oninput="filterSiteSearch()" onfocus="filterSiteSearch()" onblur="setTimeout(()=>{const b=document.getElementById('siteSearchResults');if(b)b.style.display='none';},150)">
+    <input type="hidden" id="f_site" value="${esc(selected||'')}">
+    <div id="siteSearchResults" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--panel);border:1px solid var(--line);border-radius:8px;max-height:220px;overflow-y:auto;z-index:20;margin-top:4px;box-shadow:var(--shadow)"></div>
+  </div>`;
+}
+function filterSiteSearch(){
+  const q = document.getElementById('siteSearchInput').value.trim().toLowerCase();
+  const box = document.getElementById('siteSearchResults');
+  const list = canonicalSiteList();
+  const matches = q ? list.filter(s=>s.toLowerCase().includes(q)) : list;
+  box.innerHTML = matches.slice(0,30).map(s=>`<div class="click" style="padding:8px 10px;font-size:13px;border-bottom:1px solid var(--line)" onmousedown="selectSiteSearch('${esc(s).replace(/'/g,"\\'")}')">${esc(s)}</div>`).join('') || `<div class="mut" style="padding:8px 10px;font-size:12px">No matching sites</div>`;
+  box.style.display = 'block';
+}
+function selectSiteSearch(name){
+  document.getElementById('f_site').value = name;
+  document.getElementById('siteSearchInput').value = name;
+  document.getElementById('siteSearchResults').style.display = 'none';
+}
 function newPayrollRun(){
   openModal(`
     <h3>New Payroll Run</h3>
-    <div class="field"><label class="fl" for="f_site">Project Site</label><select id="f_site">${siteSelectOptions('')}</select></div>
-    ${siteDatalist()}
+    ${siteSearchField('')}
     <div class="field"><label class="fl" for="f_paydate">Pay Date</label><input id="f_paydate" type="date" value="${todayISO()}"></div>
     <div class="grid2">
       <div class="field"><label class="fl" for="f_from">Period From</label><input id="f_from" type="date"></div>
@@ -5804,6 +5875,7 @@ function computePay(e, reg, ot, days){
     otPay = ot * (Number(e.otRate)||0);
   } else if(e.payType === 'Daily'){
     regPay = (Number(days)||0) * (Number(e.regAmount)||0);
+    otPay = (Number(ot)||0) * ((Number(e.regAmount)||0) / 8); // matches the real payroll sheet: OT = (Rate/8) * OT hours
   } else if(e.payType === 'Salary'){
     regPay = Number(e.regAmount)||0;
   } else { // Freelance / Piece Work — flat rate entry
@@ -5884,9 +5956,9 @@ function renderPayrollRun(runId){
             <td><b>${esc(p.employeeName)}</b></td>
             <td class="mut">${esc(p.payType)}</td>
             <td class="num mono">${p.payType==='Hourly'?(Number(p.regHours)||0).toFixed(2):p.payType==='Daily'?(Number(p.regHours)||0)+' d':'—'}</td>
-            <td class="num mono">${p.payType==='Hourly'?(Number(p.otHours)||0).toFixed(2):'—'}</td>
+            <td class="num mono">${p.payType==='Hourly'||p.payType==='Daily'?(Number(p.otHours)||0).toFixed(2):'—'}</td>
             <td class="num">${money(p.regPay)}</td>
-            <td class="num">${p.payType==='Hourly'?money(p.otPay):'—'}</td>
+            <td class="num">${p.payType==='Hourly'||p.payType==='Daily'?money(p.otPay):'—'}</td>
             <td class="num mut">${p.govDeductions?'-'+money(p.govDeductions):'—'}</td>
             <td class="num mut">${p.advanceDeducted?'-'+money(p.advanceDeducted):'—'}</td>
             <td class="num mono" style="font-weight:800">${money(p.netPay)}</td>
@@ -6074,8 +6146,11 @@ function addEmployeeToPayroll(runId){
       </div>
       <div class="mut" style="font-size:12px;margin-bottom:6px">Pulled from timesheet entries in this period at ${money(e.regAmount)}/hr regular, ${money(e.otRate)}/hr overtime. Adjust if needed.</div>
     ` : e.payType==='Daily' ? `
-      <div class="field"><label class="fl" for="f_days">Days Worked</label><input id="f_days" type="number" step="1" min="0" value="${days}"></div>
-      <div class="mut" style="font-size:12px;margin-bottom:6px">${days>0 ? `Found ${days} timesheet day(s) logged for ${esc(e.name)} in this period.` : `No timesheet entries found for ${esc(e.name)} in this period — enter the number of days worked manually.`} Daily rate: ${money(e.regAmount)}/day.</div>
+      <div class="grid2">
+        <div class="field"><label class="fl" for="f_days">Days Worked</label><input id="f_days" type="number" step="1" min="0" value="${days}"></div>
+        <div class="field"><label class="fl" for="f_ot">Overtime Hours</label><input id="f_ot" type="number" step="0.25" min="0" value="0"></div>
+      </div>
+      <div class="mut" style="font-size:12px;margin-bottom:6px">${days>0 ? `Found ${days} timesheet day(s) logged for ${esc(e.name)} in this period.` : `No timesheet entries found for ${esc(e.name)} in this period — enter the number of days worked manually.`} Daily rate: ${money(e.regAmount)}/day. Overtime pays ${money((Number(e.regAmount)||0)/8)}/hr (rate ÷ 8).</div>
     ` : `
       <div class="field"><label class="fl" for="f_flat">Amount</label><input id="f_flat" type="number" step="0.01" value="${e.regAmount}"></div>
       <div class="mut" style="font-size:12px;margin-bottom:6px">${esc(e.payType)} pay is entered as a flat amount for this run.</div>
@@ -6103,7 +6178,7 @@ function addEmployeeToPayroll(runId){
     if(e.payType==='Hourly'){
       gross = (Number(document.getElementById('f_reg').value)||0)*(Number(e.regAmount)||0) + (Number(document.getElementById('f_ot').value)||0)*(Number(e.otRate)||0);
     } else if(e.payType==='Daily'){
-      gross = (Number(document.getElementById('f_days').value)||0) * (Number(e.regAmount)||0);
+      gross = (Number(document.getElementById('f_days').value)||0) * (Number(e.regAmount)||0) + (Number(document.getElementById('f_ot').value)||0) * ((Number(e.regAmount)||0)/8);
     } else {
       gross = Number(document.getElementById('f_flat').value)||0;
     }
@@ -6133,8 +6208,9 @@ function confirmAddToPayroll(runId, empId){
     regPay = p.regPay; otPay = p.otPay;
   } else if(e.payType==='Daily'){
     regHours = Number(document.getElementById('f_days').value)||0; // days worked, stored in regHours for this row
-    const p = computePay(e, 0, 0, regHours);
-    regPay = p.regPay;
+    otHours = Number(document.getElementById('f_ot').value)||0;
+    const p = computePay(e, 0, otHours, regHours);
+    regPay = p.regPay; otPay = p.otPay;
   } else {
     regPay = Number(document.getElementById('f_flat').value)||0;
   }
@@ -6964,6 +7040,24 @@ function runMigrationV30(){
   localStorage.setItem(MIGRATION_V30_KEY, '1');
   saveDB();
 }
+const MIGRATION_V31_KEY = 'buildsuite_migration_v31';
+function runMigrationV31(){
+  if(localStorage.getItem(MIGRATION_V31_KEY)) return;
+  let positioned = 0;
+  DB.employees.forEach(e=>{
+    if(e.rateHistory===undefined) e.rateHistory = [];
+    // Only set a position if it's currently blank or already one of these two generic labels —
+    // never overwrite a specific existing role (Foreman, Electrician, etc.) just because the rate matches.
+    if(e.payType==='Daily' && (!e.type || e.type==='Laborer' || e.type==='Skilled Worker')){
+      const rate = Number(e.regAmount)||0;
+      if(rate===550 && e.type!=='Laborer'){ e.type='Laborer'; positioned++; }
+      else if(rate===650 && e.type!=='Skilled Worker'){ e.type='Skilled Worker'; positioned++; }
+    }
+  });
+  if(positioned > 0) logNotification('Cleanup', `Set position for ${positioned} employee${positioned===1?'':'s'} based on their daily rate (₱550 → Laborer, ₱650 → Skilled Worker)`, null);
+  localStorage.setItem(MIGRATION_V31_KEY, '1');
+  saveDB();
+}
 
 function mergeDB(local, cloud){
   // Union-merge: never silently drop a record either side added. On a genuine conflict
@@ -7137,6 +7231,7 @@ async function boot(){
   runMigrationV28();
   runMigrationV29();
   runMigrationV30();
+  runMigrationV31();
   loadCloudConfig();
   await restoreAuthSession();
   applyTheme(localStorage.getItem('buildsuite_theme') || (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
