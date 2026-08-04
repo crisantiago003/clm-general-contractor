@@ -451,7 +451,7 @@ async function connectFromPendingScreen(){
       backfillMissingKeys(cloudDB);
       const alreadyThere = myOwnAccount && cloudDB.users.some(u=>(u.username||u.name).toLowerCase()===(myOwnAccount.username||myOwnAccount.name).toLowerCase());
       if(myOwnAccount && !alreadyThere){ cloudDB.users.push(myOwnAccount); }
-      DB = cloudDB;
+      DB = mergeDB(DB, cloudDB); // merge, never a raw replace — otherwise anything sitting in this device's local Trash would be silently discarded and its stale cloud copy would come back
       ensureAdminAccount();
       cloud.connected = true;
       saveCloudConfig();
@@ -518,7 +518,7 @@ async function finishCloudConnect(direction){
   if(direction === 'pull'){
     const row = await cloudPull();
     if(row && row.data){
-      DB = row.data;
+      DB = mergeDB(DB, row.data); // merge, never a raw replace — same reasoning as connectFromPendingScreen above
       backfillMissingKeys(DB);
       ensureAdminAccount();
       localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
@@ -4753,7 +4753,7 @@ function saveMaterialTransfer(id){
   }
 
   if(!DB.materialTransfers) DB.materialTransfers = [];
-  DB.materialTransfers.push({ id: uid(), materialName: m.name, qty, unit: m.unit, fromSite, toSite, date: todayISO(), transferredBy: session.name, note });
+  DB.materialTransfers.push({ id: uid(), kind: 'Material', materialName: m.name, qty, unit: m.unit, fromSite, toSite, date: todayISO(), transferredBy: session.name, note });
   logNotification('Transfer', `${qty} ${m.unit} of "${m.name}" transferred from ${fromSite||'—'} to ${toSite}`, 'inventory', {itab:'materials', matSite: toSite});
   saveDB(); closeModal(); toast('Stock transferred'); renderInventory();
 }
@@ -4761,19 +4761,20 @@ function renderTransfersInner(){
   const list = [...(DB.materialTransfers||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   return `
     <div class="ph"><h3 style="text-transform:none;font-size:18px;color:var(--text)">Stock Transfers</h3></div>
-    <div class="mut" style="font-size:12.5px;margin-bottom:10px">Every time stock moves from one site to another — including deliveries from HQ — it's logged here.</div>
+    <div class="mut" style="font-size:12.5px;margin-bottom:10px">Every time materials or equipment move from one site to another — including deliveries from HQ — it's logged here.</div>
     <div class="twrap"><table>
-      <tr><th>Material</th><th class="right">Qty</th><th>From</th><th>To</th><th>Date</th><th>By</th><th>Note</th></tr>
+      <tr><th>Type</th><th>Item</th><th class="right">Qty</th><th>From</th><th>To</th><th>Date</th><th>By</th><th>Note</th></tr>
       ${list.map(t=>`
         <tr>
+          <td><span class="badge b-status">${esc(t.kind||'Material')}</span></td>
           <td><b>${esc(t.materialName)}</b></td>
-          <td class="num mono">${t.qty} ${esc(t.unit)}</td>
+          <td class="num mono">${t.qty}${t.unit?' '+esc(t.unit):''}</td>
           <td class="mut">${esc(t.fromSite)||'—'}</td>
           <td><b>${esc(t.toSite)}</b></td>
           <td class="mut">${fmtDate(t.date)}</td>
           <td class="mut">${esc(t.transferredBy)}</td>
           <td class="mut">${esc(t.note)||'—'}</td>
-        </tr>`).join('') || `<tr><td colspan="7" class="empty">No transfers logged yet</td></tr>`}
+        </tr>`).join('') || `<tr><td colspan="8" class="empty">No transfers logged yet</td></tr>`}
     </table></div>
   `;
 }
@@ -4919,10 +4920,58 @@ function renderEquipmentInner(){
           <td class="num mono">${e.qty!==''?e.qty:1}</td>
           <td>${equipmentStatusBadge(e.status)}</td>
           <td class="mut">${fmtDate(e.date)||'—'}</td>
-          <td><button class="x" onclick="event.stopPropagation();deleteEquipment(${e.id})">✕</button></td>
+          <td style="display:flex;gap:6px">${canCreateForSite(e.site)&&(e.qty===''||Number(e.qty)>0)?`<button class="btn ghost sm" onclick="event.stopPropagation();openTransferEquipment(${e.id})">🚚 Transfer</button>`:''}<button class="x" onclick="event.stopPropagation();deleteEquipment(${e.id})">✕</button></td>
         </tr>`).join('') || `<tr><td colspan="8" class="empty">No equipment found</td></tr>`}
     </table></div>
   `;
+}
+function openTransferEquipment(id){
+  if(!canEdit()) return;
+  const e = DB.equipment.find(x=>x.id===id);
+  if(!e) return;
+  const qty = e.qty!==''?Number(e.qty):1;
+  openModal(`
+    <h3>🚚 Transfer Equipment</h3>
+    <p style="font-size:13px;color:var(--muted)">Move this equipment to another site instead of logging a brand new entry for the same tool.</p>
+    <div class="stat-row"><span class="mut">Equipment</span><span><b>${esc(e.name)}</b>${e.brand?` <span class="mut">(${esc(e.brand)})</span>`:''}</span></div>
+    <div class="stat-row"><span class="mut">Currently at</span><span>${esc(e.site)||'—'}</span></div>
+    <div class="stat-row"><span class="mut">Available</span><span class="mono">${qty}</span></div>
+    <div class="field"><label class="fl" for="tre_qty">Quantity to Transfer</label><input id="tre_qty" type="number" step="1" max="${qty}" value="${qty}"></div>
+    <div class="field"><label class="fl" for="tre_to">Deliver To</label><select id="tre_to">${siteSelectOptions('')}</select></div>
+    <div class="field"><label class="fl" for="tre_note">Note (optional)</label><input id="tre_note" placeholder="e.g. Requested by Foreman for scaffolding work"></div>
+    <div class="btnrow">
+      <button class="btn save" onclick="saveEquipmentTransfer(${id})">Confirm Transfer</button>
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+    </div>
+  `);
+}
+function saveEquipmentTransfer(id){
+  const e = DB.equipment.find(x=>x.id===id);
+  if(!e) return;
+  const currentQty = e.qty!==''?Number(e.qty):1;
+  const qty = Number(document.getElementById('tre_qty').value)||0;
+  const toSite = document.getElementById('tre_to').value.trim();
+  const note = document.getElementById('tre_note').value.trim();
+  if(qty <= 0){ toast('Enter a quantity to transfer'); return; }
+  if(qty > currentQty){ toast(`Only ${currentQty} available — can't transfer more than that`); return; }
+  if(!toSite){ toast('Choose where this is being delivered to'); return; }
+  if(toSite.trim().toLowerCase() === (e.site||'').trim().toLowerCase()){ toast('Destination is the same as the current site'); return; }
+
+  const fromSite = e.site;
+  e.qty = currentQty - qty;
+
+  let dest = DB.equipment.find(x=>x.name.trim().toLowerCase()===e.name.trim().toLowerCase() && (x.brand||'').trim().toLowerCase()===(e.brand||'').trim().toLowerCase() && (x.site||'').trim().toLowerCase()===toSite.trim().toLowerCase());
+  if(dest){
+    dest.qty = (dest.qty!==''?Number(dest.qty):1) + qty;
+  } else {
+    dest = { id: nextId(DB.equipment), name: e.name, brand: e.brand, serial: e.serial, qty, unit: e.unit, status: e.status, site: toSite, receivedFrom: `Transferred from ${fromSite||'—'}`, date: todayISO() };
+    DB.equipment.push(dest);
+  }
+
+  if(!DB.materialTransfers) DB.materialTransfers = [];
+  DB.materialTransfers.push({ id: uid(), kind: 'Equipment', materialName: e.name, qty, unit: e.unit||'', fromSite, toSite, date: todayISO(), transferredBy: session.name, note });
+  logNotification('Transfer', `${qty} unit(s) of "${e.name}" transferred from ${fromSite||'—'} to ${toSite}`, 'inventory', {itab:'equipment'});
+  saveDB(); closeModal(); toast('Equipment transferred'); renderInventory();
 }
 function openToolHistory(name){
   const entries = toolHistory(name);
@@ -6716,6 +6765,13 @@ function runMigrationV28(){
   localStorage.setItem(MIGRATION_V28_KEY, '1');
   saveDB();
 }
+const MIGRATION_V29_KEY = 'buildsuite_migration_v29';
+function runMigrationV29(){
+  if(localStorage.getItem(MIGRATION_V29_KEY)) return;
+  (DB.materialTransfers||[]).forEach(t=>{ if(t.kind===undefined) t.kind = 'Material'; });
+  localStorage.setItem(MIGRATION_V29_KEY, '1');
+  saveDB();
+}
 
 function mergeDB(local, cloud){
   // Union-merge: never silently drop a record either side added. On a genuine conflict
@@ -6887,6 +6943,7 @@ async function boot(){
   runMigrationV26();
   runMigrationV27();
   runMigrationV28();
+  runMigrationV29();
   loadCloudConfig();
   await restoreAuthSession();
   applyTheme(localStorage.getItem('buildsuite_theme') || (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
