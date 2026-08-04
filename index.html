@@ -5614,6 +5614,123 @@ function renderPayroll(){
     </div>
   `;
 }
+function openEditPaidEmployee(paidId){
+  const p = DB.paidEmployees.find(x=>x.id===paidId);
+  if(!p) return;
+  const e = employeeById(p.employeeId);
+  const pr = DB.payrolls.find(x=>x.id===p.payrollId);
+  if(!e || !pr) return;
+  openModal(`
+    <h3>Edit Pay — ${esc(e.name)}</h3>
+    <div class="mut" style="font-size:12.5px;margin-bottom:16px">${esc(e.payType)} · Period ${fmtDate(pr.fromDate)} – ${fmtDate(pr.toDate)}</div>
+    ${e.payType==='Hourly' ? `
+      <div class="grid2">
+        <div class="field"><label class="fl" for="f_reg">Regular Hours</label><input id="f_reg" type="number" step="0.25" value="${(Number(p.regHours)||0).toFixed(2)}"></div>
+        <div class="field"><label class="fl" for="f_ot">Overtime Hours</label><input id="f_ot" type="number" step="0.25" value="${(Number(p.otHours)||0).toFixed(2)}"></div>
+      </div>
+      <div class="mut" style="font-size:12px;margin-bottom:6px">${money(e.regAmount)}/hr regular, ${money(e.otRate)}/hr overtime.</div>
+    ` : e.payType==='Daily' ? `
+      <div class="field"><label class="fl" for="f_days">Days Worked</label><input id="f_days" type="number" step="1" min="0" value="${Number(p.regHours)||0}"></div>
+      <div class="mut" style="font-size:12px;margin-bottom:6px">Daily rate: ${money(e.regAmount)}/day.</div>
+    ` : `
+      <div class="field"><label class="fl" for="f_flat">Amount</label><input id="f_flat" type="number" step="0.01" value="${p.regPay}"></div>
+    `}
+    <div class="stat-row"><span class="mut">Gross Pay</span><span id="reviewGross" class="mono">${money(p.grossPay)}</span></div>
+    ${e.govDeductions ? `
+      <div class="stat-row"><span class="mut">SSS (employee share, est.)</span><span id="reviewSSS" class="mono">–</span></div>
+      <div class="stat-row"><span class="mut">PhilHealth (employee share, est.)</span><span id="reviewPH" class="mono">–</span></div>
+      <div class="stat-row"><span class="mut">Pag-IBIG (employee share, est.)</span><span id="reviewPI" class="mono">–</span></div>
+    ` : ''}
+    ${(p.advanceDeducted>0 || outstandingAdvanceTotal(e.id) > 0) ? `
+      <div class="field" style="border-top:1px solid var(--line);padding-top:10px;margin-top:6px">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13.5px"><input type="checkbox" id="f_deductAdvance" ${p.advanceDeducted>0?'checked':''}> Deduct outstanding cash advance</label>
+      </div>
+    ` : ''}
+    <div id="reviewTotal" class="stat-row" style="font-weight:800;font-size:15px;margin-top:6px"><span>Total Pay</span><span class="mono">${money(p.netPay)}</span></div>
+    <div class="btnrow">
+      <button class="btn save" onclick="confirmEditPaidEmployee('${paidId}')">Save Changes</button>
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+    </div>
+  `);
+  const recalc = () => {
+    let gross = 0;
+    if(e.payType==='Hourly'){
+      gross = (Number(document.getElementById('f_reg').value)||0)*(Number(e.regAmount)||0) + (Number(document.getElementById('f_ot').value)||0)*(Number(e.otRate)||0);
+    } else if(e.payType==='Daily'){
+      gross = (Number(document.getElementById('f_days').value)||0) * (Number(e.regAmount)||0);
+    } else {
+      gross = Number(document.getElementById('f_flat').value)||0;
+    }
+    document.getElementById('reviewGross').textContent = money(gross);
+    let net = gross;
+    if(e.govDeductions){
+      const d = govDeductionsFor(gross);
+      document.getElementById('reviewSSS').textContent = '-'+money(d.sss);
+      document.getElementById('reviewPH').textContent = '-'+money(d.philhealth);
+      document.getElementById('reviewPI').textContent = '-'+money(d.pagibig);
+      net = gross - d.total;
+    }
+    const advCb = document.getElementById('f_deductAdvance');
+    if(advCb && advCb.checked){ net -= outstandingAdvanceTotal(e.id); }
+    document.getElementById('reviewTotal').innerHTML = `<span>Total Pay</span><span class="mono">${money(net)}</span>`;
+  };
+  ['f_reg','f_ot','f_days','f_flat','f_deductAdvance'].forEach(id=>{ const el=document.getElementById(id); if(el) el.addEventListener('input', recalc); });
+}
+function confirmEditPaidEmployee(paidId){
+  const p = DB.paidEmployees.find(x=>x.id===paidId);
+  if(!p) return;
+  const e = employeeById(p.employeeId);
+  let regHours=0, otHours=0, regPay=0, otPay=0;
+  if(e.payType==='Hourly'){
+    regHours = Number(document.getElementById('f_reg').value)||0;
+    otHours = Number(document.getElementById('f_ot').value)||0;
+    const c = computePay(e, regHours, otHours, 0);
+    regPay = c.regPay; otPay = c.otPay;
+  } else if(e.payType==='Daily'){
+    regHours = Number(document.getElementById('f_days').value)||0;
+    const c = computePay(e, 0, 0, regHours);
+    regPay = c.regPay;
+  } else {
+    regPay = Number(document.getElementById('f_flat').value)||0;
+  }
+  const gross = regPay + otPay;
+  let deductions = 0, deductionBreakdown = null;
+  if(e.govDeductions){ deductionBreakdown = govDeductionsFor(gross); deductions = deductionBreakdown.total; }
+  const advCb = document.getElementById('f_deductAdvance');
+  const advanceDeducted = (advCb && advCb.checked) ? outstandingAdvanceTotal(e.id) : 0;
+  Object.assign(p, { regHours, otHours, regPay, otPay, grossPay: gross, govDeductions: deductions, deductionBreakdown, advanceDeducted, netPay: gross - deductions - advanceDeducted });
+  saveDB(); closeModal(); toast('Pay updated'); go('payroll',{runId:p.payrollId});
+}
+function autoPopulatePayrollRun(pr){
+  // Bring in everyone currently assigned to this site automatically, using the exact same
+  // timesheet-based calculation as adding someone by hand — so a new run isn't a blank slate.
+  const siteEmployees = DB.employees.filter(e => e.active !== false && (e.currentSite||'').trim().toLowerCase() === (pr.site||'').trim().toLowerCase());
+  siteEmployees.forEach(e=>{
+    const { reg, ot } = calcHoursForEmployee(e.id, pr.fromDate, pr.toDate);
+    const days = daysWorkedFor(e.id, pr.fromDate, pr.toDate);
+    let regHours=0, otHours=0, regPay=0, otPay=0;
+    if(e.payType==='Hourly'){
+      regHours = reg; otHours = ot;
+      const c = computePay(e, reg, ot, 0);
+      regPay = c.regPay; otPay = c.otPay;
+    } else if(e.payType==='Daily'){
+      regHours = days;
+      const c = computePay(e, 0, 0, days);
+      regPay = c.regPay;
+    } else {
+      regPay = Number(e.regAmount)||0;
+    }
+    const gross = regPay + otPay;
+    let deductions = 0, deductionBreakdown = null;
+    if(e.govDeductions){ deductionBreakdown = govDeductionsFor(gross); deductions = deductionBreakdown.total; }
+    DB.paidEmployees.push({
+      id: uid(), payrollId: pr.id, employeeId: e.id, employeeName: e.name, payType: e.payType,
+      regHours, otHours, regPay, otPay, grossPay: gross, govDeductions: deductions, deductionBreakdown,
+      advanceDeducted: 0, netPay: gross - deductions,
+    });
+  });
+  return siteEmployees.length;
+}
 function newPayrollRun(){
   openModal(`
     <h3>New Payroll Run</h3>
@@ -5638,7 +5755,9 @@ function savePayrollRun(){
   if(!payDate){ toast('Please choose a pay date'); return; }
   const pr = { id: nextId(DB.payrolls), payDate, status:'Pending', fromDate, toDate, site };
   DB.payrolls.push(pr);
-  saveDB(); closeModal(); toast('Payroll run created');
+  const addedCount = site ? autoPopulatePayrollRun(pr) : 0;
+  saveDB(); closeModal();
+  toast(addedCount ? `Payroll run created — ${addedCount} employee${addedCount===1?'':'s'} at ${site} added automatically` : 'Payroll run created');
   go('payroll',{runId:pr.id});
 }
 async function deletePayrollRun(id){
@@ -5758,7 +5877,7 @@ function renderPayrollRun(runId){
             <td class="num mut">${p.govDeductions?'-'+money(p.govDeductions):'—'}</td>
             <td class="num mut">${p.advanceDeducted?'-'+money(p.advanceDeducted):'—'}</td>
             <td class="num mono" style="font-weight:800">${money(p.netPay)}</td>
-            <td style="display:flex;gap:4px"><button class="btn ghost sm" onclick="openPayslip('${p.id}')">🖨</button><button class="x" onclick="removeFromPayroll(${pr.id},'${p.id}')">✕</button></td>
+            <td style="display:flex;gap:4px"><button class="btn ghost sm" onclick="openEditPaidEmployee('${p.id}')">Edit</button><button class="btn ghost sm" onclick="openPayslip('${p.id}')">🖨</button><button class="x" onclick="removeFromPayroll(${pr.id},'${p.id}')">✕</button></td>
           </tr>`).join('') || `<tr><td colspan="10" class="empty">No employees added to this run yet</td></tr>`}
       </table></div>
     </div>
@@ -5823,7 +5942,10 @@ function printPayrollSummary(runId){
   const paidList = DB.paidEmployees.filter(p=>p.payrollId===runId);
   if(!paidList.length){ toast('No paid employees in this run to print'); return; }
   const pr = DB.payrolls.find(x=>x.id===runId);
-  const rows = paidList.map((p,i)=>{
+  const grandTotal = paidList.reduce((s,p)=>s+(Number(p.netPay)||0), 0);
+  const companyName = (DB.settings && DB.settings.companyName) || '';
+
+  const tableRows = paidList.map((p,i)=>{
     const rate = p.regHours > 0 ? Math.round((p.regPay / p.regHours) * 100) / 100 : p.regPay;
     return `
       <tr>
@@ -5834,30 +5956,47 @@ function printPayrollSummary(runId){
         <td class="num">${p.otHours||''}</td>
         <td class="num">${p.otPay?money0(p.otPay):''}</td>
         <td class="num total">${money0(p.netPay)}</td>
+        <td class="sig"></td>
       </tr>`;
   }).join('');
-  const grandTotal = paidList.reduce((s,p)=>s+(Number(p.netPay)||0), 0);
+
+  const copyBlock = (label, showReceivedBy) => `
+    ${companyName ? `<div class="co">${esc(companyName).toUpperCase()}</div>` : ''}
+    <div class="copy-label">${label}</div>
+    <div class="h1">PROJECT SITE: ${esc((pr&&pr.site)||'—').toUpperCase()}</div>
+    <div class="h2">DATE COVERAGE: ${pr?fmtDate(pr.fromDate).toUpperCase():''} - ${pr?fmtDate(pr.toDate).toUpperCase():''}</div>
+    <table>
+      <thead><tr><th></th><th>NAME</th><th>RATE</th><th># OF DAYS</th><th># OF OT</th><th>OT</th><th>TOTAL PAY</th><th>SIGNATURE</th></tr></thead>
+      <tbody>${tableRows}</tbody>
+      <tfoot><tr><td colspan="6" style="text-align:right">TOTAL</td><td class="num">${money0(grandTotal)}</td><td></td></tr></tfoot>
+    </table>
+    ${showReceivedBy ? `<div class="received-by">RECEIVED BY: <span class="sigline"></span></div>` : ''}
+  `;
+
   const w = window.open('', '_blank');
-  w.document.write(`<html><head><title>Payroll Summary — ${esc(pr&&pr.site)||''}</title><style>
-    @page { size: portrait; margin: 12mm; }
+  w.document.write(`<html><head><title>Payroll — ${esc(pr&&pr.site)||''} ${pr?fmtDate(pr.payDate):''}</title><style>
+    @page { size: portrait; margin: 10mm; }
     body{font-family:-apple-system,Arial,sans-serif;margin:0;padding:0;color:#111}
-    h1{font-size:13px;margin:0 0 2px}
-    .sub{font-size:11px;margin:0 0 10px;color:#333}
-    table{width:100%;border-collapse:collapse;font-size:11px}
-    th,td{border:1px solid #999;padding:4px 6px}
-    th{background:#e8e8e8;text-align:center;font-size:10.5px}
+    .co{font-size:12px;font-weight:700;margin-bottom:2px}
+    .copy-label{font-size:13px;font-weight:800;margin-bottom:4px;text-decoration:underline}
+    .h1{font-size:12px;font-weight:700;margin:0}
+    .h2{font-size:11px;margin:0 0 8px}
+    table{width:100%;border-collapse:collapse;font-size:10.5px;margin-bottom:4px}
+    th,td{border:1px solid #999;padding:3px 5px}
+    th{background:#e8e8e8;text-align:center;font-size:10px}
     td.name{text-align:left}
     td.num{text-align:right;font-variant-numeric:tabular-nums}
     td.total{font-weight:700}
+    td.sig{min-width:70px}
     tfoot td{font-weight:800;border-top:2px solid #333}
+    .received-by{font-size:11px;font-weight:700;margin:10px 0 18px;display:flex;align-items:center;gap:8px}
+    .sigline{flex:1;border-bottom:1px solid #333;max-width:220px;display:inline-block}
+    .cut-line{border-top:1px dashed #999;margin:14px 0;text-align:center;position:relative}
+    .cut-line span{position:relative;top:-8px;background:#fff;padding:0 8px;font-size:9px;color:#999}
   </style></head><body>
-    <h1>PROJECT SITE: ${esc((pr&&pr.site)||'—').toUpperCase()}</h1>
-    <div class="sub">DATE COVERAGE: ${pr?fmtDate(pr.fromDate).toUpperCase():''} - ${pr?fmtDate(pr.toDate).toUpperCase():''}</div>
-    <table>
-      <thead><tr><th></th><th>NAME</th><th>RATE</th><th># OF DAYS</th><th># OF OT</th><th>OT</th><th>TOTAL PAY</th></tr></thead>
-      <tbody>${rows}</tbody>
-      <tfoot><tr><td colspan="6" style="text-align:right">TOTAL</td><td class="num">${money0(grandTotal)}</td></tr></tfoot>
-    </table>
+    ${copyBlock("FOREMAN'S COPY", true)}
+    <div class="cut-line"><span>✂ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -</span></div>
+    ${copyBlock("RECEIVING COPY", false)}
   </body></html>`);
   w.document.close();
   setTimeout(()=>w.print(), 300);
