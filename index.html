@@ -5702,10 +5702,10 @@ function confirmEditPaidEmployee(paidId){
   saveDB(); closeModal(); toast('Pay updated'); go('payroll',{runId:p.payrollId});
 }
 function autoPopulatePayrollRun(pr){
-  // Bring in everyone currently assigned to this site automatically, using the exact same
-  // timesheet-based calculation as adding someone by hand — so a new run isn't a blank slate.
-  const siteEmployees = DB.employees.filter(e => e.active !== false && (e.currentSite||'').trim().toLowerCase() === (pr.site||'').trim().toLowerCase());
-  siteEmployees.forEach(e=>{
+  // Bring in everyone whose MOST RECENT payroll record puts them at this site — employees don't
+  // have a static "current site" field of their own; where they last worked/got paid is the real signal.
+  const matches = employeesCurrentlyAtSite(pr.site).map(x=>x.e).filter(e=>e.active !== false);
+  matches.forEach(e=>{
     const { reg, ot } = calcHoursForEmployee(e.id, pr.fromDate, pr.toDate);
     const days = daysWorkedFor(e.id, pr.fromDate, pr.toDate);
     let regHours=0, otHours=0, regPay=0, otPay=0;
@@ -5729,7 +5729,7 @@ function autoPopulatePayrollRun(pr){
       advanceDeducted: 0, netPay: gross - deductions,
     });
   });
-  return siteEmployees.length;
+  return matches.length;
 }
 function newPayrollRun(){
   openModal(`
@@ -5747,12 +5747,23 @@ function newPayrollRun(){
     </div>
   `);
 }
+function isSaneDate(s){
+  if(!s) return true; // empty is fine, just not a malformed one
+  const m = /^(\d{4})-\d{2}-\d{2}$/.exec(s);
+  if(!m) return false;
+  const year = Number(m[1]);
+  return year >= 2000 && year <= 2100;
+}
 function savePayrollRun(){
   const payDate = document.getElementById('f_paydate').value;
   const fromDate = document.getElementById('f_from').value;
   const toDate = document.getElementById('f_to').value;
   const site = document.getElementById('f_site').value.trim();
   if(!payDate){ toast('Please choose a pay date'); return; }
+  if(!isSaneDate(payDate) || !isSaneDate(fromDate) || !isSaneDate(toDate)){
+    toast('One of the dates looks wrong (check the year) — please re-pick it using the calendar icon.');
+    return;
+  }
   const pr = { id: nextId(DB.payrolls), payDate, status:'Pending', fromDate, toDate, site };
   DB.payrolls.push(pr);
   const addedCount = site ? autoPopulatePayrollRun(pr) : 0;
@@ -5818,6 +5829,7 @@ function renderPayrollRun(runId){
   const paid = paidEmpsFor(pr.id);
   const paidIds = paid.map(p=>p.employeeId);
   const available = DB.employees.filter(e=>e.active && !paidIds.includes(e.id));
+  window.__payrollAvailableEmployees = available;
 
   document.getElementById('mainArea').innerHTML = `
     <div class="crumb"><a onclick="go('payroll')" style="color:var(--muted);text-decoration:none">Payroll</a> &nbsp;/&nbsp; <b>${fmtDate(pr.payDate)}</b></div>
@@ -5853,10 +5865,11 @@ function renderPayrollRun(runId){
     <div class="panel">
       <div class="ph"><h3>Add Employee to This Run</h3></div>
       <div class="searchbar">
-        <select id="addEmpSelect" style="min-width:220px">
-          <option value="">— select employee —</option>
-          ${available.map(e=>`<option value="${e.id}">${esc(e.name)} · ${esc(e.payType)}</option>`).join('')}
-        </select>
+        <div style="position:relative;flex:1;min-width:220px">
+          <input id="addEmpSearch" placeholder="Search employee by name..." autocomplete="off" oninput="filterEmployeeSearch()" onfocus="filterEmployeeSearch()" onblur="setTimeout(()=>{const b=document.getElementById('addEmpResults');if(b)b.style.display='none';},150)">
+          <input type="hidden" id="addEmpSelect" value="">
+          <div id="addEmpResults" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--panel);border:1px solid var(--line);border-radius:8px;max-height:240px;overflow-y:auto;z-index:20;margin-top:4px;box-shadow:var(--shadow)"></div>
+        </div>
         <button class="btn pri" onclick="addEmployeeToPayroll(${pr.id})">+ Review & Add</button>
       </div>
       <div class="mut" style="font-size:12px">Hourly pay pulls hours from timesheets. Daily-rate pay counts timesheet days in the period (editable before you confirm). Overtime applies past ${OT_THRESHOLD} hours/day. No tax or benefit deductions are applied.</div>
@@ -6029,6 +6042,19 @@ function updPayrollStatus(id, status){
 }
 function updPayrollSite(id, site){
   const pr = DB.payrolls.find(p=>p.id===id); pr.site = site.trim(); saveDB(); toast('Project site updated');
+}
+function filterEmployeeSearch(){
+  const q = document.getElementById('addEmpSearch').value.trim().toLowerCase();
+  const box = document.getElementById('addEmpResults');
+  const list = window.__payrollAvailableEmployees || [];
+  const matches = q ? list.filter(e=>e.name.toLowerCase().includes(q)) : list;
+  box.innerHTML = matches.slice(0,30).map(e=>`<div class="click" style="padding:8px 10px;font-size:13px;border-bottom:1px solid var(--line)" onmousedown="selectEmployeeSearch(${e.id},'${esc(e.name).replace(/'/g,"\\'")}')">${esc(e.name)} <span class="mut">· ${esc(e.payType)}</span></div>`).join('') || `<div class="mut" style="padding:8px 10px;font-size:12px">No matching employees</div>`;
+  box.style.display = 'block';
+}
+function selectEmployeeSearch(id, name){
+  document.getElementById('addEmpSelect').value = id;
+  document.getElementById('addEmpSearch').value = name;
+  document.getElementById('addEmpResults').style.display = 'none';
 }
 function addEmployeeToPayroll(runId){
   const sel = document.getElementById('addEmpSelect');
@@ -6911,6 +6937,33 @@ function runMigrationV29(){
   localStorage.setItem(MIGRATION_V29_KEY, '1');
   saveDB();
 }
+const MIGRATION_V30_KEY = 'buildsuite_migration_v30';
+function runMigrationV30(){
+  if(localStorage.getItem(MIGRATION_V30_KEY)) return;
+  let fixed = 0;
+  const repairDate = (s) => {
+    if(!s) return s;
+    const m = /^(\d{4,})-(\d{2})-(\d{2})$/.exec(s);
+    if(!m) return s;
+    const year = Number(m[1]);
+    if(year >= 2000 && year <= 2100) return s; // already fine
+    // e.g. "12026" — a stray leading digit before a real "2026"; take the last 4 digits
+    const lastFour = Number(m[1].slice(-4));
+    if(m[1].length > 4 && lastFour >= 2000 && lastFour <= 2100){
+      fixed++;
+      return `${lastFour}-${m[2]}-${m[3]}`;
+    }
+    return s; // don't guess if it doesn't look confidently fixable
+  };
+  DB.payrolls.forEach(pr=>{
+    pr.fromDate = repairDate(pr.fromDate);
+    pr.toDate = repairDate(pr.toDate);
+    pr.payDate = repairDate(pr.payDate);
+  });
+  if(fixed > 0) logNotification('Cleanup', `Corrected ${fixed} payroll date${fixed===1?'':'s'} with an invalid year`, null);
+  localStorage.setItem(MIGRATION_V30_KEY, '1');
+  saveDB();
+}
 
 function mergeDB(local, cloud){
   // Union-merge: never silently drop a record either side added. On a genuine conflict
@@ -7083,6 +7136,7 @@ async function boot(){
   runMigrationV27();
   runMigrationV28();
   runMigrationV29();
+  runMigrationV30();
   loadCloudConfig();
   await restoreAuthSession();
   applyTheme(localStorage.getItem('buildsuite_theme') || (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
