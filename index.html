@@ -1056,7 +1056,6 @@ function guardDelete(){
 
 /* ---------- router ---------- */
 const NAV = [
-  ['dashboard','Dashboard'],
   ['orders','Orders'],
   ['products','Products'],
   ['leads','Leads'],
@@ -1108,7 +1107,7 @@ function renderHeader(){
   const visibleNav = NAV.filter(([k]) => roleCanAccessTab(k));
   const alerts = getAlerts();
   document.getElementById('headerBar').innerHTML = `
-    <div class="brand"><div class="mark">${companyMark()}</div><div class="name">${esc(companyDisplayName())}</div></div>
+    <div class="brand" style="cursor:pointer" onclick="go('dashboard')" title="Go to Dashboard"><div class="mark">${companyMark()}</div><div class="name">${esc(companyDisplayName())}</div></div>
     <nav class="tabs" id="navtabs">${visibleNav.map(([k,l])=>`<button class="${k===view?'on':''}" onclick="go('${k}')">${l}</button>`).join('')}</nav>
     <div class="spacer"></div>
     <span class="mut syncstatus" style="font-size:12px;display:flex;align-items:center;white-space:nowrap"><span class="syncdot ${cloud.connected?'on':''}"></span>${cloud.syncing?'Syncing…':cloud.connected?(cloud.lastError?'Sync error':'Cloud synced'):'Saved in this browser'}</span>
@@ -3597,6 +3596,36 @@ function saveNewLead(){
   });
   saveDB(); closeModal(); toast('Lead added'); renderLeads();
 }
+function openEditLead(id){
+  const l = (DB.leads||[]).find(x=>x.id===id);
+  if(!l) return;
+  openModal(`
+    <h3>Edit Lead</h3>
+    <div class="field"><label class="fl" for="f_lname">Name</label><input id="f_lname" value="${esc(l.name)}"></div>
+    <div class="grid2">
+      <div class="field"><label class="fl" for="f_lemail">Email</label><input id="f_lemail" type="email" value="${esc(l.email)}"></div>
+      <div class="field"><label class="fl" for="f_lphone">Phone</label><input id="f_lphone" value="${esc(l.phone)}"></div>
+    </div>
+    <div class="field"><label class="fl" for="f_lsource">Source</label><input id="f_lsource" value="${esc(l.source)}"></div>
+    <div class="field"><label class="fl" for="f_lmessage">Notes</label><textarea id="f_lmessage" rows="3">${esc(l.message)}</textarea></div>
+    <div class="btnrow">
+      <button class="btn save" onclick="saveEditLead('${l.id}')">Save Changes</button>
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+    </div>
+  `);
+}
+function saveEditLead(id){
+  const l = (DB.leads||[]).find(x=>x.id===id);
+  if(!l) return;
+  const name = document.getElementById('f_lname').value.trim();
+  if(!name){ toast('Please enter a name'); return; }
+  l.name = name;
+  l.email = document.getElementById('f_lemail').value.trim();
+  l.phone = document.getElementById('f_lphone').value.trim();
+  l.source = document.getElementById('f_lsource').value.trim() || 'Manual';
+  l.message = document.getElementById('f_lmessage').value.trim();
+  saveDB(); closeModal(); toast('Lead updated'); renderLeadDetail(id);
+}
 function renderLeadDetail(id){
   const l = (DB.leads||[]).find(x=>x.id===id);
   if(!l){ go('leads'); return; }
@@ -3611,7 +3640,7 @@ function renderLeadDetail(id){
         <div class="stat-row"><span class="mut">Source</span><span>${esc(l.source)}</span></div>
         <div class="stat-row"><span class="mut">First Contacted</span><span>${fmtDate(l.createdDate)}</span></div>
         ${l.message?`<div style="margin-top:10px"><div class="mut" style="font-size:11px;text-transform:uppercase;font-weight:700">Original Message</div><div style="font-size:13px;margin-top:2px">${esc(l.message)}</div></div>`:''}
-        <div class="btnrow"><button class="x" onclick="deleteLead('${l.id}')">Delete Lead</button></div>
+        <div class="btnrow"><button class="btn ghost sm" onclick="openEditLead('${l.id}')">Edit</button><button class="x" onclick="deleteLead('${l.id}')">Delete Lead</button></div>
       </div>
       <div class="panel">
         <div class="ph"><h3>Pipeline Status</h3></div>
