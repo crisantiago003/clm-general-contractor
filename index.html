@@ -422,6 +422,22 @@ async function cloudPull(){
   const rows = await res.json();
   return rows.length ? rows[0] : null;
 }
+async function fetchPublicProfile(){
+  // The landing page is meant to be public — but under our locked-down reads, an anonymous
+  // visitor's browser never actually gets real company data unless they've logged in before on
+  // that device. This calls a narrow function that returns ONLY the intentionally-public
+  // subset (company profile, testimonials, gallery) — never payroll, employees, or anything else.
+  if(!cloud.connected) return null;
+  try{
+    const res = await fetch(`${cloud.url}/rest/v1/rpc/get_public_profile`, {
+      method: 'POST',
+      headers: cloudHeaders(),
+      body: JSON.stringify({ company_code: cloud.code }),
+    });
+    if(!res.ok) return null;
+    return await res.json();
+  }catch(e){ return null; }
+}
 async function submitLeadToCloud(lead){
   // The contact form is used by anonymous website visitors who will never have an account —
   // under our current security, they can't write to the shared database directly. This calls a
@@ -7800,6 +7816,14 @@ async function boot(){
     startInactivityWatch();
     startNotifyChecks();
   } else {
+    if(cloud.connected){
+      const pub = await fetchPublicProfile();
+      if(pub){
+        if(pub.settings) Object.assign(DB.settings, pub.settings);
+        if(pub.testimonials) DB.testimonials = pub.testimonials;
+        if(pub.galleryPhotos) DB.galleryPhotos = pub.galleryPhotos;
+      }
+    }
     renderLanding();
   }
 }
