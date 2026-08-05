@@ -3697,6 +3697,65 @@ function convertLeadToProject(id){
   toast(`"${l.name}" is now a project — you can rename it and add details anytime`);
   go('customers',{custId:newProject.id});
 }
+function openImportProgram(custId){
+  openModal(`
+    <h3>📋 Import Program of Work</h3>
+    <p style="font-size:13px;color:var(--muted)">Paste the item breakdown from your Program of Work / Bill of Quantities — copy the Item, Description, and Bid Amount columns straight from Excel. Each row becomes a project activity, and its weight is calculated automatically from its real share of the total budget — no guessing needed.</p>
+    <div class="mut" style="font-size:11.5px;margin-bottom:6px">Expected columns, in order (no header row):</div>
+    <div class="mono" style="font-size:11px;background:var(--input);border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:10px">Item No.  |  Description  |  Bid Amount</div>
+    <textarea id="programImportText" rows="10" placeholder="I\tSOIL POISONING\t9355.50\nII\tTERMITE TREATMENT\t2806.65\nIII\tEXCAVATION\t109279.80" style="font-family:var(--mono);font-size:12px"></textarea>
+    <div id="programImportPreview" class="mut" style="font-size:12px;margin-top:8px"></div>
+    <div class="btnrow">
+      <button class="btn save" onclick="confirmImportProgram(${custId})">Import</button>
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+    </div>
+  `);
+  document.getElementById('programImportText').addEventListener('input', function(){
+    const lines = this.value.split('\n').map(l=>l.trim()).filter(Boolean);
+    let total = 0;
+    lines.forEach(l=>{ const cells = l.split('\t'); total += Number(cells[2])||0; });
+    document.getElementById('programImportPreview').textContent = lines.length ? `${lines.length} item${lines.length===1?'':'s'} detected — total ₱${total.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}` : '';
+  });
+}
+function confirmImportProgram(custId){
+  const c = customerById(custId);
+  const text = document.getElementById('programImportText').value;
+  const lines = text.split('\n').map(l=>l.trim()).filter(Boolean);
+  if(!lines.length){ toast('Paste the item breakdown first'); return; }
+  const rows = lines.map(line=>{
+    const cells = line.split('\t').map(x=>x.trim());
+    return { itemNo: cells[0]||'', name: cells[1]||'', budgetAmount: Number(cells[2])||0 };
+  }).filter(r=>r.name);
+  if(!rows.length){ toast('Could not read any valid rows — check that Description is in the second column'); return; }
+  const totalBudget = rows.reduce((s,r)=>s+r.budgetAmount, 0);
+  if(totalBudget <= 0){ toast('Total budget came out to ₱0 — check that Bid Amount is in the third column'); return; }
+
+  const hasExistingProgress = (c.activities||[]).some(a=>(a.pct||0) > 0);
+  const doImport = () => {
+    c.activities = rows.map(r=>({
+      id: uid(), name: r.name, itemNo: r.itemNo, budgetAmount: r.budgetAmount,
+      weight: Math.round((r.budgetAmount/totalBudget)*10000)/100, // to 2 decimals, e.g. 57.7
+      pct: 0, plannedStart: '', plannedEnd: '',
+    }));
+    c.budget = totalBudget;
+    saveDB(); closeModal(); toast(`Imported ${rows.length} items — total budget ₱${totalBudget.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`);
+    go('customers',{custId});
+  };
+  if(hasExistingProgress){
+    window.__pendingProgramImport = doImport;
+    closeModal();
+    openModal(`
+      <h3>⚠️ Replace Existing Progress?</h3>
+      <p style="font-size:13.5px">This project already has activities with progress logged. Importing a Program of Work replaces the entire activity list — any progress already recorded on the current activities will be lost (though it stays visible in the project's activity log history).</p>
+      <div class="btnrow">
+        <button class="btn del" onclick="window.__pendingProgramImport()">Replace Anyway</button>
+        <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      </div>
+    `);
+  } else {
+    doImport();
+  }
+}
 function renderCustomerDetail(id){
   const c = customerById(id);
   if(!c){ go('customers'); return; }
@@ -3711,7 +3770,7 @@ function renderCustomerDetail(id){
   document.getElementById('mainArea').innerHTML = `
     <div class="crumb"><a onclick="go('customers')" style="color:var(--muted);text-decoration:none">Projects</a> &nbsp;/&nbsp; <b>${esc(c.name)}</b></div>
     <div class="panel">
-      <div class="ph"><h3>Project Progress</h3>${session.type==='Admin'?`<div class="btnrow" style="margin:0"><button class="btn ghost sm" onclick="openBulkImport('activities',${id})">Bulk Import</button><button class="btn ghost sm" onclick="openAddActivity(${id})">+ Add Activity</button></div>`:''}</div>
+      <div class="ph"><h3>Project Progress</h3>${session.type==='Admin'?`<div class="btnrow" style="margin:0"><button class="btn ghost sm" onclick="openImportProgram(${id})">📋 Import Program of Work</button><button class="btn ghost sm" onclick="openBulkImport('activities',${id})">Bulk Import</button><button class="btn ghost sm" onclick="openAddActivity(${id})">+ Add Activity</button></div>`:''}</div>
       <div class="progress-tooltip-wrap">
         <div class="progress" style="margin-top:4px"><div style="width:${projectCompletionPct(c)}%;background:${projectCompletionPct(c)>=100?'var(--green)':'var(--accent2)'}"></div></div>
         <div class="progress-tooltip">
@@ -3764,6 +3823,33 @@ function renderCustomerDetail(id){
         </div>
       ` : ''}
     </div>
+    ${c.budget ? (() => {
+      const rpt = projectReport(id, '', todayISO());
+      const spentPct = Math.min(100, Math.round((rpt.totalExpenses / c.budget) * 100));
+      const donePct = projectCompletionPct(c);
+      const gap = spentPct - donePct;
+      let note, noteColor;
+      if(!c.activities || !c.activities.length){
+        note = 'Add activities to compare spending pace against real physical progress.'; noteColor = 'var(--muted)';
+      } else if(gap > 15){
+        note = `Spending is ${gap}pts ahead of physical progress — worth a closer look.`; noteColor = 'var(--danger)';
+      } else if(gap < -15){
+        note = `Physical progress is ${-gap}pts ahead of spending — good sign.`; noteColor = 'var(--green)';
+      } else {
+        note = 'Spending pace roughly tracks physical progress.'; noteColor = 'var(--green)';
+      }
+      return `
+    <div class="panel">
+      <div class="ph"><h3>💰 Budget vs. Progress</h3><button class="btn ghost sm" onclick="go('projectReport',{projectId:${id},from:'',to:'${todayISO()}'})">Full Report</button></div>
+      <div class="grid2">
+        <div class="stat-row"><span class="mut">Total Budget</span><span class="mono">${money(c.budget)}</span></div>
+        <div class="stat-row"><span class="mut">Spent So Far</span><span class="mono">${money(rpt.totalExpenses)} (${spentPct}%)</span></div>
+        <div class="stat-row"><span class="mut">Physical Progress</span><span class="mono">${donePct}%</span></div>
+        <div class="stat-row"><span class="mut">Remaining Budget</span><span class="mono" style="color:${rpt.totalExpenses>c.budget?'var(--danger)':'var(--green)'}">${money(c.budget - rpt.totalExpenses)}</span></div>
+      </div>
+      <div class="mut" style="font-size:12.5px;margin-top:8px;color:${noteColor}"><b>${note}</b></div>
+    </div>`;
+    })() : ''}
     <div class="grid2">
       <div class="panel">
         <div class="ph"><h3>Project Details</h3>${canEdit()?`<button class="btn ghost sm" onclick="editCustomer(${id})">Edit</button>`:''}</div>
