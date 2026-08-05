@@ -3697,63 +3697,141 @@ function convertLeadToProject(id){
   toast(`"${l.name}" is now a project — you can rename it and add details anytime`);
   go('customers',{custId:newProject.id});
 }
-function openImportProgram(custId){
-  openModal(`
-    <h3>📋 Import Program of Work</h3>
-    <p style="font-size:13px;color:var(--muted)">Paste the item breakdown from your Program of Work / Bill of Quantities — copy the Item, Description, and Bid Amount columns straight from Excel. Each row becomes a project activity, and its weight is calculated automatically from its real share of the total budget — no guessing needed.</p>
-    <div class="mut" style="font-size:11.5px;margin-bottom:6px">Expected columns, in order (no header row):</div>
-    <div class="mono" style="font-size:11px;background:var(--input);border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:10px">Item No.  |  Description  |  Bid Amount</div>
-    <textarea id="programImportText" rows="10" placeholder="I\tSOIL POISONING\t9355.50\nII\tTERMITE TREATMENT\t2806.65\nIII\tEXCAVATION\t109279.80" style="font-family:var(--mono);font-size:12px"></textarea>
-    <div id="programImportPreview" class="mut" style="font-size:12px;margin-top:8px"></div>
-    <div class="btnrow">
-      <button class="btn save" onclick="confirmImportProgram(${custId})">Import</button>
-      <button class="btn ghost" onclick="closeModal()">Cancel</button>
-    </div>
-  `);
-  document.getElementById('programImportText').addEventListener('input', function(){
-    const lines = this.value.split('\n').map(l=>l.trim()).filter(Boolean);
-    let total = 0;
-    lines.forEach(l=>{ const cells = l.split('\t'); total += Number(cells[2])||0; });
-    document.getElementById('programImportPreview').textContent = lines.length ? `${lines.length} item${lines.length===1?'':'s'} detected — total ₱${total.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}` : '';
-  });
+function parseMoney(str){
+  // Real spreadsheet numbers come with thousand-separator commas and sometimes a peso sign —
+  // Number() alone treats those as invalid and silently returns 0, which is exactly the bug
+  // that caused a real program import to show a ₱0 total. Strip everything but digits/decimal first.
+  if(typeof str === 'number') return str;
+  const cleaned = String(str||'').replace(/[₱,\s]/g, '');
+  const n = Number(cleaned);
+  return isNaN(n) ? 0 : n;
 }
-function confirmImportProgram(custId){
+function openImportProgram(custId){
   const c = customerById(custId);
+  window.__programDraft = (c.activities||[]).map(a=>({ itemNo: a.itemNo||'', name: a.name, budgetAmount: a.budgetAmount||0 }));
+  renderProgramEditor(custId);
+}
+function renderProgramEditor(custId){
+  const c = customerById(custId);
+  const draft = window.__programDraft || [];
+  const total = draft.reduce((s,r)=>s+r.budgetAmount, 0);
+  openModal(`
+    <h3>📋 Program of Work — ${esc(c.name)}</h3>
+    <p style="font-size:12.5px;color:var(--muted)">Add each scope of work with its budgeted amount. Weight is calculated automatically from its share of the total — you don't need to work that out yourself. Edit or remove any row before saving, and nothing changes on the project until you click Save.</p>
+    <div class="twrap" style="max-height:280px;overflow-y:auto"><table>
+      <tr><th>Item</th><th>Scope of Work</th><th class="right">Amount</th><th class="right">Weight</th><th></th></tr>
+      ${draft.map((r,i)=>`
+        <tr>
+          <td class="mono">${esc(r.itemNo)}</td>
+          <td>${esc(r.name)}</td>
+          <td class="num mono">${money(r.budgetAmount)}</td>
+          <td class="num mono">${total>0?((r.budgetAmount/total)*100).toFixed(2):'0.00'}%</td>
+          <td style="white-space:nowrap"><button class="btn ghost sm" onclick="editProgramDraftRow(${i},${custId})">Edit</button> <button class="x" onclick="deleteProgramDraftRow(${i},${custId})">✕</button></td>
+        </tr>`).join('') || `<tr><td colspan="5" class="empty">No items yet — add one below, or paste several at once.</td></tr>`}
+      ${draft.length ? `<tr style="border-top:2px solid var(--line);font-weight:800"><td colspan="2">TOTAL</td><td class="num mono">${money(total)}</td><td class="num mono">100.00%</td><td></td></tr>` : ''}
+    </table></div>
+    <div class="grid2" style="margin-top:14px">
+      <div class="field"><label class="fl" for="pw_item">Item No. (optional)</label><input id="pw_item" placeholder="e.g. VI"></div>
+      <div class="field"><label class="fl" for="pw_amount">Budget Amount</label><input id="pw_amount" type="text" placeholder="0.00"></div>
+    </div>
+    <div class="field"><label class="fl" for="pw_name">Scope of Work</label><input id="pw_name" placeholder="e.g. CONCRETE WORKS"></div>
+    <div class="btnrow" style="margin-top:0">
+      <button class="btn ghost sm" onclick="addProgramDraftRow(${custId})">+ Add Item</button>
+      <button class="btn ghost sm" onclick="toggleProgramPaste()">📋 Paste Multiple at Once</button>
+    </div>
+    <div id="programPasteArea" style="display:none;margin-top:10px">
+      <div class="mut" style="font-size:11px;margin-bottom:4px">Item No. | Scope of Work | Amount — one per line, tab-separated (paste straight from Excel)</div>
+      <textarea id="programImportText" rows="6" placeholder="VI	CONCRETE WORKS	8,026,715.74" style="font-family:var(--mono);font-size:12px"></textarea>
+      <div class="btnrow" style="margin-top:6px"><button class="btn ghost sm" onclick="addPastedProgramRows(${custId})">Add These Rows</button></div>
+    </div>
+    <div class="btnrow" style="margin-top:16px">
+      <button class="btn save" onclick="saveProgramDraft(${custId})">Save Program${draft.length?` (${draft.length} item${draft.length===1?'':'s'})`:''}</button>
+      <button class="btn ghost" onclick="window.__programDraft=null;closeModal()">Cancel</button>
+    </div>
+  `, {wide:true});
+}
+function addProgramDraftRow(custId){
+  const name = document.getElementById('pw_name').value.trim();
+  const amount = parseMoney(document.getElementById('pw_amount').value);
+  if(!name){ toast('Please enter a scope of work'); return; }
+  if(amount <= 0){ toast('Please enter a valid budget amount'); return; }
+  window.__programDraft.push({ itemNo: document.getElementById('pw_item').value.trim(), name, budgetAmount: amount });
+  renderProgramEditor(custId);
+}
+function editProgramDraftRow(idx, custId){
+  const r = window.__programDraft[idx];
+  openModal(`
+    <h3>Edit Item</h3>
+    <div class="field"><label class="fl" for="pw_eitem">Item No.</label><input id="pw_eitem" value="${esc(r.itemNo)}"></div>
+    <div class="field"><label class="fl" for="pw_ename">Scope of Work</label><input id="pw_ename" value="${esc(r.name)}"></div>
+    <div class="field"><label class="fl" for="pw_eamount">Budget Amount</label><input id="pw_eamount" type="text" value="${r.budgetAmount}"></div>
+    <div class="btnrow">
+      <button class="btn save" onclick="saveProgramDraftRowEdit(${idx},${custId})">Save</button>
+      <button class="btn ghost" onclick="renderProgramEditor(${custId})">Cancel</button>
+    </div>
+  `, {wide:true});
+}
+function saveProgramDraftRowEdit(idx, custId){
+  const name = document.getElementById('pw_ename').value.trim();
+  const amount = parseMoney(document.getElementById('pw_eamount').value);
+  if(!name){ toast('Please enter a scope of work'); return; }
+  if(amount <= 0){ toast('Please enter a valid budget amount'); return; }
+  window.__programDraft[idx] = { itemNo: document.getElementById('pw_eitem').value.trim(), name, budgetAmount: amount };
+  renderProgramEditor(custId);
+}
+function deleteProgramDraftRow(idx, custId){
+  window.__programDraft.splice(idx,1);
+  renderProgramEditor(custId);
+}
+function toggleProgramPaste(){
+  const el = document.getElementById('programPasteArea');
+  el.style.display = el.style.display==='none' ? 'block' : 'none';
+}
+function addPastedProgramRows(custId){
   const text = document.getElementById('programImportText').value;
   const lines = text.split('\n').map(l=>l.trim()).filter(Boolean);
-  if(!lines.length){ toast('Paste the item breakdown first'); return; }
-  const rows = lines.map(line=>{
+  let added = 0;
+  lines.forEach(line=>{
     const cells = line.split('\t').map(x=>x.trim());
-    return { itemNo: cells[0]||'', name: cells[1]||'', budgetAmount: Number(cells[2])||0 };
-  }).filter(r=>r.name);
-  if(!rows.length){ toast('Could not read any valid rows — check that Description is in the second column'); return; }
-  const totalBudget = rows.reduce((s,r)=>s+r.budgetAmount, 0);
-  if(totalBudget <= 0){ toast('Total budget came out to ₱0 — check that Bid Amount is in the third column'); return; }
-
+    const name = cells[1]||'';
+    const amount = parseMoney(cells[2]);
+    if(name && amount > 0){ window.__programDraft.push({ itemNo: cells[0]||'', name, budgetAmount: amount }); added++; }
+  });
+  if(added===0){ toast('No valid rows found — check that the Amount is in the third column'); return; }
+  toast(`Added ${added} item${added===1?'':'s'}`);
+  renderProgramEditor(custId);
+}
+function saveProgramDraft(custId){
+  const draft = window.__programDraft || [];
+  if(!draft.length){ toast('Add at least one item first'); return; }
+  const c = customerById(custId);
+  const totalBudget = draft.reduce((s,r)=>s+r.budgetAmount, 0);
+  if(totalBudget <= 0){ toast('Total budget came out to ₱0 — check the amounts entered'); return; }
   const hasExistingProgress = (c.activities||[]).some(a=>(a.pct||0) > 0);
-  const doImport = () => {
-    c.activities = rows.map(r=>({
+  const doSave = () => {
+    c.activities = draft.map(r=>({
       id: uid(), name: r.name, itemNo: r.itemNo, budgetAmount: r.budgetAmount,
-      weight: Math.round((r.budgetAmount/totalBudget)*10000)/100, // to 2 decimals, e.g. 57.7
+      weight: Math.round((r.budgetAmount/totalBudget)*10000)/100,
       pct: 0, plannedStart: '', plannedEnd: '',
     }));
     c.budget = totalBudget;
-    saveDB(); closeModal(); toast(`Imported ${rows.length} items — total budget ₱${totalBudget.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`);
+    saveDB(); window.__programDraft = null; closeModal();
+    toast(`Saved ${draft.length} items — total budget ${money(totalBudget)}`);
     go('customers',{custId});
   };
   if(hasExistingProgress){
-    window.__pendingProgramImport = doImport;
+    window.__pendingProgramImport = doSave;
     closeModal();
     openModal(`
       <h3>⚠️ Replace Existing Progress?</h3>
-      <p style="font-size:13.5px">This project already has activities with progress logged. Importing a Program of Work replaces the entire activity list — any progress already recorded on the current activities will be lost (though it stays visible in the project's activity log history).</p>
+      <p style="font-size:13.5px">This project already has activities with progress logged. Saving this program replaces the entire activity list — any progress already recorded on the current activities will be lost (though it stays visible in the project's activity log history).</p>
       <div class="btnrow">
         <button class="btn del" onclick="window.__pendingProgramImport()">Replace Anyway</button>
         <button class="btn ghost" onclick="closeModal()">Cancel</button>
       </div>
     `);
   } else {
-    doImport();
+    doSave();
   }
 }
 function renderCustomerDetail(id){
