@@ -416,13 +416,52 @@ async function cloudPull(){
   const rows = await res.json();
   return rows.length ? rows[0] : null;
 }
+async function fetchUserForLogin(username){
+  // Used before anyone is authenticated (first-time device connect, or a not-yet-migrated
+  // account's first login). Calls a narrow Postgres function that returns ONLY the single
+  // matching user record — never the rest of the company's materials, payroll, or supplier data.
+  // This is what makes it safe for Supabase's row-level security to require authentication for
+  // ordinary reads of the full company record, while this one specific lookup still works.
+  try{
+    const res = await fetch(`${cloud.url}/rest/v1/rpc/get_user_for_login`, {
+      method: 'POST',
+      headers: cloudHeaders(),
+      body: JSON.stringify({ company_code: cloud.code, check_username: username }),
+    });
+    if(!res.ok) return null;
+    const data = await res.json();
+    return (data && Object.keys(data).length) ? data : null;
+  }catch(e){ return null; }
+}
+async function authenticateForConnect(username, pw){
+  // Tries real Supabase Auth sign-in first; falls back to the narrow single-user lookup for
+  // accounts that haven't completed migration yet. This is what lets "Connect This Device"
+  // prove who someone is BEFORE pulling any of the company's real data.
+  try{
+    const email = authEmailFor(username);
+    const signInResult = await supabaseAuthSignIn(email, pw);
+    if(signInResult.ok){
+      saveAuthSession(signInResult.accessToken, signInResult.refreshToken);
+      return { ok: true };
+    }
+  }catch(e){}
+  const fetchedUser = await fetchUserForLogin(username);
+  if(!fetchedUser) return { ok:false, msg:"Could not find that username on this company's workspace." };
+  const hashedInput = await hashPassword(pw);
+  if(String(fetchedUser.password) !== hashedInput) return { ok:false, msg:'Incorrect password.' };
+  return { ok:true, user: fetchedUser };
+}
 async function preLoginCloudConnect(){
   const url = document.getElementById('cloudUrl').value.trim().replace(/\/$/,'');
   const key = document.getElementById('cloudKey').value.trim();
   const code = document.getElementById('cloudCode').value.trim();
-  if(!url || !key || !code){ toast('Please fill in the URL, key, and sync code your Admin gave you'); return; }
+  const username = document.getElementById('cloudConnectUser').value.trim();
+  const pw = document.getElementById('cloudConnectPw').value;
+  if(!url || !key || !code || !username || !pw){ toast("Please fill in all fields — your Admin has the URL, key, and sync code, and you'll need your own username and password."); return; }
   cloud.url = url; cloud.key = key; cloud.code = code;
   try{
+    const auth = await authenticateForConnect(username, pw);
+    if(!auth.ok){ toast(auth.msg || 'Could not verify your login for this company.'); return; }
     const existing = await cloudPull();
     if(existing && existing.data){
       // A device connecting before ever logging in should only ever PULL the real company data —
@@ -449,8 +488,12 @@ async function connectFromPendingScreen(){
   const url = document.getElementById('cloudUrl').value.trim().replace(/\/$/,'');
   const key = document.getElementById('cloudKey').value.trim();
   const code = document.getElementById('cloudCode').value.trim();
-  if(!url || !key || !code){ toast('Please fill in the URL, key, and sync code your Admin gave you'); return; }
+  const username = document.getElementById('cloudConnectUser').value.trim();
+  const pw = document.getElementById('cloudConnectPw').value;
+  if(!url || !key || !code || !username || !pw){ toast("Please fill in all fields — your Admin has the URL, key, and sync code, and you'll need your own username and password."); return; }
   cloud.url = url; cloud.key = key; cloud.code = code;
+  const auth = await authenticateForConnect(username, pw);
+  if(!auth.ok){ toast(auth.msg || 'Could not verify your login for this company.'); return; }
   const myOwnAccount = DB.users.find(u=>u.id===session.id); // must not be lost in the switch to cloud data
   try{
     const existing = await cloudPull();
@@ -486,10 +529,12 @@ function openPreLoginCloudConnect(){
   const fromPending = !!session;
   openModal(`
     <h3>Connect This Device</h3>
-    <p style="font-size:13px;color:var(--muted)">Ask your Admin for these three details — they only need to be entered once on this device.</p>
+    <p style="font-size:13px;color:var(--muted)">Ask your Admin for these details — they only need to be entered once on this device. Your username and password confirm you're allowed to see this company's data before anything is downloaded.</p>
     <input id="cloudUrl" placeholder="Supabase Project URL" style="margin-bottom:8px">
     <input id="cloudKey" placeholder="Supabase anon public key" style="margin-bottom:8px">
-    <input id="cloudCode" placeholder="Sync code">
+    <input id="cloudCode" placeholder="Sync code" style="margin-bottom:8px">
+    <input id="cloudConnectUser" placeholder="Your username" style="margin-bottom:8px">
+    <input id="cloudConnectPw" type="password" placeholder="Your password">
     <button class="btn pri" style="width:100%;justify-content:center;margin-top:14px" onclick="${fromPending?'connectFromPendingScreen()':'preLoginCloudConnect()'}">Connect</button>
     <div class="btnrow"><button class="btn ghost" onclick="closeModal()">Cancel</button></div>
   `);
@@ -1677,7 +1722,7 @@ function renderLanding(){
   document.getElementById('loginScreen').innerHTML = `
   <div class="landing">
     <div class="landing-nav">
-      <div class="brand2"><div class="mark2">CLM</div>${esc(companyName)}</div>
+      <div class="brand2"><div class="mark2">${companyMark()}</div>${esc(companyName)}</div>
       <nav>
         <a onclick="document.getElementById('ld-about').scrollIntoView({behavior:'smooth'})">About</a>
         <a onclick="document.getElementById('ld-services').scrollIntoView({behavior:'smooth'})">Services</a>
@@ -2026,16 +2071,16 @@ async function doLogin(){
           localStorage.setItem('buildsuite_updated_at', new Date().toISOString());
         }
       } else {
-        // Not signed up on the real backend yet (or wrong password) — fall back to reading
-        // with whatever access we already have, and let local verification decide below.
+        // Not signed up on the real backend yet (or wrong password). Rather than reading the
+        // whole company database before anyone is authenticated, fetch just this one username's
+        // record — enough to check the password locally and continue the migration below,
+        // without exposing the rest of the company's data.
         console.debug('Real backend sign-in did not succeed yet (expected if not migrated):', signInResult.error);
-        const row = await cloudPull();
-        if(row && row.data){
-          DB = mergeDB(DB, row.data);
-          backfillMissingKeys(DB);
-          ensureAdminAccount();
+        const fetchedUser = await fetchUserForLogin(uInput);
+        if(fetchedUser){
+          const idx = DB.users.findIndex(u => (u.username||u.name).toLowerCase() === (fetchedUser.username||fetchedUser.name).toLowerCase());
+          if(idx >= 0) DB.users[idx] = fetchedUser; else DB.users.push(fetchedUser);
           localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
-          localStorage.setItem('buildsuite_updated_at', new Date().toISOString());
         }
       }
     }catch(e){ /* offline or unreachable — fall through and try with whatever data we already have locally */ }
@@ -4890,6 +4935,10 @@ function toolHistory(name){
   const key = name.trim().toUpperCase();
   return DB.equipment.filter(e=>e.name.trim().toUpperCase()===key).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
 }
+function toolTransferHistory(name){
+  const key = name.trim().toUpperCase();
+  return (DB.materialTransfers||[]).filter(t => t.kind==='Equipment' && (t.materialName||'').trim().toUpperCase()===key).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+}
 function renderEquipmentInner(){
   sub.eqSearch = sub.eqSearch || '';
   sub.eqSite = sub.eqSite || 'ALL';
@@ -5029,6 +5078,11 @@ function openToolHistory(name){
   const statusCounts = {};
   entries.forEach(e=>{ const s=e.status||'Unknown'; statusCounts[s]=(statusCounts[s]||0)+1; });
   const latest = entries[entries.length-1];
+  const transfers = toolTransferHistory(name);
+  const timeline = [
+    ...entries.map(e=>({ type:'log', date:e.date, e })),
+    ...transfers.map(t=>({ type:'transfer', date:t.date, t })),
+  ].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
   openModal(`
     <h3>📜 History — ${esc(entries[0].name)}</h3>
     <div class="grid2" style="margin-bottom:12px">
@@ -5042,7 +5096,10 @@ function openToolHistory(name){
     <div class="mut" style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;font-weight:700;margin-bottom:8px">Timeline (oldest → newest)</div>
     <div class="twrap" style="max-height:340px;overflow-y:auto"><table>
       <tr><th>Date</th><th>Moved</th><th>Status</th><th>Serial #</th><th class="right">Qty</th><th></th></tr>
-      ${entries.map(e=>`
+      ${timeline.map(row=>{
+        if(row.type==='log'){
+          const e = row.e;
+          return `
         <tr class="click" onclick="closeModal();editEquipment(${e.id})">
           <td class="mut">${fmtDate(e.date)||'—'}</td>
           <td>${e.receivedFrom?`${esc(e.receivedFrom)} → `:''}<b>${esc(e.site)}</b></td>
@@ -5050,7 +5107,20 @@ function openToolHistory(name){
           <td class="mono">${esc(e.serial)||'—'}</td>
           <td class="num mono">${e.qty!==''?e.qty:1}</td>
           <td><button class="x" onclick="event.stopPropagation();deleteEquipment(${e.id});closeModal()">✕</button></td>
-        </tr>`).join('')}
+        </tr>`;
+        } else {
+          const t = row.t;
+          return `
+        <tr>
+          <td class="mut">${fmtDate(t.date)||'—'}</td>
+          <td>🚚 <span class="mut">${esc(t.fromSite)} →</span> <b>${esc(t.toSite)}</b></td>
+          <td><span class="badge" style="opacity:.8">Transfer</span></td>
+          <td class="mono">—</td>
+          <td class="num mono">${t.qty}</td>
+          <td></td>
+        </tr>`;
+        }
+      }).join('')}
     </table></div>
     <div class="mut" style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;font-weight:700;margin:16px 0 8px">Maintenance Reminders</div>
     ${equipReminderRows(entries[0].name)}
