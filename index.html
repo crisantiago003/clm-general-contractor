@@ -38,6 +38,12 @@
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
+/* Scrollbars styled to match the active theme instead of the browser's default light scrollbar */
+*{scrollbar-width:thin;scrollbar-color:var(--line) var(--panel)}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:var(--panel)}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px;border:2px solid var(--panel)}
+::-webkit-scrollbar-thumb:hover{background:var(--muted)}
 body{background:var(--bg);color:var(--text);font:14px/1.5 var(--font);-webkit-font-smoothing:antialiased}
 button{font-family:inherit;cursor:pointer}
 input,select,textarea{font-family:inherit;font-size:13.5px;background:var(--input);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:9px 11px;width:100%}
@@ -1483,7 +1489,7 @@ function saveSignupCode(){
   DB.settings.signupCode = document.getElementById('signupCodeInput').value.trim();
   saveDB(); toast('Invite code updated'); closeModal(); openSettings();
 }
-function saveCompanyProfile(){
+async function saveCompanyProfile(){
   DB.settings.companyName = document.getElementById('cpName').value;
   DB.settings.companyShortName = document.getElementById('cpShortName').value;
   DB.settings.companyDescription = document.getElementById('cpDesc').value;
@@ -1491,7 +1497,9 @@ function saveCompanyProfile(){
   DB.settings.companyEmail = document.getElementById('cpEmail').value;
   DB.settings.companyAddress = document.getElementById('cpAddress').value;
   DB.settings.companyTIN = document.getElementById('cpTIN').value;
-  saveDB(); toast('Company profile updated'); closeModal(); openSettings();
+  const r = await saveDBAndConfirmSync();
+  toast(r.synced ? 'Company profile updated' : `⚠️ Saved here, but failed to sync — ${r.error||'check your connection'}. Try again, or log out and back in.`);
+  closeModal(); openSettings();
 }
 function openManageAnnouncements(){
   if(session.type !== 'Admin'){ toast('Only an Admin can manage announcements.'); return; }
@@ -6372,6 +6380,7 @@ function renderPayrollRun(runId){
           <button class="btn ghost sm" onclick="exportPayrollRunCSV(${pr.id})">Export CSV</button>
           <button class="btn ghost sm" onclick="printPayrollSummary(${pr.id})">🖨 Print Summary (1 page)</button>
           <button class="btn ghost sm" onclick="printWholeRun(${pr.id})">🖨 Print Whole Run</button>
+          <button class="btn ghost sm" onclick="openDenominationBreakdown(${pr.id})">💵 Cash Denomination</button>
           <button class="btn del sm" onclick="deletePayrollRun(${pr.id})">Delete Run</button>
         </div>
       </div>
@@ -6476,6 +6485,87 @@ function openPayslip(paidId){
       <button class="btn ghost" onclick="closeModal()">Close</button>
     </div>
   `);
+}
+const PESO_DENOMINATIONS = [1000, 500, 200, 100, 50, 20, 10, 5, 1];
+function denominationBreakdown(amount){
+  // Cash has to be handed over in whole pesos, so round first — the greedy largest-first approach
+  // matches how anyone counting out real bills and coins would naturally do it.
+  let remaining = Math.round(Number(amount)||0);
+  const breakdown = {};
+  PESO_DENOMINATIONS.forEach(d=>{
+    const count = Math.floor(remaining / d);
+    if(count > 0){ breakdown[d] = count; remaining -= count * d; }
+  });
+  return breakdown;
+}
+function openDenominationBreakdown(runId){
+  const pr = DB.payrolls.find(p=>p.id===runId);
+  const paid = paidEmpsFor(runId);
+  if(!paid.length){ toast('No paid employees in this run yet'); return; }
+  const rows = paid.map(p=>({ name: p.employeeName, amount: p.netPay, breakdown: denominationBreakdown(p.netPay) }));
+  const totals = {};
+  let grandTotal = 0;
+  rows.forEach(r=>{
+    grandTotal += Math.round(Number(r.amount)||0);
+    PESO_DENOMINATIONS.forEach(d=>{ totals[d] = (totals[d]||0) + (r.breakdown[d]||0); });
+  });
+  openModal(`
+    <h3>💵 Cash Denomination — ${fmtDate(pr.payDate)}</h3>
+    <div class="mut" style="font-size:12.5px;margin-bottom:12px">${esc(pr.site)||'—'} · rounded to the nearest peso for cash handling</div>
+    <div class="twrap" style="max-height:400px;overflow-y:auto"><table>
+      <tr><th>Employee</th>${PESO_DENOMINATIONS.map(d=>`<th class="right">₱${d}</th>`).join('')}<th class="right">Total</th></tr>
+      ${rows.map(r=>`
+        <tr>
+          <td>${esc(r.name)}</td>
+          ${PESO_DENOMINATIONS.map(d=>`<td class="num mono">${r.breakdown[d]||''}</td>`).join('')}
+          <td class="num mono"><b>${money0(Math.round(r.amount))}</b></td>
+        </tr>`).join('')}
+      <tr style="border-top:2px solid var(--line);font-weight:800">
+        <td>TOTAL BILLS/COINS NEEDED</td>
+        ${PESO_DENOMINATIONS.map(d=>`<td class="num mono">${totals[d]||0}</td>`).join('')}
+        <td class="num mono">${money0(grandTotal)}</td>
+      </tr>
+    </table></div>
+    <div class="mut" style="font-size:11.5px;margin-top:10px">e.g. "3" under ₱1000 means withdraw three ₱1000 bills for that total row.</div>
+    <div class="btnrow">
+      <button class="btn ghost sm" onclick="printDenominationBreakdown(${runId})">🖨 Print</button>
+      <button class="btn ghost" onclick="closeModal()">Close</button>
+    </div>
+  `);
+}
+function printDenominationBreakdown(runId){
+  const pr = DB.payrolls.find(p=>p.id===runId);
+  const paid = paidEmpsFor(runId);
+  const rows = paid.map(p=>({ name: p.employeeName, amount: p.netPay, breakdown: denominationBreakdown(p.netPay) }));
+  const totals = {};
+  let grandTotal = 0;
+  rows.forEach(r=>{
+    grandTotal += Math.round(Number(r.amount)||0);
+    PESO_DENOMINATIONS.forEach(d=>{ totals[d] = (totals[d]||0) + (r.breakdown[d]||0); });
+  });
+  const w = window.open('', '_blank');
+  w.document.write(`<html><head><title>Cash Denomination — ${esc(pr.site)||''} ${fmtDate(pr.payDate)}</title><style>
+    @page { size: landscape; margin: 10mm; }
+    body{font-family:-apple-system,Arial,sans-serif;margin:0;padding:0;color:#111}
+    h1{font-size:14px;margin:0 0 2px}
+    .sub{font-size:11px;margin:0 0 10px;color:#333}
+    table{width:100%;border-collapse:collapse;font-size:10.5px}
+    th,td{border:1px solid #999;padding:3px 5px}
+    th{background:#e8e8e8;text-align:center}
+    td.name{text-align:left}
+    td.num{text-align:right;font-variant-numeric:tabular-nums}
+    tfoot td{font-weight:800;border-top:2px solid #333}
+  </style></head><body>
+    <h1>Cash Denomination Breakdown</h1>
+    <div class="sub">${esc(pr.site)||''} · ${fmtDate(pr.payDate)}</div>
+    <table>
+      <tr><th>Employee</th>${PESO_DENOMINATIONS.map(d=>`<th>₱${d}</th>`).join('')}<th>Total</th></tr>
+      ${rows.map(r=>`<tr><td class="name">${esc(r.name)}</td>${PESO_DENOMINATIONS.map(d=>`<td class="num">${r.breakdown[d]||''}</td>`).join('')}<td class="num">${money0(Math.round(r.amount))}</td></tr>`).join('')}
+      <tfoot><tr><td>TOTAL</td>${PESO_DENOMINATIONS.map(d=>`<td class="num">${totals[d]||0}</td>`).join('')}<td class="num">${money0(grandTotal)}</td></tr></tfoot>
+    </table>
+  </body></html>`);
+  w.document.close();
+  setTimeout(()=>w.print(), 300);
 }
 function printPayrollSummary(runId){
   const paidList = DB.paidEmployees.filter(p=>p.payrollId===runId);
