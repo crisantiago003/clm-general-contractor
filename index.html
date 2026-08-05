@@ -295,10 +295,17 @@ let DB = null;
 let session = null;      // {id,name,type}
 let view = 'dashboard';
 let sub = {};             // per-view transient state (editing ids, filters, tabs)
-let cloud = { url: '', key: '', code: '', connected: false, syncing: false, lastError: '', authToken: '' };
+let cloud = { url: 'https://icawsteyzdnvfvnkgtud.supabase.co', key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljYXdzdGV5emRudmZ2bmtndHVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzMTk2MTAsImV4cCI6MjEwMDg5NTYxMH0.cwGYFPZE9co9_pa-HmqWdLh2p-S51f-0ZVQjDB4HDf8', code: 'CLM2026', connected: true, syncing: false, lastError: '', authToken: '' };
 function loadCloudConfig(){
   try{
     const saved = JSON.parse(localStorage.getItem('buildsuite_cloud_config') || 'null');
+    if(saved && saved.explicitlyDisconnected){
+      // "Prepare for New Client" deliberately disconnects this copy from the seller's own
+      // Supabase project — that choice must stick even though a fresh browser normally falls
+      // back to the built-in connection below.
+      cloud.url = ''; cloud.key = ''; cloud.code = ''; cloud.connected = false;
+      return;
+    }
     if(saved){ cloud.url = saved.url||''; cloud.key = saved.key||''; cloud.code = saved.code||''; cloud.connected = !!(saved.url && saved.key && saved.code); }
   }catch(e){}
 }
@@ -712,7 +719,7 @@ function runPrepareForResale(){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
   // Disconnect cloud entirely — this copy must not stay pointed at the seller's own Supabase project
   cloud = { url:'', key:'', code:'', connected:false, syncing:false, lastError:'', authToken:'' };
-  localStorage.removeItem('buildsuite_cloud_config');
+  localStorage.setItem('buildsuite_cloud_config', JSON.stringify({ url:'', key:'', code:'', explicitlyDisconnected: true }));
   clearAuthSession();
   session = null;
   sessionStorage.removeItem('buildsuite_session');
