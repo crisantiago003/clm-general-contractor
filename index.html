@@ -47,7 +47,10 @@ html,body{margin:0;height:100%}
 body{background:var(--bg);color:var(--text);font:14px/1.5 var(--font);-webkit-font-smoothing:antialiased}
 button{font-family:inherit;cursor:pointer}
 input,select,textarea{font-family:inherit;font-size:13.5px;background:var(--input);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:9px 11px;width:100%}
-input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(242,169,59,.2)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:0.01ms!important;animation-iteration-count:1!important;transition-duration:0.01ms!important;scroll-behavior:auto!important}}
 input[type="checkbox"]{width:auto}
 .pwwrap{position:relative}
 .pwwrap input{padding-right:40px}
@@ -81,11 +84,11 @@ nav.tabs::-webkit-scrollbar{display:none}
   header{padding:0 8px;gap:3px}
   .btn.ghost.sm{padding:6px 8px}
 }
-nav.tabs button{background:none;border:none;color:var(--muted);padding:8px 11px;border-radius:8px;font-size:12.5px;font-weight:600;white-space:nowrap}
+nav.tabs button{background:none;border:none;color:var(--muted);padding:8px 11px;border-radius:8px;font-size:12.5px;font-weight:600;white-space:nowrap;transition:background .15s,color .15s}
 nav.tabs button:hover{background:var(--chip);color:var(--text)}
 nav.tabs button.on{background:var(--accent);color:var(--accent-ink)}
 .spacer{flex:1}
-.iconbtn{background:var(--chip);border:1px solid var(--line);color:var(--text);border-radius:8px;width:34px;height:34px;font-size:15px;display:flex;align-items:center;justify-content:center}
+.iconbtn{background:var(--chip);border:1px solid var(--line);color:var(--text);border-radius:8px;width:34px;height:34px;font-size:15px;display:flex;align-items:center;justify-content:center;transition:background .15s}
 .iconbtn:hover{background:var(--line)}
 .userchip{display:flex;align-items:center;gap:8px;background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:5px 12px 5px 6px;font-size:12.5px;font-weight:600}
 .userchip .av{width:22px;height:22px;border-radius:50%;background:var(--accent2);color:#04222a;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800}
@@ -136,6 +139,7 @@ th{text-align:left;color:var(--muted);font-weight:700;font-size:11px;text-transf
 td{padding:10px;border-bottom:1px solid var(--line);vertical-align:middle}
 tr.click{cursor:pointer}
 tr.click:hover td{background:var(--panel2)}
+tr.click td{transition:background .1s}
 .num{text-align:right;font-family:var(--mono)}
 .mono{font-family:var(--mono)}
 .mut{color:var(--muted)}
@@ -154,7 +158,7 @@ tr.click:hover td{background:var(--panel2)}
 [data-theme="light"] .b-paid,[data-theme="light"] .b-Paid,[data-theme="light"] .b-Completed,[data-theme="light"] .b-Closed,[data-theme="light"] .b-Delivered{background:#dcf3e3;color:#137a3d}
 [data-theme="light"] .b-Pending,[data-theme="light"] .b-Ordered,[data-theme="light"] .b-Scheduled{background:#faedd2;color:#8a5c0d}
 .lowstock{color:var(--danger);font-weight:800}
-.btn{border:none;border-radius:8px;padding:9px 15px;font-weight:700;font-size:13px;display:inline-flex;align-items:center;gap:6px}
+.btn{border:none;border-radius:8px;padding:9px 15px;font-weight:700;font-size:13px;display:inline-flex;align-items:center;gap:6px;transition:background .15s,color .15s,filter .15s,border-color .15s,opacity .15s}
 .btn.pri{background:var(--accent);color:var(--accent-ink)}
 .btn.pri:hover{filter:brightness(1.08)}
 .btn.save{background:var(--green);color:#04231a}
@@ -165,25 +169,27 @@ tr.click:hover td{background:var(--panel2)}
 .btn.sm{padding:6px 11px;font-size:12px}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 .btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
-.x{background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:4px 8px;border-radius:6px}
+.x{background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:4px 8px;border-radius:6px;transition:color .15s,background .15s}
 .x:hover{color:var(--danger);background:rgba(224,82,79,.1)}
 
 /* ===== Misc ===== */
 .toggle{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
-.toggle button{background:var(--input);border:none;color:var(--muted);padding:9px 16px;font-weight:700;font-size:12.5px}
+.toggle button{background:var(--input);border:none;color:var(--muted);padding:9px 16px;font-weight:700;font-size:12.5px;transition:background .15s,color .15s}
 .toggle button.on{background:var(--accent);color:var(--accent-ink)}
 .searchbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
 .searchbar input,.searchbar select{width:auto;min-width:160px;flex:1}
 .empty{padding:40px 20px;text-align:center;color:var(--muted)}
 .empty .big{font-size:32px;margin-bottom:8px}
-.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#0c2a1f;border:1px solid var(--green);color:#aef5da;padding:10px 18px;border-radius:9px;font-size:13px;font-weight:600;opacity:0;transition:.25s;pointer-events:none;z-index:100;box-shadow:var(--shadow)}
-.toast.show{opacity:1}
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
-.modal{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px;max-width:480px;width:100%;max-height:calc(100vh - 40px);overflow-y:auto;box-shadow:var(--shadow)}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(12px);background:#0c2a1f;border:1px solid var(--green);color:#aef5da;padding:10px 18px;border-radius:9px;font-size:13px;font-weight:600;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;z-index:100;box-shadow:var(--shadow)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;animation:fadeIn .15s ease-out}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px;max-width:480px;width:100%;max-height:calc(100vh - 40px);overflow-y:auto;box-shadow:var(--shadow);animation:slideUp .2s ease-out}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 .modal.wide{max-width:min(95vw, 1000px)}
 .modal h3{margin-bottom:14px}
 .pillnav{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
-.pillnav button{background:var(--chip);border:1px solid var(--line);color:var(--muted);padding:7px 14px;border-radius:999px;font-size:12.5px;font-weight:700}
+.pillnav button{background:var(--chip);border:1px solid var(--line);color:var(--muted);padding:7px 14px;border-radius:999px;font-size:12.5px;font-weight:700;transition:background .15s,color .15s,border-color .15s}
 .pillnav button.on{background:var(--accent2);color:#04222a;border-color:var(--accent2)}
 .avatar{width:36px;height:36px;border-radius:8px;background:var(--chip);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:var(--muted)}
 .progress{height:8px;border-radius:5px;background:var(--chip);overflow:hidden}
@@ -198,11 +204,11 @@ tr.click:hover td{background:var(--panel2)}
 .progress > div{height:100%;background:var(--accent2)}
 .stat-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:13.3px}
 .stat-row:last-child{border-bottom:none}
-.jobcard{border:1px solid var(--line);border-radius:9px;padding:12px 14px;margin-bottom:8px;background:var(--panel2);cursor:pointer}
+.jobcard{border:1px solid var(--line);border-radius:9px;padding:12px 14px;margin-bottom:8px;background:var(--panel2);cursor:pointer;transition:border-color .15s}
 .jobcard:hover{border-color:var(--accent2)}
 .itemsedit input,.itemsedit select{padding:7px 8px;font-size:12.8px}
 .itemsedit td{padding:6px}
-@media print{header,.noprint{display:none!important}body{background:#fff;color:#000}main{max-width:none;padding:0}}
+@media print{header,.noprint,.toast,.modal-bg,.searchbar,.btnrow,.pillnav{display:none!important}body{background:#fff;color:#000;font-size:12px}main{max-width:none;padding:0}.panel,.kpi,.kpi-hero,.kpi-sec{border:1px solid #ccc;box-shadow:none;break-inside:avoid}table{font-size:11px}th{background:#f0f0f0!important;color:#000!important}.progress>div{print-color-adjust:exact;-webkit-print-color-adjust:exact}.badge{border:1px solid #999;print-color-adjust:exact;-webkit-print-color-adjust:exact}@page{margin:1.5cm}}
 
 /* ===== Public Landing Page ===== */
 .landing{min-height:100vh;background:var(--bg)}
@@ -255,7 +261,8 @@ tr.click:hover td{background:var(--panel2)}
 .faq-item summary::after{content:'+';font-size:20px;font-weight:400;color:var(--accent);flex-shrink:0;margin-left:12px;transition:transform .15s}
 .faq-item[open] summary::after{transform:rotate(45deg)}
 .faq-item p{margin-top:10px;font-size:13.5px;color:var(--muted);line-height:1.65}
-.svc-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:26px}
+.svc-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:26px;transition:border-color .2s,transform .2s}
+.svc-card:hover{border-color:var(--accent2);transform:translateY(-2px)}
 .svc-card .ic{width:44px;height:44px;border-radius:10px;background:var(--chip);display:flex;align-items:center;justify-content:center;color:var(--accent);margin-bottom:16px}
 .svc-card .ic svg{width:22px;height:22px}
 .svc-card h3{font-size:15.5px;margin-bottom:8px}
@@ -270,7 +277,8 @@ tr.click:hover td{background:var(--panel2)}
 .landing-contact{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start}
 .landing-footer{border-top:1px solid var(--line);padding:30px 24px;text-align:center;color:var(--muted);font-size:12.5px}
 .landing-footer a{color:var(--accent2);text-decoration:none}
-@media(max-width:820px){.svc-grid,.proj-grid,.process-grid{grid-template-columns:1fr 1fr}.stat-strip{grid-template-columns:1fr 1fr}.landing-contact{grid-template-columns:1fr}.landing-hero h1{font-size:40px}.landing-section h2{font-size:30px}.landing-nav nav{display:none}.cta-banner{flex-direction:column;text-align:center}}
+.hamburger{display:none;background:none;border:none;color:var(--text);font-size:22px;padding:6px;cursor:pointer;line-height:1}
+@media(max-width:820px){.svc-grid,.proj-grid,.process-grid{grid-template-columns:1fr 1fr}.stat-strip{grid-template-columns:1fr 1fr}.landing-contact{grid-template-columns:1fr}.landing-hero h1{font-size:40px}.landing-section h2{font-size:30px}.landing-nav nav{display:none;position:absolute;top:64px;left:0;right:0;background:var(--panel);border-bottom:1px solid var(--line);flex-direction:column;padding:12px 24px;gap:8px;box-shadow:var(--shadow)}.landing-nav nav.open{display:flex}.hamburger{display:block}.cta-banner{flex-direction:column;text-align:center}}
 </style>
 </head>
 <body>
@@ -319,9 +327,9 @@ function cloudHeaders(){
   return { 'apikey': cloud.key, 'Authorization': 'Bearer '+(cloud.authToken || cloud.key), 'Content-Type': 'application/json' };
 }
 function authEmailFor(username){
-  // Supabase Auth needs an email address — we build one from the username so nobody needs a
-  // real email on file. This is never sent anywhere or shown to anyone; it's purely an ID.
-  return username.trim().toLowerCase().replace(/[^a-z0-9._-]/g,'') + '@buildsuite.internal';
+  const clean = username.trim().toLowerCase().replace(/[^a-z0-9._-]/g,'');
+  if(!clean) return 'unknown@buildsuite.internal';
+  return clean + '@buildsuite.internal';
 }
 function saveAuthSession(accessToken, refreshToken){
   cloud.authToken = accessToken;
@@ -501,6 +509,7 @@ async function preLoginCloudConnect(){
   const username = document.getElementById('cloudConnectUser').value.trim();
   const pw = document.getElementById('cloudConnectPw').value;
   if(!url || !key || !code || !username || !pw){ toast("Please fill in all fields — your Admin has the URL, key, and sync code, and you'll need your own username and password."); return; }
+  if(!/^https?:\/\/.+/i.test(url)){ toast("The URL must start with https:// — check the Project URL your Admin gave you."); return; }
   cloud.url = url; cloud.key = key; cloud.code = code;
   try{
     const auth = await authenticateForConnect(username, pw);
@@ -534,6 +543,7 @@ async function connectFromPendingScreen(){
   const username = document.getElementById('cloudConnectUser').value.trim();
   const pw = document.getElementById('cloudConnectPw').value;
   if(!url || !key || !code || !username || !pw){ toast("Please fill in all fields — your Admin has the URL, key, and sync code, and you'll need your own username and password."); return; }
+  if(!/^https?:\/\/.+/i.test(url)){ toast("The URL must start with https:// — check the Project URL your Admin gave you."); return; }
   cloud.url = url; cloud.key = key; cloud.code = code;
   const auth = await authenticateForConnect(username, pw);
   if(!auth.ok){ toast(auth.msg || 'Could not verify your login for this company.'); return; }
@@ -630,8 +640,9 @@ async function finishCloudConnect(direction){
 }
 function disconnectCloud(){
   if(!confirm('Disconnect cloud sync? Your data stays in this browser, but stops syncing.')) return;
-  cloud = { url:'', key:'', code:'', connected:false, syncing:false, lastError:'' };
+  cloud = { url:'', key:'', code:'', connected:false, syncing:false, lastError:'', authToken:'' };
   localStorage.removeItem('buildsuite_cloud_config');
+  clearAuthSession();
   if(cloudPollTimer) clearInterval(cloudPollTimer);
   toast('Cloud sync disconnected');
   closeModal(); renderHeader();
@@ -729,9 +740,11 @@ function runPrepareForResale(){
 function exportJSON(){
   const blob = new Blob([JSON.stringify(DB,null,2)], {type:'application/json'});
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(blob);
+  a.href = url;
   a.download = 'buildsuite-export.json';
   a.click();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
 }
 function csvCell(v){
   const s = (v==null?'':String(v));
@@ -741,9 +754,11 @@ function downloadCSV(filename, headers, rows){
   const lines = [headers.map(csvCell).join(',')].concat(rows.map(r=>r.map(csvCell).join(',')));
   const blob = new Blob(['\uFEFF' + lines.join('\r\n')], {type:'text/csv;charset=utf-8'});
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(blob);
+  a.href = url;
   a.download = filename;
   a.click();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
   toast('Downloaded ' + filename);
 }
 function exportEmployeesCSV(){
@@ -839,6 +854,27 @@ function searchInput(el, apply){
     try{ ne.setSelectionRange(pos, pos); }catch(e){}
   }
 }
+
+/* ---------- debounce ---------- */
+function debounce(fn, ms){
+  let timer;
+  return function(...args){ clearTimeout(timer); timer = setTimeout(()=>fn.apply(this,args), ms); };
+}
+
+/* ---------- keyboard shortcuts ---------- */
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Escape'){
+    const modal = document.getElementById('modalBg');
+    if(modal){ closeModal(); e.preventDefault(); return; }
+  }
+  if((e.ctrlKey || e.metaKey) && e.key === 'k'){
+    e.preventDefault();
+    const searchBtn = document.getElementById('globalSearchBtn');
+    if(searchBtn){ searchBtn.click(); return; }
+    const searchBox = document.querySelector('.searchbar input');
+    if(searchBox) searchBox.focus();
+  }
+});
 
 /* ---------- theme ---------- */
 function applyTheme(t){
@@ -1122,7 +1158,7 @@ function renderHeader(){
     <div style="position:relative">
       <button class="iconbtn" onclick="toggleNotifications()" title="Notifications">🔔${alerts.length?`<span style="position:absolute;top:-3px;right:-3px;background:var(--danger);color:#fff;font-size:10px;font-weight:800;border-radius:999px;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 3px">${alerts.length}</span>`:''}</button>
     </div>
-    ${session.type!=='Pending' ? `<button class="iconbtn" onclick="openGlobalSearch()" title="Search everything">🔍</button>` : ''}
+    ${session.type!=='Pending' ? `<button class="iconbtn" id="globalSearchBtn" onclick="openGlobalSearch()" title="Search everything (Ctrl+K)" aria-label="Search everything">🔍</button>` : ''}
     ${session.type!=='Pending' ? `<button class="iconbtn" onclick="go('help')" title="Help & Getting Started">❓</button>` : ''}
     ${session.type==='Admin' ? `<button class="iconbtn" onclick="openSettings()" title="Settings">⚙️</button>` : ''}
     <button class="iconbtn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">🌙</button>
@@ -1210,11 +1246,12 @@ function openGlobalSearch(){
   `);
   const input = document.getElementById('globalSearchInput');
   input.focus();
-  input.addEventListener('input', function(){
-    const results = globalSearchResults(this.value);
+  const debouncedSearch = debounce(function(val){
+    const results = globalSearchResults(val);
     window.__searchActions = results.map(r=>r.action);
     const box = document.getElementById('globalSearchResults');
-    if(this.value.trim().length < 2){ box.innerHTML = 'Start typing to search across everything you have access to.'; return; }
+    if(!box) return;
+    if(val.trim().length < 2){ box.innerHTML = 'Start typing to search across everything you have access to.'; return; }
     if(!results.length){ box.innerHTML = '<div class="empty">No matches found</div>'; return; }
     const groups = {};
     results.forEach((r,i)=>{ (groups[r.group] = groups[r.group]||[]).push({...r, idx:i}); });
@@ -1222,7 +1259,8 @@ function openGlobalSearch(){
       <div class="mut" style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;font-weight:700;margin:12px 0 6px">${group}</div>
       ${items.map(r=>`<div class="click" style="padding:8px 10px;border-radius:8px;display:flex;justify-content:space-between" onmouseover="this.style.background='var(--chip)'" onmouseout="this.style.background='none'" onclick="closeModal();window.__searchActions[${r.idx}]()"><b style="font-size:13px">${esc(r.label)}</b><span class="mut" style="font-size:12px">${esc(r.sub)}</span></div>`).join('')}
     `).join('');
-  });
+  }, 200);
+  input.addEventListener('input', function(){ debouncedSearch(this.value); });
 }
 /* ---------- Trash / Recycle Bin ---------- */
 const TRASH_TYPE_ARRAYS = {
@@ -1827,6 +1865,7 @@ function renderLanding(){
   <div class="landing">
     <div class="landing-nav">
       <div class="brand2"><div class="mark2">${companyMark()}</div>${esc(companyName)}</div>
+      <button class="hamburger" onclick="this.nextElementSibling.classList.toggle('open')" aria-label="Toggle menu">☰</button>
       <nav>
         <a onclick="document.getElementById('ld-about').scrollIntoView({behavior:'smooth'})">About</a>
         <a onclick="document.getElementById('ld-services').scrollIntoView({behavior:'smooth'})">Services</a>
@@ -2436,14 +2475,14 @@ function renderDashboard(){
       <div class="kpi-hero">
         <div class="icon-wrap" style="background:rgba(63,182,201,.14);color:var(--accent2)">${KPI_ICONS.profit}</div>
         <div>
-          <div class="l">Est. Job Profit</div>
+          <div class="l">Est. Job Profit${revenue ? ` (${((totalProfit/revenue)*100).toFixed(1)}% margin)` : ''}</div>
           <div class="v" style="color:var(--accent2)">${money0(totalProfit)}</div>
           <div class="kpi-trend ${profitTrend.cls}">${profitTrend.arrow} ${profitTrend.label}</div>
         </div>
       </div>
     </div>
     <div class="cards">
-      <div class="kpi-sec"><div class="icon-wrap" style="background:rgba(242,169,59,.14);color:var(--accent)">${KPI_ICONS.purchases}</div><div><div class="l">Purchases</div><div class="v" style="color:var(--accent)">${money0(spend)}</div></div></div>
+      <div class="kpi-sec"><div class="icon-wrap" style="background:rgba(242,169,59,.14);color:var(--accent)">${KPI_ICONS.purchases}</div><div><div class="l">Purchases</div><div class="v" style="color:var(--accent)">${money0(spend)}</div><div class="kpi-trend ${purchaseTrend.cls}" style="font-size:11px">${purchaseTrend.arrow} ${purchaseTrend.label}</div></div></div>
       <div class="kpi-sec"><div class="icon-wrap" style="background:${outstanding>0?'rgba(224,82,79,.14)':'rgba(56,183,117,.14)'};color:${outstanding>0?'var(--danger)':'var(--green)'}">${KPI_ICONS.outstanding}</div><div><div class="l">Outstanding</div><div class="v" style="color:${outstanding>0?'var(--danger)':'var(--green)'}">${money0(outstanding)}</div></div></div>
       <div class="kpi-sec"><div class="icon-wrap" style="background:rgba(153,153,153,.14);color:var(--text)">${KPI_ICONS.jobs}</div><div><div class="l">Active Jobs</div><div class="v">${activeJobs}</div></div></div>
       <div class="kpi-sec"><div class="icon-wrap" style="background:${lowStock.length?'rgba(224,82,79,.14)':'rgba(56,183,117,.14)'};color:${lowStock.length?'var(--danger)':'var(--green)'}">${KPI_ICONS.stock}</div><div><div class="l">Low Stock Items</div><div class="v" style="color:${lowStock.length?'var(--danger)':'var(--green)'}">${lowStock.length}</div></div></div>
@@ -2481,7 +2520,7 @@ function renderDashboard(){
       <div class="panel">
         <div class="ph"><h3>Low Stock (below 5 units)</h3><button class="btn ghost sm" onclick="go('products')">View all</button></div>
         ${lowStock.length ? lowStock.slice(0,6).map(p=>`
-          <div class="stat-row"><span>${esc(p.name)}</span><span class="lowstock mono">${stockFor(p.id)} on hand</span></div>`).join('')
+          <div class="stat-row"><span>${esc(p.name)}</span><span class="lowstock mono">${stockFor(p.id)} on hand</span></div>`).join('') + (lowStock.length > 6 ? `<div class="mut" style="text-align:center;padding:6px;font-size:12px">+ ${lowStock.length-6} more items</div>` : '')
           : `<div class="empty">Stock levels look healthy 👍</div>`}
       </div>
       <div class="panel">
@@ -2518,11 +2557,22 @@ function renderDashboard(){
         const ar = accountsReceivable();
         const total = ar.reduce((s,r)=>s+r.balance,0);
         if(!ar.length) return `<div class="empty">No outstanding invoices — you're fully collected 👍</div>`;
+        const b30 = ar.filter(r=>r.daysOutstanding<=30).reduce((s,r)=>s+r.balance,0);
+        const b60 = ar.filter(r=>r.daysOutstanding>30&&r.daysOutstanding<=60).reduce((s,r)=>s+r.balance,0);
+        const b90 = ar.filter(r=>r.daysOutstanding>60&&r.daysOutstanding<=90).reduce((s,r)=>s+r.balance,0);
+        const b90p = ar.filter(r=>r.daysOutstanding>90).reduce((s,r)=>s+r.balance,0);
         return `
           <div class="stat-row" style="font-weight:800"><span>Total Outstanding</span><span class="mono" style="color:var(--danger)">${money(total)}</span></div>
+          <div style="display:flex;gap:8px;margin:8px 0 12px;flex-wrap:wrap">
+            <span class="badge b-status" style="font-size:11px">0-30d: ${money0(b30)}</span>
+            ${b60?`<span class="badge b-Pending" style="font-size:11px">31-60d: ${money0(b60)}</span>`:''}
+            ${b90?`<span class="badge b-danger" style="font-size:11px">61-90d: ${money0(b90)}</span>`:''}
+            ${b90p?`<span class="badge b-danger" style="font-size:11px;font-weight:800">90+d: ${money0(b90p)}</span>`:''}
+          </div>
           ${ar.slice(0,5).map(r=>`
-            <div class="stat-row"><span>${esc(partyName(r.order))} — #${r.order.id}</span><span class="mono">${money(r.balance)} <span class="mut" style="font-size:11px">(${r.daysOutstanding}d)</span></span></div>
+            <div class="stat-row"><span>${esc(partyName(r.order))} — #${r.order.id}${r.overdue?' <span style="color:var(--danger);font-size:11px">OVERDUE</span>':''}</span><span class="mono">${money(r.balance)} <span class="mut" style="font-size:11px">(${r.daysOutstanding}d)</span></span></div>
           `).join('')}
+          ${ar.length>5?`<div class="mut" style="text-align:center;padding:6px;font-size:12px">+ ${ar.length-5} more invoices</div>`:''}
         `;
       })()}
     </div>
@@ -2607,7 +2657,16 @@ function renderDashboard(){
         const approvedCOTotal = (DB.changeOrders||[]).filter(co=>co.status==='Approved').reduce((s,co)=>s+(Number(co.amount)||0),0);
         const openIncidents = (DB.incidents||[]).filter(i=>!i.closed).length;
         const hasModuleData = openRFIs || pendingSubs || pendingCOs || openIncidents || (DB.rfis||[]).length || (DB.changeOrders||[]).length;
-        if(!hasModuleData) return '';
+        if(!hasModuleData) return `<div style="display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap">
+          <div class="panel" style="flex:1;min-width:200px;padding:16px">
+            <h4 style="margin:0 0 8px">Document Control</h4>
+            <div class="mut" style="font-size:12.5px">Track RFIs and submittals from the <a style="cursor:pointer;color:var(--accent2)" onclick="go('rfis')">RFIs</a> and <a style="cursor:pointer;color:var(--accent2)" onclick="go('submittals')">Submittals</a> tabs.</div>
+          </div>
+          <div class="panel" style="flex:1;min-width:200px;padding:16px">
+            <h4 style="margin:0 0 8px">Change Orders & Safety</h4>
+            <div class="mut" style="font-size:12.5px">Manage <a style="cursor:pointer;color:var(--accent2)" onclick="go('changeOrders')">change orders</a> and log <a style="cursor:pointer;color:var(--accent2)" onclick="go('safety')">safety incidents</a>.</div>
+          </div>
+        </div>`;
         return `<div style="display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap">
           ${openRFIs||pendingSubs?`<div class="panel" style="flex:1;min-width:200px;padding:16px">
             <h4 style="margin:0 0 8px">📋 Document Control</h4>
@@ -2887,6 +2946,7 @@ function renderOrderDetail(id){
           ${['INVOICE','PURCHASE','WORK ORDER'].map(t=>`<button class="${o.type===t?'on':''}" onclick="switchOrderType(${o.id},'${t}')">${orderTypeLabel(t)}</button>`).join('')}
         </div>
         <div class="btnrow" style="margin:0">
+          <button class="btn ghost sm" onclick="duplicateOrder(${o.id})">Duplicate</button>
           <button class="btn ghost sm" onclick="window.print()">🖨 Print</button>
           <button class="btn del sm" onclick="deleteOrder(${o.id})">Delete</button>
         </div>
@@ -2900,6 +2960,7 @@ function renderOrderDetail(id){
           </select>
         </div>
         ${o.type==='INVOICE' ? `
+        <div class="field"><label class="fl">Due Date</label><input type="date" value="${esc(o.dueDate||'')}" onchange="updOrder(${o.id},'dueDate',this.value)"></div>
         <div class="field"><label class="fl">Official Receipt #</label>
           <div style="display:flex;gap:6px">
             <input value="${esc(o.orNumber)}" class="mono" placeholder="Not issued" onchange="updOrder(${o.id},'orNumber',this.value)">
@@ -2985,9 +3046,25 @@ function renderOrderDetail(id){
       <div class="stat-row"><span class="mut">Revenue</span><span class="mono">${money(total)}</span></div>
       <div class="stat-row"><span class="mut">Cost of Goods</span><span class="mono">-${money(cost)}</span></div>
       <div class="stat-row"><span class="mut">Labor Cost</span><span class="mono">-${money(labor)}</span></div>
-      <div class="stat-row" style="font-weight:800;font-size:15px"><span>Estimated Profit</span><span class="mono" style="color:${profit>=0?'var(--green)':'var(--danger)'}">${money(profit)}</span></div>
+      <div class="stat-row" style="font-weight:800;font-size:15px"><span>Estimated Profit${total ? ` (${((profit/total)*100).toFixed(1)}%)` : ''}</span><span class="mono" style="color:${profit>=0?'var(--green)':'var(--danger)'}">${money(profit)}</span></div>
     </div>` : ''}
   `;
+}
+function duplicateOrder(id){
+  const src = DB.orders.find(x=>x.id===id);
+  if(!src) return;
+  const copy = JSON.parse(JSON.stringify(src));
+  copy.id = nextId(DB.orders);
+  copy.date = todayISO();
+  copy.status = defaultStatus(copy.type);
+  copy.orNumber = '';
+  copy.payment = '';
+  copy.items.forEach(it=>{ it.id = uid(); });
+  (copy.laborCosts||[]).forEach(l=>{ l.id = uid(); });
+  DB.orders.push(copy);
+  saveDB();
+  toast('Order duplicated');
+  go('orders', {editId: copy.id});
 }
 function switchOrderType(id, type){
   const o = DB.orders.find(x=>x.id===id);
@@ -3011,8 +3088,10 @@ function accountsReceivable(){
     const total = orderTotal(o);
     const paid = Number(o.payment)||0;
     const balance = total - paid;
-    const days = o.date ? Math.floor((new Date(today) - new Date(o.date)) / 86400000) : 0;
-    return { order: o, total, paid, balance, daysOutstanding: days };
+    const refDate = o.dueDate || o.date;
+    const days = refDate ? Math.floor((new Date(today) - new Date(refDate)) / 86400000) : 0;
+    const overdue = o.dueDate ? (today > o.dueDate && balance > 0) : days > 30;
+    return { order: o, total, paid, balance, daysOutstanding: days, overdue };
   }).filter(r=>r.balance > 0).sort((a,b)=>b.daysOutstanding-a.daysOutstanding);
 }
 function updOrderParty(id, partyIdRaw){
