@@ -2304,7 +2304,7 @@ async function doLogin(){
     }catch(e){ /* offline or unreachable — try again on their next login */ }
   }
 
-  if(cloud.connected && !authedThisSession){
+  if(cloud.connected && !authedThisSession && cloud.authToken){
     try{
       const row = await cloudPull();
       if(row && row.data){
@@ -8834,7 +8834,11 @@ async function boot(){
           renderLogin();
           return;
         }
-      }catch(e){ console.debug('Cloud check before first-time setup failed (proceeding with setup):', e); }
+      }catch(e){
+        console.debug('Cloud check before first-time setup failed:', e);
+        renderLogin();
+        return;
+      }
     }
     renderFirstTimeSetup();
     return;
