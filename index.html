@@ -87,6 +87,13 @@ nav.tabs::-webkit-scrollbar{display:none}
 nav.tabs button{background:none;border:none;color:var(--muted);padding:8px 11px;border-radius:8px;font-size:12.5px;font-weight:600;white-space:nowrap;transition:background .15s,color .15s}
 nav.tabs button:hover{background:var(--chip);color:var(--text)}
 nav.tabs button.on{background:var(--accent);color:var(--accent-ink)}
+.nav-group{position:relative;display:inline-flex}
+.nav-group>button::after{content:' ▾';font-size:9px;opacity:.6}
+.nav-dropdown{display:none;position:absolute;top:calc(100% + 2px);left:0;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);min-width:160px;padding:4px;z-index:30}
+.nav-group:hover .nav-dropdown,.nav-group.open .nav-dropdown{display:block}
+.nav-dropdown button{display:block;width:100%;text-align:left;background:none;border:none;color:var(--text);padding:8px 12px;border-radius:6px;font-size:12.5px;font-weight:600;white-space:nowrap;cursor:pointer;transition:background .15s,color .15s}
+.nav-dropdown button:hover{background:var(--chip)}
+.nav-dropdown button.on{background:var(--accent);color:var(--accent-ink)}
 .spacer{flex:1}
 .iconbtn{background:var(--chip);border:1px solid var(--line);color:var(--text);border-radius:8px;width:34px;height:34px;font-size:15px;display:flex;align-items:center;justify-content:center;transition:background .15s}
 .iconbtn:hover{background:var(--line)}
@@ -391,7 +398,7 @@ async function saveDBAndConfirmSync(){
 function scheduleCloudPush(){
   if(!cloud.connected) return;
   clearTimeout(pushTimer);
-  pushTimer = setTimeout(cloudPush, 1200);
+  pushTimer = setTimeout(cloudPush, 800);
 }
 async function cloudPush(alreadyRetried){
   if(!cloud.connected) return;
@@ -1092,23 +1099,39 @@ function guardDelete(){
 
 /* ---------- router ---------- */
 const NAV = [
-  ['orders','Orders'],
-  ['products','Products'],
-  ['leads','Leads'],
-  ['customers','Projects'],
-  ['rfis','RFIs'],
-  ['submittals','Submittals'],
-  ['changeOrders','Change Orders'],
-  ['safety','Safety'],
-  ['vendors','Suppliers'],
-  ['employees','Employees'],
-  ['fleet','Fleet'],
-  ['inventory','Inventory'],
-  ['payroll','Payroll'],
-  ['transactions','Transactions'],
-  ['users','Users'],
+  { key:'orders', label:'Orders' },
+  { key:'products', label:'Products' },
+  { key:'leads', label:'Leads' },
+  { key:'customers', label:'Projects' },
+  { key:'documents', label:'Documents', children:[
+    { key:'rfis', label:'RFIs' },
+    { key:'submittals', label:'Submittals' },
+    { key:'changeOrders', label:'Change Orders' },
+  ]},
+  { key:'safety', label:'Safety' },
+  { key:'vendors', label:'Suppliers' },
+  { key:'resources', label:'Resources', children:[
+    { key:'employees', label:'Employees' },
+    { key:'fleet', label:'Fleet' },
+    { key:'inventory', label:'Inventory' },
+  ]},
+  { key:'finance', label:'Finance', children:[
+    { key:'payroll', label:'Payroll' },
+    { key:'transactions', label:'Transactions' },
+  ]},
+  { key:'users', label:'Users' },
 ];
+function navGroupForView(v){
+  return NAV.find(g => g.children && g.children.some(c => c.key === v));
+}
+function firstAccessibleChild(group){
+  if(!group.children) return group.key;
+  const child = group.children.find(c => roleCanAccessTab(c.key));
+  return child ? child.key : group.children[0].key;
+}
 function go(v, params){
+  const group = NAV.find(g => g.key === v && g.children);
+  if(group) v = firstAccessibleChild(group);
   view = v;
   sub = params || {};
   render();
@@ -1148,11 +1171,22 @@ function render(){
   (renderers[view] || renderDashboard)();
 }
 function renderHeader(){
-  const visibleNav = NAV.filter(([k]) => roleCanAccessTab(k));
+  const navHtml = NAV.map(item => {
+    if(item.children){
+      const visible = item.children.filter(c => roleCanAccessTab(c.key));
+      if(!visible.length) return '';
+      const isActive = item.children.some(c => c.key === view);
+      return `<div class="nav-group"><button class="${isActive?'on':''}" onclick="go('${firstAccessibleChild(item)}')">${item.label}</button><div class="nav-dropdown">${visible.map(c =>
+        `<button class="${c.key===view?'on':''}" onclick="this.closest('.nav-group').classList.remove('open');go('${c.key}')">${c.label}</button>`
+      ).join('')}</div></div>`;
+    }
+    if(!roleCanAccessTab(item.key)) return '';
+    return `<button class="${item.key===view?'on':''}" onclick="go('${item.key}')">${item.label}</button>`;
+  }).join('');
   const alerts = getAlerts();
   document.getElementById('headerBar').innerHTML = `
     <div class="brand" style="cursor:pointer" onclick="go('dashboard')" title="Go to Dashboard"><div class="mark">${companyMark()}</div><div class="name">${esc(companyDisplayName())}</div></div>
-    <nav class="tabs" id="navtabs">${visibleNav.map(([k,l])=>`<button class="${k===view?'on':''}" onclick="go('${k}')">${l}</button>`).join('')}</nav>
+    <nav class="tabs" id="navtabs">${navHtml}</nav>
     <div class="spacer"></div>
     <span class="mut syncstatus" style="font-size:12px;display:flex;align-items:center;white-space:nowrap"><span class="syncdot ${cloud.connected?'on':''}"></span>${cloud.syncing?'Syncing…':cloud.connected?(cloud.lastError?'Sync error':'Cloud synced'):'Saved in this browser'}</span>
     <div style="position:relative">
@@ -1333,7 +1367,7 @@ function renderHelp(){
       <p class="mut" style="font-size:13px;margin-bottom:20px">A quick reference for what you can do here, based on your role (${esc(session.type)}${isSiteLead && session.type==='Employee' ? ' — Site Lead access' : ''}). Click any section to expand it.</p>
       <div class="faq-list" style="max-width:none">
         <details class="faq-item" open><summary>What is BuildSuite?</summary><p>One system for the whole operation — projects, payroll, materials, suppliers, and your team, instead of scattered spreadsheets. Everything you do here saves automatically and syncs across devices if cloud sync is connected (check the dot next to "Cloud synced" in the header).</p></details>
-        <details class="faq-item"><summary>Getting around</summary><p>The tabs across the top take you to each section. The <b>🔍 search icon</b> in the header finds anything — an employee, an order, a supplier — instantly, without hunting through tabs. The <b>🔔 bell</b> shows anything that needs attention right now (low stock, overdue reminders, pending approvals). Click your name/photo in the top-right anytime to get to <b>My Profile</b>.</p></details>
+        <details class="faq-item"><summary>Getting around</summary><p>The tabs across the top take you to each section. Related tabs are grouped — hover over <b>Documents</b>, <b>Resources</b>, or <b>Finance</b> to see sub-sections. The <b>🔍 search icon</b> in the header finds anything — an employee, an order, a supplier — instantly, without hunting through tabs. The <b>🔔 bell</b> shows anything that needs attention right now (low stock, overdue reminders, pending approvals). Click your name/photo in the top-right anytime to get to <b>My Profile</b>.</p></details>
         <details class="faq-item"><summary>Your profile & payslip</summary><p>Click your name in the header to open My Profile. You can update your contact info, upload a photo, and change your password there — no need to ask an Admin. If you're paid through BuildSuite, your payroll history and printable payslips are there too, under "My Payroll."</p></details>
         ${isSiteLead ? `
         <details class="faq-item"><summary>Requesting materials & tools for your site</summary><p>Go to <b>Orders</b> or <b>Inventory → Purchase Requests</b> — your site is pre-filled automatically, and you won't see other sites' financial numbers. This keeps requests fast without giving you access to things outside your project.</p></details>
@@ -2268,6 +2302,21 @@ async function doLogin(){
       // don't migrate them this time. Local login still works exactly as it does today, and
       // we'll quietly try again the next time they log in. Nothing changes for them either way.
     }catch(e){ /* offline or unreachable — try again on their next login */ }
+  }
+
+  if(cloud.connected && !authedThisSession){
+    try{
+      const row = await cloudPull();
+      if(row && row.data){
+        DB = mergeDB(DB, row.data);
+        backfillMissingKeys(DB);
+        ensureAdminAccount();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
+        localStorage.setItem('buildsuite_updated_at', new Date().toISOString());
+        const freshUser = DB.users.find(u => u.id === res.user.id);
+        if(freshUser) res.user = freshUser;
+      }
+    }catch(e){ /* offline — proceed with local data */ }
   }
 
   if(btn){ btn.disabled = false; btn.textContent = 'Sign in'; }
@@ -8071,7 +8120,7 @@ function dismissReview(id){
   u.reviewed = true;
   saveDB(); toast('Marked as reviewed'); renderUsers();
 }
-const CUSTOM_TAB_LIST = [['dashboard','Dashboard'],['orders','Orders'],['products','Products'],['customers','Projects'],['vendors','Suppliers'],['employees','Employees'],['fleet','Fleet'],['inventory','Inventory'],['payroll','Payroll'],['transactions','Transactions']];
+const CUSTOM_TAB_LIST = [['dashboard','Dashboard'],['orders','Orders'],['products','Products'],['leads','Leads'],['customers','Projects'],['rfis','RFIs'],['submittals','Submittals'],['changeOrders','Change Orders'],['safety','Safety'],['vendors','Suppliers'],['employees','Employees'],['fleet','Fleet'],['inventory','Inventory'],['payroll','Payroll'],['transactions','Transactions']];
 function editUser(id){
   if(session.type !== 'Admin'){ toast('Only an Admin can edit user accounts.'); return; }
   const u = id ? DB.users.find(x=>x.id===id) : {id:null,name:'',username:'',password:'',type:'Clerk',position:'',canRequestForSite:false,customTabs:[]};
@@ -8810,6 +8859,27 @@ async function boot(){
     renderLanding();
   }
 }
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'hidden' && cloud.connected && pushTimer){
+    clearTimeout(pushTimer);
+    pushTimer = null;
+    cloudPush();
+  }
+});
+window.addEventListener('beforeunload', () => {
+  if(!cloud.connected || !pushTimer) return;
+  clearTimeout(pushTimer);
+  pushTimer = null;
+  const updatedAt = localStorage.getItem('buildsuite_updated_at') || new Date().toISOString();
+  try{
+    fetch(`${cloud.url}/rest/v1/buildsuite_sync?on_conflict=id`, {
+      method: 'POST',
+      headers: { ...cloudHeaders(), 'Prefer': 'resolution=merge-duplicates' },
+      body: JSON.stringify([{ id: cloud.code, data: DB, updated_at: updatedAt }]),
+      keepalive: true,
+    });
+  }catch(e){}
+});
 document.addEventListener('DOMContentLoaded', boot);
 
 </script>
