@@ -5380,6 +5380,531 @@ function deleteDailyLog(id){
   saveDB(); closeModal(); toast('Entry deleted'); renderDailyLog();
 }
 
+function renderCalculator(){
+  window._calcTab = window._calcTab || 'concrete';
+  const CALC_TABS = [
+    {key:'concrete',  label:'🧱 Concrete'},
+    {key:'masonry',   label:'🧱 Masonry (CHB)'},
+    {key:'rebar',     label:'⚙️ Rebar'},
+    {key:'boardfoot', label:'🪵 Board Foot'},
+    {key:'tiling',    label:'◻️ Tiling'},
+    {key:'painting',  label:'🎨 Painting'},
+    {key:'roofing',   label:'🏠 Roofing'},
+    {key:'formwork',  label:'🔲 Formwork'},
+  ];
+  const active = window._calcTab;
+
+  // ---------- small shared helpers (exposed on window so inline handlers can reach them) ----------
+  const cnum = (id, def) => {
+    const el = document.getElementById(id);
+    if(!el) return def||0;
+    const v = parseFloat(el.value);
+    return isNaN(v) ? (def||0) : v;
+  };
+  const cval = (id, def) => {
+    const el = document.getElementById(id);
+    return el ? el.value : (def||'');
+  };
+  const setOut = (id, html) => { const el = document.getElementById(id); if(el) el.innerHTML = html; };
+  const kpi = (label, val, cls) => `<div class="kpi"><div class="l">${label}</div><div class="v ${cls||''}">${val}</div></div>`;
+
+  window.switchCalcTab = function(key){
+    window._calcTab = key;
+    renderCalculator();
+  };
+
+  // ---------- 1. CONCRETE ----------
+  const CONCRETE_MIXES = {
+    A: { label:'Class A (1:2:4) — footings, columns, beams, slabs', cement:9.0, sand:0.5, gravel:0.9 },
+    B: { label:'Class B (1:2.5:5) — general concrete works',        cement:7.5, sand:0.5, gravel:1.0 },
+    C: { label:'Class C (1:3:6) — lean/mass concrete',              cement:6.0, sand:0.5, gravel:1.0 },
+  };
+  window.updateConcreteCalc = function(){
+    const L = cnum('cc_len'), W = cnum('cc_wid'), T = cnum('cc_thk'), N = cnum('cc_qty',1) || 1;
+    const mix = CONCRETE_MIXES[cval('cc_mix','A')] || CONCRETE_MIXES.A;
+    const vol = L*W*T*N;
+    const bags = vol*mix.cement, sand = vol*mix.sand, gravel = vol*mix.gravel;
+    const cost = Math.ceil(bags)*cnum('cc_pcement',260) + sand*cnum('cc_psand',1200) + gravel*cnum('cc_pgravel',1300);
+    setOut('cc_results', `
+      <div class="cards">
+        ${kpi('Total Volume', vol.toFixed(3)+' m³')}
+        ${kpi('Cement Bags (40kg)', Math.ceil(bags), 'amber')}
+        ${kpi('Sand', sand.toFixed(2)+' m³')}
+        ${kpi('Gravel', gravel.toFixed(2)+' m³')}
+      </div>
+      <div class="kpi" style="margin-top:10px"><div class="l">Est. Material Cost</div><div class="v green">${money0(cost)}</div></div>
+    `);
+  };
+  const concreteTab = () => `
+    <div class="grid2">
+      <div class="panel">
+        <h3>Concrete Calculator</h3>
+        <div class="field"><label class="fl">Element</label>
+          <select id="cc_elem" onchange="updateConcreteCalc()">
+            <option>Footing</option><option>Column</option><option>Beam</option><option>Slab</option><option>Wall Footing</option>
+          </select>
+        </div>
+        <div class="grid2">
+          <div class="field"><label class="fl">Length (m)</label><input id="cc_len" type="number" step="0.01" value="3" oninput="updateConcreteCalc()"></div>
+          <div class="field"><label class="fl">Width (m)</label><input id="cc_wid" type="number" step="0.01" value="0.4" oninput="updateConcreteCalc()"></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label class="fl">Thickness / Depth (m)</label><input id="cc_thk" type="number" step="0.01" value="0.3" oninput="updateConcreteCalc()"></div>
+          <div class="field"><label class="fl">Number of Units</label><input id="cc_qty" type="number" step="1" value="1" oninput="updateConcreteCalc()"></div>
+        </div>
+        <div class="field"><label class="fl">Mix Class</label>
+          <select id="cc_mix" onchange="updateConcreteCalc()">
+            ${Object.entries(CONCRETE_MIXES).map(([k,m])=>`<option value="${k}">${m.label}</option>`).join('')}
+          </select>
+        </div>
+        <div class="grid3">
+          <div class="field"><label class="fl">Cement ₱/bag</label><input id="cc_pcement" type="number" value="260" oninput="updateConcreteCalc()"></div>
+          <div class="field"><label class="fl">Sand ₱/m³</label><input id="cc_psand" type="number" value="1200" oninput="updateConcreteCalc()"></div>
+          <div class="field"><label class="fl">Gravel ₱/m³</label><input id="cc_pgravel" type="number" value="1300" oninput="updateConcreteCalc()"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Results</h3>
+        <div id="cc_results"></div>
+        <div class="mut" style="font-size:11.5px;margin-top:10px">Volume = L × W × T × qty. Class A yield: 9.0 bags cement, 0.5 m³ sand, 0.9 m³ gravel per m³ of concrete (DPWH-referenced mix table).</div>
+      </div>
+    </div>
+  `;
+
+  // ---------- 2. MASONRY (CHB) ----------
+  window.updateMasonryCalc = function(){
+    const H = cnum('mc_h'), L = cnum('mc_l'), win = cnum('mc_win'), door = cnum('mc_door');
+    const brk = cnum('mc_brk',5);
+    const thk = cval('mc_thk','4');
+    const area = Math.max(0, H*L - win - door);
+    const chb = Math.ceil(area*12.5*(1+brk/100));
+    const cementRate = thk==='6' ? 1.02 : 0.53;
+    const sandRate = thk==='6' ? 0.085 : 0.044;
+    const cementBags = area*cementRate, sand = area*sandRate;
+    const cost = chb*cnum('mc_pchb', thk==='6'?18:13) + Math.ceil(cementBags)*cnum('mc_pcement',260) + sand*cnum('mc_psand',1200);
+    setOut('mc_results', `
+      <div class="cards">
+        ${kpi('Net Wall Area', area.toFixed(2)+' m²')}
+        ${kpi('CHB Units (incl. breakage)', chb, 'amber')}
+        ${kpi('Cement Bags', Math.ceil(cementBags))}
+        ${kpi('Sand', sand.toFixed(2)+' m³')}
+      </div>
+      <div class="kpi" style="margin-top:10px"><div class="l">Est. Material Cost</div><div class="v green">${money0(cost)}</div></div>
+    `);
+  };
+  const masonryTab = () => `
+    <div class="grid2">
+      <div class="panel">
+        <h3>Masonry (CHB) Calculator</h3>
+        <div class="grid2">
+          <div class="field"><label class="fl">Wall Height (m)</label><input id="mc_h" type="number" step="0.01" value="3" oninput="updateMasonryCalc()"></div>
+          <div class="field"><label class="fl">Wall Length (m)</label><input id="mc_l" type="number" step="0.01" value="10" oninput="updateMasonryCalc()"></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label class="fl">Window Area (m²)</label><input id="mc_win" type="number" step="0.01" value="0" oninput="updateMasonryCalc()"></div>
+          <div class="field"><label class="fl">Door Area (m²)</label><input id="mc_door" type="number" step="0.01" value="0" oninput="updateMasonryCalc()"></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label class="fl">Breakage (%)</label><input id="mc_brk" type="number" step="0.5" value="5" oninput="updateMasonryCalc()"></div>
+          <div class="field"><label class="fl">CHB Thickness</label>
+            <select id="mc_thk" onchange="updateMasonryCalc()">
+              <option value="4">4" CHB</option>
+              <option value="6">6" CHB</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid3">
+          <div class="field"><label class="fl">CHB ₱/pc</label><input id="mc_pchb" type="number" value="13" oninput="updateMasonryCalc()"></div>
+          <div class="field"><label class="fl">Cement ₱/bag</label><input id="mc_pcement" type="number" value="260" oninput="updateMasonryCalc()"></div>
+          <div class="field"><label class="fl">Sand ₱/m³</label><input id="mc_psand" type="number" value="1200" oninput="updateMasonryCalc()"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Results</h3>
+        <div id="mc_results"></div>
+        <div class="mut" style="font-size:11.5px;margin-top:10px">Area = H×L − openings. CHB = area × 12.5 pcs/m² + breakage. 4": 0.53 bag & 0.044 m³ sand per m². 6": 1.02 bag & 0.085 m³ sand per m².</div>
+      </div>
+    </div>
+  `;
+
+  // ---------- 3. REBAR ----------
+  const REBAR_WEIGHT = {10:0.617, 12:0.888, 16:1.58, 20:2.47, 25:3.85};
+  window.updateRebarCalc = function(){
+    const H = cnum('rc_h'), L = cnum('rc_l'), openings = cnum('rc_open');
+    const spacing = cnum('rc_spacing',20) || 20;
+    const hLayers = cnum('rc_hlayers',1) || 1;
+    const dia = parseInt(cval('rc_dia','12'));
+    const stdLen = cnum('rc_stdlen',6) || 6;
+
+    const numVertical = Math.floor(L/(spacing/100)) + 1;
+    let totalLen = numVertical*H + hLayers*L;
+    const grossArea = H*L;
+    if(openings>0 && grossArea>0){
+      totalLen = Math.max(0, totalLen*(1 - openings/grossArea));
+    }
+    const weightPerM = REBAR_WEIGHT[dia]||0.888;
+    const totalWeight = totalLen*weightPerM;
+    const numBars = Math.ceil(totalLen/stdLen);
+    const tieWire = totalWeight*0.035;
+    const cost = totalWeight*cnum('rc_prebar',55) + tieWire*cnum('rc_ptie',90);
+    setOut('rc_results', `
+      <div class="cards">
+        ${kpi('Number of Bars ('+stdLen+'m ea.)', numBars, 'amber')}
+        ${kpi('Total Length', totalLen.toFixed(1)+' m')}
+        ${kpi('Total Weight', totalWeight.toFixed(1)+' kg')}
+        ${kpi('Tie Wire (~3.5%)', tieWire.toFixed(2)+' kg')}
+      </div>
+      <div class="kpi" style="margin-top:10px"><div class="l">Est. Material Cost</div><div class="v green">${money0(cost)}</div></div>
+    `);
+  };
+  const rebarTab = () => `
+    <div class="grid2">
+      <div class="panel">
+        <h3>Rebar Calculator</h3>
+        <div class="grid2">
+          <div class="field"><label class="fl">Height (m)</label><input id="rc_h" type="number" step="0.01" value="3" oninput="updateRebarCalc()"></div>
+          <div class="field"><label class="fl">Length (m)</label><input id="rc_l" type="number" step="0.01" value="10" oninput="updateRebarCalc()"></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label class="fl">Openings (m²)</label><input id="rc_open" type="number" step="0.01" value="0" oninput="updateRebarCalc()"></div>
+          <div class="field"><label class="fl">Vertical Spacing (cm)</label><input id="rc_spacing" type="number" step="1" value="20" oninput="updateRebarCalc()"></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label class="fl">Horizontal Layers</label><input id="rc_hlayers" type="number" step="1" value="8" oninput="updateRebarCalc()"></div>
+          <div class="field"><label class="fl">Bar Diameter</label>
+            <select id="rc_dia" onchange="updateRebarCalc()">
+              <option value="10">10mm</option>
+              <option value="12" selected>12mm</option>
+              <option value="16">16mm</option>
+              <option value="20">20mm</option>
+              <option value="25">25mm</option>
+            </select>
+          </div>
+        </div>
+        <div class="field"><label class="fl">Standard Bar Length</label>
+          <select id="rc_stdlen" onchange="updateRebarCalc()">
+            <option value="6" selected>6 m (Philippine standard)</option>
+            <option value="9">9 m</option>
+            <option value="12">12 m</option>
+          </select>
+        </div>
+        <div class="grid2">
+          <div class="field"><label class="fl">Rebar ₱/kg</label><input id="rc_prebar" type="number" value="55" oninput="updateRebarCalc()"></div>
+          <div class="field"><label class="fl">Tie Wire ₱/kg</label><input id="rc_ptie" type="number" value="90" oninput="updateRebarCalc()"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Results</h3>
+        <div id="rc_results"></div>
+        <div class="mut" style="font-size:11.5px;margin-top:10px">Weight/m — 10mm: 0.617kg · 12mm: 0.888kg · 16mm: 1.58kg · 20mm: 2.47kg · 25mm: 3.85kg. Tie wire estimated at 3.5% of steel weight.</div>
+      </div>
+    </div>
+  `;
+
+  // ---------- 4. BOARD FOOT ----------
+  window.updateBoardFootCalc = function(){
+    const pcs = cnum('bf_pcs',1)||1, w1 = cnum('bf_w1'), w2 = cnum('bf_w2'), len = cnum('bf_len');
+    const bfPer = (w1*w2*len)/12;
+    const total = bfPer*pcs;
+    const cost = total*cnum('bf_price',45);
+    setOut('bf_results', `
+      <div class="cards">
+        ${kpi('Board Feet / Piece', bfPer.toFixed(2)+' bf')}
+        ${kpi('Total Board Feet', total.toFixed(2)+' bf', 'amber')}
+      </div>
+      <div class="kpi" style="margin-top:10px"><div class="l">Est. Material Cost</div><div class="v green">${money0(cost)}</div></div>
+    `);
+  };
+  const boardfootTab = () => `
+    <div class="grid2">
+      <div class="panel">
+        <h3>Board Foot Calculator (Carpentry)</h3>
+        <div class="field"><label class="fl">Number of Pieces</label><input id="bf_pcs" type="number" step="1" value="10" oninput="updateBoardFootCalc()"></div>
+        <div class="grid2">
+          <div class="field"><label class="fl">Width 1 / Thickness (in)</label><input id="bf_w1" type="number" step="0.01" value="2" oninput="updateBoardFootCalc()"></div>
+          <div class="field"><label class="fl">Width 2 (in)</label><input id="bf_w2" type="number" step="0.01" value="6" oninput="updateBoardFootCalc()"></div>
+        </div>
+        <div class="field"><label class="fl">Length (ft)</label><input id="bf_len" type="number" step="0.01" value="10" oninput="updateBoardFootCalc()"></div>
+        <div class="field"><label class="fl">Lumber ₱/bd.ft</label><input id="bf_price" type="number" value="45" oninput="updateBoardFootCalc()"></div>
+      </div>
+      <div class="panel">
+        <h3>Results</h3>
+        <div id="bf_results"></div>
+        <div class="mut" style="font-size:11.5px;margin-top:10px">BF = (Width1 × Width2 × Length) / 12 per piece, e.g. a 2"×6"×10ft piece.</div>
+      </div>
+    </div>
+  `;
+
+  // ---------- 5. TILING ----------
+  const TILE_SIZES = {200:25, 250:16, 300:11.11, 400:6.25, 600:2.78};
+  window.updateTilingCalc = function(){
+    const area = cnum('tc_area'), brk = cnum('tc_brk',7)||0;
+    const size = parseInt(cval('tc_size','300'));
+    const coverage = cnum('tc_cov',4)||4;
+    const totalArea = area*(1+brk/100);
+    const tiles = Math.ceil(totalArea*(TILE_SIZES[size]||11.11));
+    const adhesive = Math.ceil(totalArea/coverage);
+    const cost = tiles*cnum('tc_ptile',45) + adhesive*cnum('tc_padh',350);
+    setOut('tc_results', `
+      <div class="cards">
+        ${kpi('Area incl. Breakage', totalArea.toFixed(2)+' m²')}
+        ${kpi('Tiles Needed', tiles, 'amber')}
+        ${kpi('Adhesive / Cement', adhesive+' bags')}
+      </div>
+      <div class="kpi" style="margin-top:10px"><div class="l">Est. Material Cost</div><div class="v green">${money0(cost)}</div></div>
+    `);
+  };
+  const tilingTab = () => `
+    <div class="grid2">
+      <div class="panel">
+        <h3>Tiling Calculator</h3>
+        <div class="grid2">
+          <div class="field"><label class="fl">Floor / Wall Area (m²)</label><input id="tc_area" type="number" step="0.01" value="20" oninput="updateTilingCalc()"></div>
+          <div class="field"><label class="fl">Breakage (%)</label><input id="tc_brk" type="number" step="0.5" value="7" oninput="updateTilingCalc()"></div>
+        </div>
+        <div class="field"><label class="fl">Tile Size</label>
+          <select id="tc_size" onchange="updateTilingCalc()">
+            <option value="200">200 × 200 mm</option>
+            <option value="250">250 × 250 mm</option>
+            <option value="300" selected>300 × 300 mm</option>
+            <option value="400">400 × 400 mm</option>
+            <option value="600">600 × 600 mm</option>
+          </select>
+        </div>
+        <div class="grid2">
+          <div class="field"><label class="fl">Adhesive Coverage (m²/bag)</label><input id="tc_cov" type="number" step="0.1" value="4" oninput="updateTilingCalc()"></div>
+          <div class="field"><label class="fl">Adhesive ₱/bag</label><input id="tc_padh" type="number" value="350" oninput="updateTilingCalc()"></div>
+        </div>
+        <div class="field"><label class="fl">Tile ₱/pc</label><input id="tc_ptile" type="number" value="45" oninput="updateTilingCalc()"></div>
+      </div>
+      <div class="panel">
+        <h3>Results</h3>
+        <div id="tc_results"></div>
+        <div class="mut" style="font-size:11.5px;margin-top:10px">Tiles/m² — 200×200: 25 · 250×250: 16 · 300×300: 11.11 · 400×400: 6.25 · 600×600: 2.78.</div>
+      </div>
+    </div>
+  `;
+
+  // ---------- 6. PAINTING ----------
+  const PAINT_TYPES = [
+    {name:'Flat Latex (interior)', lo:35, hi:40},
+    {name:'Semi-Gloss Latex', lo:30, hi:35},
+    {name:'Enamel (metal/wood)', lo:25, hi:30},
+    {name:'Primer / Skim Coat', lo:30, hi:35},
+    {name:'Elastomeric (exterior)', lo:4, hi:6},
+  ];
+  window.updatePaintingCalc = function(){
+    const area = cnum('pc_area'), coverage = cnum('pc_cov',35)||35, coats = cnum('pc_coats',2)||2;
+    const totalArea = area*coats;
+    const gallonsRaw = totalArea/coverage;
+    const gallons = Math.ceil(gallonsRaw*4)/4;
+    const liters = gallons*4;
+    const cost = gallons*cnum('pc_price',850);
+    setOut('pc_results', `
+      <div class="cards">
+        ${kpi('Total Coated Area', totalArea.toFixed(2)+' m²')}
+        ${kpi('Gallons Needed', gallons.toFixed(2)+' gal', 'amber')}
+        ${kpi('Liters Needed', liters.toFixed(1)+' L')}
+      </div>
+      <div class="kpi" style="margin-top:10px"><div class="l">Est. Material Cost</div><div class="v green">${money0(cost)}</div></div>
+    `);
+  };
+  const paintingTab = () => `
+    <div class="grid2">
+      <div class="panel">
+        <h3>Painting Calculator</h3>
+        <div class="grid2">
+          <div class="field"><label class="fl">Wall Area (m²)</label><input id="pc_area" type="number" step="0.01" value="80" oninput="updatePaintingCalc()"></div>
+          <div class="field"><label class="fl">Number of Coats</label><input id="pc_coats" type="number" step="1" value="2" oninput="updatePaintingCalc()"></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label class="fl">Coverage (m²/gal)</label><input id="pc_cov" type="number" step="1" value="35" oninput="updatePaintingCalc()"></div>
+          <div class="field"><label class="fl">Paint ₱/gal</label><input id="pc_price" type="number" value="850" oninput="updatePaintingCalc()"></div>
+        </div>
+        <table style="margin-top:10px;font-size:12.5px">
+          <tr><th>Paint Type</th><th>Coverage (m²/gal)</th></tr>
+          ${PAINT_TYPES.map(p=>`<tr><td>${p.name}</td><td>${p.lo}–${p.hi}</td></tr>`).join('')}
+        </table>
+      </div>
+      <div class="panel">
+        <h3>Results</h3>
+        <div id="pc_results"></div>
+        <div class="mut" style="font-size:11.5px;margin-top:10px">Gallons rounded up to the nearest quarter gallon. 1 gallon = 4 liters.</div>
+      </div>
+    </div>
+  `;
+
+  // ---------- 7. ROOFING ----------
+  window.updateRoofingCalc = function(){
+    const area = cnum('rf_area'), slope = cnum('rf_slope',1.15)||1.15;
+    const sheetType = cval('rf_type','long');
+    const sheetLen = cnum('rf_len',3.6)||3.6;
+    const ridgeLen = cnum('rf_ridge',0);
+    const effWidth = sheetType==='corr' ? 0.7 : 0.6;
+    const roofArea = area*slope;
+    const sheetArea = effWidth*sheetLen;
+    const sheets = Math.ceil(roofArea/sheetArea);
+    const ridgeWithLap = ridgeLen*1.1;
+    const ridgePcs = ridgeLen>0 ? Math.ceil(ridgeWithLap/2.4) : 0;
+    const nailRate = cnum('rf_nailrate',0.1)||0.1;
+    const nails = sheets*nailRate;
+    const cost = sheets*cnum('rf_price',550) + ridgePcs*cnum('rf_pridge',250) + nails*cnum('rf_pnail',90);
+    setOut('rf_results', `
+      <div class="cards">
+        ${kpi('Effective Roof Area', roofArea.toFixed(2)+' m²')}
+        ${kpi('Number of Sheets', sheets, 'amber')}
+        ${kpi('Ridge Roll', ridgeWithLap.toFixed(1)+' m'+(ridgePcs?` (${ridgePcs} pcs)`:''))}
+        ${kpi('Roofing Nails', nails.toFixed(2)+' kg')}
+      </div>
+      <div class="kpi" style="margin-top:10px"><div class="l">Est. Material Cost</div><div class="v green">${money0(cost)}</div></div>
+    `);
+  };
+  const roofingTab = () => `
+    <div class="grid2">
+      <div class="panel">
+        <h3>Roofing Calculator</h3>
+        <div class="grid2">
+          <div class="field"><label class="fl">Roof/Plan Area (m²)</label><input id="rf_area" type="number" step="0.01" value="100" oninput="updateRoofingCalc()"></div>
+          <div class="field"><label class="fl">Slope Factor</label><input id="rf_slope" type="number" step="0.01" value="1.15" oninput="updateRoofingCalc()"></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label class="fl">Sheet Type</label>
+            <select id="rf_type" onchange="updateRoofingCalc()">
+              <option value="long" selected>Long Span (0.6m effective width)</option>
+              <option value="corr">Corrugated (0.7m effective width)</option>
+            </select>
+          </div>
+          <div class="field"><label class="fl">Sheet Length (m)</label><input id="rf_len" type="number" step="0.1" value="3.6" oninput="updateRoofingCalc()"></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label class="fl">Ridge Length (m)</label><input id="rf_ridge" type="number" step="0.1" value="10" oninput="updateRoofingCalc()"></div>
+          <div class="field"><label class="fl">Nail Rate (kg/sheet)</label><input id="rf_nailrate" type="number" step="0.01" value="0.1" oninput="updateRoofingCalc()"></div>
+        </div>
+        <div class="grid3">
+          <div class="field"><label class="fl">Sheet ₱/pc</label><input id="rf_price" type="number" value="550" oninput="updateRoofingCalc()"></div>
+          <div class="field"><label class="fl">Ridge Roll ₱/pc (2.4m)</label><input id="rf_pridge" type="number" value="250" oninput="updateRoofingCalc()"></div>
+          <div class="field"><label class="fl">Nails ₱/kg</label><input id="rf_pnail" type="number" value="90" oninput="updateRoofingCalc()"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Results</h3>
+        <div id="rf_results"></div>
+        <div class="mut" style="font-size:11.5px;margin-top:10px">Effective roof area = plan area × slope factor. Sheets = roof area ÷ (effective width × sheet length). Ridge includes 10% overlap allowance.</div>
+      </div>
+    </div>
+  `;
+
+  // ---------- 8. FORMWORK ----------
+  const PLY_SHEET_AREA = 2.44*1.22; // 4x8 ft plywood sheet, m²
+  window.updateFormworkCalc = function(){
+    const type = cval('fw_type','column');
+    const A = cnum('fw_a'), B = cnum('fw_b'), H = cnum('fw_h'), qty = cnum('fw_qty',1)||1;
+    let area = 0;
+    if(type==='column'){
+      area = 2*(A+B)*H*qty; // perimeter x height, 4 sides
+    } else if(type==='beam'){
+      area = (A + 2*H)*B*qty; // width + 2 sides(depth) x length
+    } else { // slab
+      area = A*B*qty; // soffit area
+    }
+    const plywood = Math.ceil(area/PLY_SHEET_AREA);
+    const bfRate = cnum('fw_bfrate',2.5)||2.5;
+    const boardFeet = area*bfRate;
+    const nailRate = cnum('fw_nailrate',0.15)||0.15;
+    const nails = area*nailRate;
+    const cost = plywood*cnum('fw_pply',950) + boardFeet*cnum('fw_plumber',45) + nails*cnum('fw_pnail',90);
+    setOut('fw_results', `
+      <div class="cards">
+        ${kpi('Formwork Area', area.toFixed(2)+' m²')}
+        ${kpi('Plywood Sheets (4×8ft)', plywood, 'amber')}
+        ${kpi('Lumber', boardFeet.toFixed(2)+' bd.ft')}
+        ${kpi('Nails', nails.toFixed(2)+' kg')}
+      </div>
+      <div class="kpi" style="margin-top:10px"><div class="l">Est. Material Cost</div><div class="v green">${money0(cost)}</div></div>
+    `);
+  };
+  const formworkDims = () => {
+    const type = window._fwType || 'column';
+    if(type==='column') return `
+      <div class="grid3">
+        <div class="field"><label class="fl">Width (m)</label><input id="fw_a" type="number" step="0.01" value="0.4" oninput="updateFormworkCalc()"></div>
+        <div class="field"><label class="fl">Breadth (m)</label><input id="fw_b" type="number" step="0.01" value="0.4" oninput="updateFormworkCalc()"></div>
+        <div class="field"><label class="fl">Height (m)</label><input id="fw_h" type="number" step="0.01" value="3" oninput="updateFormworkCalc()"></div>
+      </div>`;
+    if(type==='beam') return `
+      <div class="grid3">
+        <div class="field"><label class="fl">Width (m)</label><input id="fw_a" type="number" step="0.01" value="0.3" oninput="updateFormworkCalc()"></div>
+        <div class="field"><label class="fl">Length (m)</label><input id="fw_b" type="number" step="0.01" value="5" oninput="updateFormworkCalc()"></div>
+        <div class="field"><label class="fl">Depth (m)</label><input id="fw_h" type="number" step="0.01" value="0.5" oninput="updateFormworkCalc()"></div>
+      </div>`;
+    return `
+      <div class="grid3">
+        <div class="field"><label class="fl">Length (m)</label><input id="fw_a" type="number" step="0.01" value="6" oninput="updateFormworkCalc()"></div>
+        <div class="field"><label class="fl">Width (m)</label><input id="fw_b" type="number" step="0.01" value="5" oninput="updateFormworkCalc()"></div>
+        <div class="field"><label class="fl">Thickness (m)</label><input id="fw_h" type="number" step="0.01" value="0.15" oninput="updateFormworkCalc()"></div>
+      </div>`;
+  };
+  window.switchFwType = function(v){
+    window._fwType = v;
+    document.getElementById('fw_dims').innerHTML = formworkDims();
+    updateFormworkCalc();
+  };
+  const formworkTab = () => {
+    window._fwType = window._fwType || 'column';
+    return `
+    <div class="grid2">
+      <div class="panel">
+        <h3>Formwork Calculator</h3>
+        <div class="field"><label class="fl">Element Type</label>
+          <select id="fw_type" onchange="switchFwType(this.value)">
+            <option value="column" ${window._fwType==='column'?'selected':''}>Column (4 sides)</option>
+            <option value="beam" ${window._fwType==='beam'?'selected':''}>Beam (sides + soffit)</option>
+            <option value="slab" ${window._fwType==='slab'?'selected':''}>Slab (soffit)</option>
+          </select>
+        </div>
+        <div id="fw_dims">${formworkDims()}</div>
+        <div class="field"><label class="fl">Number of Units</label><input id="fw_qty" type="number" step="1" value="1" oninput="updateFormworkCalc()"></div>
+        <div class="grid2">
+          <div class="field"><label class="fl">Lumber Rate (bd.ft/m²)</label><input id="fw_bfrate" type="number" step="0.1" value="2.5" oninput="updateFormworkCalc()"></div>
+          <div class="field"><label class="fl">Nail Rate (kg/m²)</label><input id="fw_nailrate" type="number" step="0.01" value="0.15" oninput="updateFormworkCalc()"></div>
+        </div>
+        <div class="grid3">
+          <div class="field"><label class="fl">Plywood ₱/sheet</label><input id="fw_pply" type="number" value="950" oninput="updateFormworkCalc()"></div>
+          <div class="field"><label class="fl">Lumber ₱/bd.ft</label><input id="fw_plumber" type="number" value="45" oninput="updateFormworkCalc()"></div>
+          <div class="field"><label class="fl">Nails ₱/kg</label><input id="fw_pnail" type="number" value="90" oninput="updateFormworkCalc()"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Results</h3>
+        <div id="fw_results"></div>
+        <div class="mut" style="font-size:11.5px;margin-top:10px">Column: perimeter × height × qty. Beam: (width + 2×depth) × length × qty. Slab: length × width × qty (soffit only). Plywood sheet = 4×8 ft (2.44 × 1.22 m).</div>
+      </div>
+    </div>
+  `;};
+
+  // ---------- render shell + active tab ----------
+  const TAB_BODY = {
+    concrete: concreteTab, masonry: masonryTab, rebar: rebarTab, boardfoot: boardfootTab,
+    tiling: tilingTab, painting: paintingTab, roofing: roofingTab, formwork: formworkTab,
+  };
+  const TAB_UPDATE = {
+    concrete: window.updateConcreteCalc, masonry: window.updateMasonryCalc, rebar: window.updateRebarCalc,
+    boardfoot: window.updateBoardFootCalc, tiling: window.updateTilingCalc, painting: window.updatePaintingCalc,
+    roofing: window.updateRoofingCalc, formwork: window.updateFormworkCalc,
+  };
+
+  document.getElementById('mainArea').innerHTML = `
+    <div class="crumb">Construction Calculator</div>
+    <div class="panel" style="margin-bottom:14px">
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        ${CALC_TABS.map(t=>`<button class="btn ${active===t.key?'pri':'ghost'}" onclick="switchCalcTab('${t.key}')">${t.label}</button>`).join('')}
+      </div>
+    </div>
+    <div id="calcBody">${(TAB_BODY[active]||concreteTab)()}</div>
+  `;
+  (TAB_UPDATE[active]||window.updateConcreteCalc)();
+}
+
 const VENDOR_CLASSIFICATIONS = ['HARDWARE SUPPLIER','ELECTRICAL SUPPLIER','METAL SUPPLIER','PAINT SUPPLIER','SAFETY PRODUCT SUPPLIER','PLUMBING SUPPLIER','CONCRETE SUPPLIER','LUMBER SUPPLIER','EQUIPMENT RENTAL','OTHER'];
 function renderVendors(){
   sub.search = sub.search || '';
