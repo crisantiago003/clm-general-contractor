@@ -61,49 +61,51 @@ label.fl{display:block;font-size:11px;letter-spacing:.04em;text-transform:upperc
 h1,h2,h3,h4{margin:0;font-weight:700}
 a{color:var(--accent2);cursor:pointer}
 
-/* ===== Header / Nav ===== */
-header{
-  display:flex;align-items:center;gap:6px;padding:0 16px;height:56px;border-bottom:1px solid var(--line);
-  background:
-    linear-gradient(var(--panel),var(--panel)),
-    repeating-linear-gradient(90deg, rgba(63,182,201,.08) 0 1px, transparent 1px 28px),
-    repeating-linear-gradient(0deg, rgba(63,182,201,.08) 0 1px, transparent 1px 28px);
-  position:sticky;top:0;z-index:20;
-}
-.brand{display:flex;align-items:center;gap:9px;margin-right:10px;white-space:nowrap}
-.brand .mark{width:32px;height:32px;border-radius:7px;background:var(--accent);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;letter-spacing:-.02em}
-.brand .name{font-size:15px;font-weight:800;letter-spacing:-.01em}
-.brand .name span{color:var(--accent)}
-nav.tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;min-width:0;flex-shrink:1}
-nav.tabs::-webkit-scrollbar{display:none}
-@media(max-width:640px){
-  .brand .name{display:none}
-  .syncstatus{display:none!important}
-  .userchip .uname{display:none}
-  .userchip{padding:4px}
-  header{padding:0 8px;gap:3px}
-  .btn.ghost.sm{padding:6px 8px}
-}
-nav.tabs button{background:none;border:none;color:var(--muted);padding:8px 11px;border-radius:8px;font-size:12.5px;font-weight:600;white-space:nowrap;transition:background .15s,color .15s}
-nav.tabs button:hover{background:var(--chip);color:var(--text)}
-nav.tabs button.on{background:var(--accent);color:var(--accent-ink)}
-.nav-group{position:relative;display:inline-flex}
-.nav-group>button::after{content:' ▾';font-size:9px;opacity:.6}
-.nav-dropdown{display:none;position:absolute;top:calc(100% + 2px);left:0;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);min-width:160px;padding:4px;z-index:30}
-.nav-group:hover .nav-dropdown,.nav-group.open .nav-dropdown{display:block}
-.nav-dropdown button{display:block;width:100%;text-align:left;background:none;border:none;color:var(--text);padding:8px 12px;border-radius:6px;font-size:12.5px;font-weight:600;white-space:nowrap;cursor:pointer;transition:background .15s,color .15s}
-.nav-dropdown button:hover{background:var(--chip)}
-.nav-dropdown button.on{background:var(--accent);color:var(--accent-ink)}
-@media(max-width:640px){.nav-dropdown{left:auto;right:0}}
+/* ===== App Layout (Sidebar + Main) ===== */
+.app-layout{display:flex;min-height:100vh}
+.sidebar{width:230px;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:30;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;transition:transform .25s ease}
+.sidebar::-webkit-scrollbar{width:4px}
+.sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+.sidebar .brand{display:flex;align-items:center;gap:10px;padding:18px 16px 14px;white-space:nowrap;cursor:pointer;border-bottom:1px solid var(--line);flex-shrink:0}
+.sidebar .brand .mark{width:34px;height:34px;border-radius:8px;background:var(--accent);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;letter-spacing:-.02em;flex-shrink:0}
+.sidebar .brand .name{font-size:14px;font-weight:800;letter-spacing:-.01em;line-height:1.2}
+.sidebar .brand .name span{color:var(--accent)}
+.sidebar-nav{flex:1;padding:8px 0;overflow-y:auto}
+.sidebar-section{padding:0 12px;margin-bottom:4px}
+.sidebar-section-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:12px 8px 6px;user-select:none}
+.sidebar-item{display:flex;align-items:center;gap:10px;padding:9px 12px;margin:1px 0;border-radius:8px;font-size:13px;font-weight:600;color:var(--text);cursor:pointer;transition:background .15s,color .15s;border:none;background:none;width:100%;text-align:left;position:relative;white-space:nowrap}
+.sidebar-item:hover{background:var(--chip)}
+.sidebar-item.on{background:var(--accent);color:var(--accent-ink)}
+.sidebar-item.on::before{content:'';position:absolute;left:-12px;top:6px;bottom:6px;width:3px;border-radius:0 3px 3px 0;background:var(--accent-ink)}
+.sidebar-item .icon{width:20px;text-align:center;font-size:15px;flex-shrink:0;line-height:1}
+.sidebar-bottom{padding:12px;border-top:1px solid var(--line);flex-shrink:0}
+.sidebar-user{display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;cursor:pointer;transition:background .15s}
+.sidebar-user:hover{background:var(--chip)}
+.sidebar-user .av{width:28px;height:28px;border-radius:50%;background:var(--accent2);color:#04222a;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0}
+.sidebar-user .uinfo{flex:1;min-width:0}
+.sidebar-user .uname{font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.sidebar-user .urole{font-size:10.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+.sidebar-logout{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;margin-top:6px;border-radius:8px;background:none;border:1px solid var(--line);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;transition:background .15s,color .15s}
+.sidebar-logout:hover{background:rgba(224,82,79,.08);color:var(--danger);border-color:var(--danger)}
+.app-main{margin-left:230px;flex:1;display:flex;flex-direction:column;min-height:100vh}
+.topbar{display:flex;align-items:center;gap:8px;padding:0 20px;height:52px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:20;flex-shrink:0}
 .spacer{flex:1}
 .iconbtn{background:var(--chip);border:1px solid var(--line);color:var(--text);border-radius:8px;width:34px;height:34px;font-size:15px;display:flex;align-items:center;justify-content:center;transition:background .15s}
 .iconbtn:hover{background:var(--line)}
-.userchip{display:flex;align-items:center;gap:8px;background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:5px 12px 5px 6px;font-size:12.5px;font-weight:600}
-.userchip .av{width:22px;height:22px;border-radius:50%;background:var(--accent2);color:#04222a;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800}
 .syncdot{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block;margin-right:6px}
 .syncdot.on{background:var(--green);box-shadow:0 0 0 3px rgba(56,183,117,.18)}
+.sidebar-toggle{display:none;background:none;border:none;color:var(--text);font-size:22px;padding:6px;cursor:pointer;line-height:1}
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0);box-shadow:4px 0 24px rgba(0,0,0,.3)}
+  .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:29}
+  .sidebar-overlay.show{display:block}
+  .app-main{margin-left:0}
+  .sidebar-toggle{display:flex}
+  .syncstatus{display:none!important}
+}
 
-main{max-width:1280px;margin:0 auto;padding:22px 18px 60px}
+main{max-width:1280px;margin:0 auto;padding:22px 18px 60px;width:100%}
 .crumb{color:var(--muted);font-size:12px;margin-bottom:14px;text-transform:uppercase;letter-spacing:.05em;font-weight:700}
 .crumb b{color:var(--text)}
 
@@ -292,9 +294,13 @@ tr.click td{transition:background .1s}
 <body>
 
 <div id="loginScreen"></div>
-<div id="appRoot" style="display:none">
-  <header id="headerBar"></header>
-  <main id="mainArea"></main>
+<div id="appRoot" style="display:none" class="app-layout">
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="app-main">
+    <div class="topbar" id="topBar"></div>
+    <main id="mainArea"></main>
+  </div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -999,7 +1005,7 @@ function resetInactivityTimer(){
   inactivityTimer = setTimeout(()=>{
     if(session){
       logNotification('Session', `${session.name} was automatically logged out after 30 minutes of inactivity`, null);
-      logout();
+      logout(true);
       toast('Logged out after 30 minutes of inactivity');
     }
   }, INACTIVITY_LIMIT_MS);
@@ -1013,7 +1019,8 @@ function startInactivityWatch(){
 function stopInactivityWatch(){
   clearTimeout(inactivityTimer);
 }
-function logout(){
+function logout(skipConfirm){
+  if(!skipConfirm && !confirm('Are you sure you want to log out?')) return;
   session = null;
   sessionStorage.removeItem('buildsuite_session');
   sub.authMode = 'signin';
@@ -1099,6 +1106,12 @@ function guardDelete(){
 }
 
 /* ---------- router ---------- */
+const NAV_ICONS = {
+  dashboard:'📊', orders:'📋', products:'📦', leads:'🎯', customers:'🏗️',
+  rfis:'📝', submittals:'📤', changeOrders:'🔄', punchList:'✅', dailyLog:'📅',
+  safety:'🦺', vendors:'🏪', inventory:'📦', employees:'👷', fleet:'🚛',
+  payroll:'💰', transactions:'💳', users:'👥'
+};
 const NAV = [
   { key:'orders', label:'Orders' },
   { key:'products', label:'Products' },
@@ -1122,6 +1135,42 @@ const NAV = [
   { key:'transactions', label:'Transactions' },
   { key:'users', label:'Users' },
 ];
+const SIDEBAR_GROUPS = [
+  { section:'OPERATIONS', items:[
+    { key:'dashboard', label:'Dashboard' },
+    { key:'orders', label:'Orders' },
+    { key:'customers', label:'Projects' },
+  ]},
+  { section:'SALES', items:[
+    { key:'products', label:'Products' },
+    { key:'leads', label:'Leads' },
+  ]},
+  { section:'DOCUMENTS', items:[
+    { key:'rfis', label:'RFIs' },
+    { key:'submittals', label:'Submittals' },
+    { key:'changeOrders', label:'Change Orders' },
+    { key:'punchList', label:'Punch List' },
+    { key:'dailyLog', label:'Daily Log' },
+  ]},
+  { section:'SAFETY', items:[
+    { key:'safety', label:'Safety' },
+  ]},
+  { section:'PEOPLE', items:[
+    { key:'employees', label:'Employees' },
+    { key:'fleet', label:'Fleet' },
+    { key:'payroll', label:'Payroll' },
+  ]},
+  { section:'FINANCE', items:[
+    { key:'transactions', label:'Transactions' },
+  ]},
+  { section:'RESOURCES', items:[
+    { key:'inventory', label:'Inventory' },
+    { key:'vendors', label:'Suppliers' },
+  ]},
+  { section:'ADMIN', items:[
+    { key:'users', label:'Users' },
+  ]},
+];
 function navGroupForView(v){
   return NAV.find(g => g.children && g.children.some(c => c.key === v));
 }
@@ -1129,6 +1178,16 @@ function firstAccessibleChild(group){
   if(!group.children) return group.key;
   const child = group.children.find(c => roleCanAccessTab(c.key));
   return child ? child.key : group.children[0].key;
+}
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('show');
+}
+function toggleSidebar(){
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('sidebarOverlay');
+  sb.classList.toggle('open');
+  ov.classList.toggle('show');
 }
 function go(v, params){
   const group = NAV.find(g => g.key === v && g.children);
@@ -1174,24 +1233,38 @@ function render(){
   (renderers[view] || renderDashboard)();
 }
 function renderHeader(){
-  const navHtml = NAV.map(item => {
-    if(item.children){
-      const visible = item.children.filter(c => roleCanAccessTab(c.key));
-      if(!visible.length) return '';
-      const isActive = item.children.some(c => c.key === view);
-      return `<div class="nav-group" onclick="event.stopPropagation();this.classList.toggle('open')" onmouseleave="this.classList.remove('open')"><button class="${isActive?'on':''}">${item.label}</button><div class="nav-dropdown">${visible.map(c =>
-        `<button class="${c.key===view?'on':''}" onclick="event.stopPropagation();this.closest('.nav-group').classList.remove('open');go('${c.key}')">${c.label}</button>`
-      ).join('')}</div></div>`;
-    }
-    if(!roleCanAccessTab(item.key)) return '';
-    return `<button class="${item.key===view?'on':''}" onclick="go('${item.key}')">${item.label}</button>`;
+  const sidebarNavHtml = SIDEBAR_GROUPS.map(group => {
+    const visibleItems = group.items.filter(item => roleCanAccessTab(item.key));
+    if(!visibleItems.length) return '';
+    return `<div class="sidebar-section">
+      <div class="sidebar-section-label">${group.section}</div>
+      ${visibleItems.map(item =>
+        `<button class="sidebar-item${item.key===view?' on':''}" onclick="go('${item.key}');closeSidebar()">
+          <span class="icon">${NAV_ICONS[item.key]||'📄'}</span>${item.label}</button>`
+      ).join('')}
+    </div>`;
   }).join('');
+
+  document.getElementById('sidebar').innerHTML = `
+    <div class="brand" onclick="go('dashboard');closeSidebar()" title="Go to Dashboard">
+      <div class="mark">${companyMark()}</div>
+      <div class="name">${esc(companyDisplayName())}</div>
+    </div>
+    <div class="sidebar-nav">${sidebarNavHtml}</div>
+    <div class="sidebar-bottom">
+      <div class="sidebar-user" onclick="go('myProfile');closeSidebar()">
+        <div class="av">${avatarHtml(DB.users.find(u=>u.id===session.id), 28)}</div>
+        <div class="uinfo"><span class="uname">${esc(session.name)}</span><span class="urole">${esc(session.type)}</span></div>
+      </div>
+      <button class="sidebar-logout" onclick="logout()">🚪 Log out</button>
+    </div>
+  `;
+
   const alerts = getAlerts();
-  document.getElementById('headerBar').innerHTML = `
-    <div class="brand" style="cursor:pointer" onclick="go('dashboard')" title="Go to Dashboard"><div class="mark">${companyMark()}</div><div class="name">${esc(companyDisplayName())}</div></div>
-    <nav class="tabs" id="navtabs">${navHtml}</nav>
-    <div class="spacer"></div>
+  document.getElementById('topBar').innerHTML = `
+    <button class="sidebar-toggle" onclick="toggleSidebar()" title="Menu">☰</button>
     <span class="mut syncstatus" style="font-size:12px;display:flex;align-items:center;white-space:nowrap"><span class="syncdot ${cloud.connected?'on':''}"></span>${cloud.syncing?'Syncing…':cloud.connected?(cloud.lastError?'Sync error':'Cloud synced'):'Saved in this browser'}</span>
+    <div class="spacer"></div>
     <div style="position:relative">
       <button class="iconbtn" onclick="toggleNotifications()" title="Notifications">🔔${alerts.length?`<span style="position:absolute;top:-3px;right:-3px;background:var(--danger);color:#fff;font-size:10px;font-weight:800;border-radius:999px;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 3px">${alerts.length}</span>`:''}</button>
     </div>
@@ -1199,8 +1272,6 @@ function renderHeader(){
     ${session.type!=='Pending' ? `<button class="iconbtn" onclick="go('help')" title="Help & Getting Started">❓</button>` : ''}
     ${session.type==='Admin' ? `<button class="iconbtn" onclick="openSettings()" title="Settings">⚙️</button>` : ''}
     <button class="iconbtn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">🌙</button>
-    <div class="userchip" style="cursor:pointer" onclick="go('myProfile')"><div class="av">${avatarHtml(DB.users.find(u=>u.id===session.id), 22)}</div><span class="uname">${esc(session.name)}</span></div>
-    <button class="btn ghost sm" onclick="logout()">Log out</button>
   `;
 }
 function globalSearchResults(q){
@@ -2349,7 +2420,7 @@ async function doLogin(){
 }
 function enterApp(){
   document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('appRoot').style.display = 'block';
+  document.getElementById('appRoot').style.display = 'flex';
   if(session.type === 'Pending'){
     renderPendingScreen();
   } else {
@@ -2360,11 +2431,24 @@ function enterApp(){
   startNotifyChecks();
 }
 function renderPendingScreen(){
-  document.getElementById('headerBar').innerHTML = `
-    <div class="brand"><div class="mark">${companyMark()}</div><div class="name">${esc(companyDisplayName())}</div></div>
+  document.getElementById('sidebar').innerHTML = `
+    <div class="brand" onclick="go('dashboard')" title="Go to Dashboard">
+      <div class="mark">${companyMark()}</div>
+      <div class="name">${esc(companyDisplayName())}</div>
+    </div>
+    <div class="sidebar-nav"></div>
+    <div class="sidebar-bottom">
+      <div class="sidebar-user" onclick="go('myProfile')">
+        <div class="av">${avatarHtml(DB.users.find(u=>u.id===session.id), 28)}</div>
+        <div class="uinfo"><span class="uname">${esc(session.name)}</span><span class="urole">Pending</span></div>
+      </div>
+      <button class="sidebar-logout" onclick="logout()">🚪 Log out</button>
+    </div>
+  `;
+  document.getElementById('topBar').innerHTML = `
+    <button class="sidebar-toggle" onclick="toggleSidebar()" title="Menu">☰</button>
     <div class="spacer"></div>
-    <div class="userchip" style="cursor:pointer" onclick="go('myProfile')"><div class="av">${avatarHtml(DB.users.find(u=>u.id===session.id), 22)}</div><span class="uname">${esc(session.name)}</span></div>
-    <button class="btn ghost sm" onclick="logout()">Log out</button>
+    <button class="iconbtn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">🌙</button>
   `;
   document.getElementById('mainArea').innerHTML = `
     <div class="panel" style="max-width:480px;margin:60px auto;text-align:center;padding:40px 32px">
@@ -9083,7 +9167,7 @@ async function boot(){
   }
   if(session){
     document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('appRoot').style.display = 'block';
+    document.getElementById('appRoot').style.display = 'flex';
     if(session.type === 'Pending'){ renderPendingScreen(); }
     else { go('dashboard'); }
     if(cloud.connected){ syncOnBoot(); startCloudPolling(); }
