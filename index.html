@@ -94,6 +94,7 @@ nav.tabs button.on{background:var(--accent);color:var(--accent-ink)}
 .nav-dropdown button{display:block;width:100%;text-align:left;background:none;border:none;color:var(--text);padding:8px 12px;border-radius:6px;font-size:12.5px;font-weight:600;white-space:nowrap;cursor:pointer;transition:background .15s,color .15s}
 .nav-dropdown button:hover{background:var(--chip)}
 .nav-dropdown button.on{background:var(--accent);color:var(--accent-ink)}
+@media(max-width:640px){.nav-dropdown{left:auto;right:0}}
 .spacer{flex:1}
 .iconbtn{background:var(--chip);border:1px solid var(--line);color:var(--text);border-radius:8px;width:34px;height:34px;font-size:15px;display:flex;align-items:center;justify-content:center;transition:background .15s}
 .iconbtn:hover{background:var(--line)}
@@ -297,7 +298,7 @@ tr.click td{transition:background .1s}
 </div>
 <div class="toast" id="toast"></div>
 
-<script id="seed-data" type="application/json">{"customers":[{"id":1,"name":"Sample Residential Project","address":"","city":"Sample City","state":"","zip":"","phone":"","email":"","completedDate":"","projectStatus":"Active","completionPct":0,"activities":[],"activityLog":[],"budget":""},{"id":2,"name":"Sample Commercial Project","address":"","city":"Sample City","state":"","zip":"","phone":"","email":"","completedDate":"","projectStatus":"Active","completionPct":0,"activities":[],"activityLog":[],"budget":""},{"id":3,"name":"Sample Institutional Project","address":"","city":"Sample City","state":"","zip":"","phone":"","email":"","completedDate":"","projectStatus":"Active","completionPct":0,"activities":[],"activityLog":[],"budget":""}],"vendors":[{"id":1,"name":"Sample Hardware Supply","address":"","city":"Sample City","state":"","zip":"","phone":"0900-000-0001","email":"","contactPerson":"Sample Contact","item":"General Hardware","classification":"HARDWARE SUPPLIER","paymentDetails":"","pcabNumber":"","pcabCategory":"","pcabExpiry":"","purchaseNotes":[]},{"id":2,"name":"Sample Electrical Supply","address":"","city":"Sample City","state":"","zip":"","phone":"0900-000-0002","email":"","contactPerson":"Sample Contact","item":"Electrical Supplies","classification":"ELECTRICAL SUPPLIER","paymentDetails":"","pcabNumber":"","pcabCategory":"","pcabExpiry":"","purchaseNotes":[]},{"id":3,"name":"Sample Steel & Metal Corp","address":"","city":"Sample City","state":"","zip":"","phone":"0900-000-0003","email":"","contactPerson":"Sample Contact","item":"Steel & Rebar","classification":"METAL SUPPLIER","paymentDetails":"","pcabNumber":"","pcabCategory":"","pcabExpiry":"","purchaseNotes":[]}],"jobs":[{"id":1,"customerId":1,"name":"Sample Residential Project","address":"","city":"Sample City","state":"","zip":"","contactName":"","phone":"","email":"","isAutoJob":true},{"id":2,"customerId":2,"name":"Sample Commercial Project","address":"","city":"Sample City","state":"","zip":"","contactName":"","phone":"","email":"","isAutoJob":true},{"id":3,"customerId":3,"name":"Sample Institutional Project","address":"","city":"Sample City","state":"","zip":"","contactName":"","phone":"","email":"","isAutoJob":true}],"products":[],"orders":[],"employees":[{"id":1,"name":"Sample Employee One","type":"Laborer","payType":"Daily","regAmount":600,"otRate":93.75,"hourlyCost":75,"phone":"","email":"","address":"","city":"","state":"","zip":"","active":true,"govDeductions":false,"sssNo":"","philhealthNo":"","pagibigNo":"","licenseType":"","licenseNumber":"","licenseExpiry":"","foremanName":"","tin":""},{"id":2,"name":"Sample Employee Two","type":"Foreman","payType":"Daily","regAmount":800,"otRate":125,"hourlyCost":100,"phone":"","email":"","address":"","city":"","state":"","zip":"","active":true,"govDeductions":false,"sssNo":"","philhealthNo":"","pagibigNo":"","licenseType":"","licenseNumber":"","licenseExpiry":"","foremanName":"","tin":""},{"id":3,"name":"Sample Employee Three","type":"Mason","payType":"Daily","regAmount":650,"otRate":101.56,"hourlyCost":81.25,"phone":"","email":"","address":"","city":"","state":"","zip":"","active":true,"govDeductions":false,"sssNo":"","philhealthNo":"","pagibigNo":"","licenseType":"","licenseNumber":"","licenseExpiry":"","foremanName":"","tin":""}],"timesheets":[],"transactions":[],"users":[],"payrolls":[],"paidEmployees":[],"payItems":[],"vehicles":[{"id":1,"name":"Sample Vehicle 1","plate":"","make":"","model":"","type":"Truck","seats":"","assignedDriverId":"","notes":"","active":true,"serialNumber":"","engineType":"","engineNumber":"","currentSite":"Sample Residential Project"},{"id":2,"name":"Sample Excavator","plate":"","make":"","model":"","type":"Heavy Equipment","seats":"","assignedDriverId":"","notes":"","active":true,"serialNumber":"","engineType":"","engineNumber":"","currentSite":"Sample Commercial Project"}],"vehicleExpenses":[],"fuelLogs":[],"meterLogs":[],"vehicleReminders":[],"materials":[{"id":1,"name":"Sample Cement (40kg)","qty":50,"unit":"BAGS","unitPrice":250,"site":"Sample Residential Project","receivedFrom":"Sample Hardware Supply","date":"2026-01-01","reorderPoint":10},{"id":2,"name":"Sample GI Sheet","qty":30,"unit":"PCS","unitPrice":450,"site":"Sample Commercial Project","receivedFrom":"Sample Hardware Supply","date":"2026-01-01","reorderPoint":5}],"equipment":[{"id":1,"name":"Sample Power Drill","brand":"Sample Brand","serial":"","qty":2,"unit":"PCS","status":"Working","site":"Sample Residential Project","receivedFrom":"Sample Hardware Supply","date":"2026-01-01"}],"cashAdvances":[],"purchaseRequests":[],"equipmentReminders":[],"settings":{"salesTaxRate":0.08,"poTaxRate":0.1,"signupCode":"CLM2026","companyName":"CLM General Contractor & Services, Inc.","companyDescription":"A full-service general contractor handling residential, commercial, and institutional construction projects.","companyAddress":"","companyPhone":"","companyEmail":"","companyTIN":"","sheetsWebhookUrl":"","companyShortName":"CLM"},"siteAssignments":[],"announcements":[],"notificationLog":[],"galleryPhotos":[],"trash":[],"testimonials":[],"materialTransfers":[],"siteDiaries":[],"defects":[],"leads":[],"rfis":[],"submittals":[],"changeOrders":[],"incidents":[],"inspections":[]}</script>
+<script id="seed-data" type="application/json">{"customers":[{"id":1,"name":"Sample Residential Project","address":"","city":"Sample City","state":"","zip":"","phone":"","email":"","completedDate":"","projectStatus":"Active","completionPct":0,"activities":[],"activityLog":[],"budget":""},{"id":2,"name":"Sample Commercial Project","address":"","city":"Sample City","state":"","zip":"","phone":"","email":"","completedDate":"","projectStatus":"Active","completionPct":0,"activities":[],"activityLog":[],"budget":""},{"id":3,"name":"Sample Institutional Project","address":"","city":"Sample City","state":"","zip":"","phone":"","email":"","completedDate":"","projectStatus":"Active","completionPct":0,"activities":[],"activityLog":[],"budget":""}],"vendors":[{"id":1,"name":"Sample Hardware Supply","address":"","city":"Sample City","state":"","zip":"","phone":"0900-000-0001","email":"","contactPerson":"Sample Contact","item":"General Hardware","classification":"HARDWARE SUPPLIER","paymentDetails":"","pcabNumber":"","pcabCategory":"","pcabExpiry":"","purchaseNotes":[]},{"id":2,"name":"Sample Electrical Supply","address":"","city":"Sample City","state":"","zip":"","phone":"0900-000-0002","email":"","contactPerson":"Sample Contact","item":"Electrical Supplies","classification":"ELECTRICAL SUPPLIER","paymentDetails":"","pcabNumber":"","pcabCategory":"","pcabExpiry":"","purchaseNotes":[]},{"id":3,"name":"Sample Steel & Metal Corp","address":"","city":"Sample City","state":"","zip":"","phone":"0900-000-0003","email":"","contactPerson":"Sample Contact","item":"Steel & Rebar","classification":"METAL SUPPLIER","paymentDetails":"","pcabNumber":"","pcabCategory":"","pcabExpiry":"","purchaseNotes":[]}],"jobs":[{"id":1,"customerId":1,"name":"Sample Residential Project","address":"","city":"Sample City","state":"","zip":"","contactName":"","phone":"","email":"","isAutoJob":true},{"id":2,"customerId":2,"name":"Sample Commercial Project","address":"","city":"Sample City","state":"","zip":"","contactName":"","phone":"","email":"","isAutoJob":true},{"id":3,"customerId":3,"name":"Sample Institutional Project","address":"","city":"Sample City","state":"","zip":"","contactName":"","phone":"","email":"","isAutoJob":true}],"products":[],"orders":[],"employees":[{"id":1,"name":"Sample Employee One","type":"Laborer","payType":"Daily","regAmount":600,"otRate":93.75,"hourlyCost":75,"phone":"","email":"","address":"","city":"","state":"","zip":"","active":true,"govDeductions":false,"sssNo":"","philhealthNo":"","pagibigNo":"","licenseType":"","licenseNumber":"","licenseExpiry":"","foremanName":"","tin":""},{"id":2,"name":"Sample Employee Two","type":"Foreman","payType":"Daily","regAmount":800,"otRate":125,"hourlyCost":100,"phone":"","email":"","address":"","city":"","state":"","zip":"","active":true,"govDeductions":false,"sssNo":"","philhealthNo":"","pagibigNo":"","licenseType":"","licenseNumber":"","licenseExpiry":"","foremanName":"","tin":""},{"id":3,"name":"Sample Employee Three","type":"Mason","payType":"Daily","regAmount":650,"otRate":101.56,"hourlyCost":81.25,"phone":"","email":"","address":"","city":"","state":"","zip":"","active":true,"govDeductions":false,"sssNo":"","philhealthNo":"","pagibigNo":"","licenseType":"","licenseNumber":"","licenseExpiry":"","foremanName":"","tin":""}],"timesheets":[],"transactions":[],"users":[],"payrolls":[],"paidEmployees":[],"payItems":[],"vehicles":[{"id":1,"name":"Sample Vehicle 1","plate":"","make":"","model":"","type":"Truck","seats":"","assignedDriverId":"","notes":"","active":true,"serialNumber":"","engineType":"","engineNumber":"","currentSite":"Sample Residential Project"},{"id":2,"name":"Sample Excavator","plate":"","make":"","model":"","type":"Heavy Equipment","seats":"","assignedDriverId":"","notes":"","active":true,"serialNumber":"","engineType":"","engineNumber":"","currentSite":"Sample Commercial Project"}],"vehicleExpenses":[],"fuelLogs":[],"meterLogs":[],"vehicleReminders":[],"materials":[{"id":1,"name":"Sample Cement (40kg)","qty":50,"unit":"BAGS","unitPrice":250,"site":"Sample Residential Project","receivedFrom":"Sample Hardware Supply","date":"2026-01-01","reorderPoint":10},{"id":2,"name":"Sample GI Sheet","qty":30,"unit":"PCS","unitPrice":450,"site":"Sample Commercial Project","receivedFrom":"Sample Hardware Supply","date":"2026-01-01","reorderPoint":5}],"equipment":[{"id":1,"name":"Sample Power Drill","brand":"Sample Brand","serial":"","qty":2,"unit":"PCS","status":"Working","site":"Sample Residential Project","receivedFrom":"Sample Hardware Supply","date":"2026-01-01"}],"cashAdvances":[],"purchaseRequests":[],"equipmentReminders":[],"settings":{"salesTaxRate":0.08,"poTaxRate":0.1,"signupCode":"CLM2026","companyName":"CLM General Contractor & Services, Inc.","companyDescription":"A full-service general contractor handling residential, commercial, and institutional construction projects.","companyAddress":"","companyPhone":"","companyEmail":"","companyTIN":"","sheetsWebhookUrl":"","companyShortName":"CLM"},"siteAssignments":[],"announcements":[],"notificationLog":[],"galleryPhotos":[],"trash":[],"testimonials":[],"materialTransfers":[],"siteDiaries":[],"defects":[],"leads":[],"rfis":[],"submittals":[],"changeOrders":[],"incidents":[],"inspections":[],"punchItems":[],"dailyLogs":[]}</script>
 <script>
 /* ============================================================
    CLM General Contractor & Services, Inc. — Construction Management System
@@ -1026,8 +1027,8 @@ function logout(){
 /* ---------- role-based permissions ---------- */
 // Admin: everything. Manager: everything except managing Users. Sales: limited to sales-facing tabs, no deletes.
 // Clerk: same tab access as Manager but cannot delete records.
-const SALES_TABS = ['dashboard','orders','products','leads','customers','vendors','rfis','submittals','changeOrders'];
-const EMPLOYEE_TABS = ['dashboard','customers','safety'];
+const SALES_TABS = ['dashboard','orders','products','leads','customers','vendors','rfis','submittals','changeOrders','punchList','dailyLog'];
+const EMPLOYEE_TABS = ['dashboard','customers','safety','dailyLog'];
 function roleCanAccessTab(tabKey){
   if(!session) return false;
   if(tabKey==='myProfile') return session.type!=='Pending'; // everyone with real access can manage their own profile
@@ -1107,18 +1108,18 @@ const NAV = [
     { key:'rfis', label:'RFIs' },
     { key:'submittals', label:'Submittals' },
     { key:'changeOrders', label:'Change Orders' },
+    { key:'punchList', label:'Punch List' },
+    { key:'dailyLog', label:'Daily Log' },
   ]},
   { key:'safety', label:'Safety' },
   { key:'vendors', label:'Suppliers' },
-  { key:'resources', label:'Resources', children:[
+  { key:'inventory', label:'Inventory' },
+  { key:'team', label:'Team', children:[
     { key:'employees', label:'Employees' },
     { key:'fleet', label:'Fleet' },
-    { key:'inventory', label:'Inventory' },
-  ]},
-  { key:'finance', label:'Finance', children:[
     { key:'payroll', label:'Payroll' },
-    { key:'transactions', label:'Transactions' },
   ]},
+  { key:'transactions', label:'Transactions' },
   { key:'users', label:'Users' },
 ];
 function navGroupForView(v){
@@ -1153,6 +1154,8 @@ function render(){
     rfis: renderRFIs,
     submittals: renderSubmittals,
     changeOrders: renderChangeOrders,
+    punchList: renderPunchList,
+    dailyLog: renderDailyLog,
     safety: renderSafety,
     vendors: renderVendors,
     employees: renderEmployees,
@@ -1176,8 +1179,8 @@ function renderHeader(){
       const visible = item.children.filter(c => roleCanAccessTab(c.key));
       if(!visible.length) return '';
       const isActive = item.children.some(c => c.key === view);
-      return `<div class="nav-group"><button class="${isActive?'on':''}" onclick="go('${firstAccessibleChild(item)}')">${item.label}</button><div class="nav-dropdown">${visible.map(c =>
-        `<button class="${c.key===view?'on':''}" onclick="this.closest('.nav-group').classList.remove('open');go('${c.key}')">${c.label}</button>`
+      return `<div class="nav-group" onclick="event.stopPropagation();this.classList.toggle('open')" onmouseleave="this.classList.remove('open')"><button class="${isActive?'on':''}">${item.label}</button><div class="nav-dropdown">${visible.map(c =>
+        `<button class="${c.key===view?'on':''}" onclick="event.stopPropagation();this.closest('.nav-group').classList.remove('open');go('${c.key}')">${c.label}</button>`
       ).join('')}</div></div>`;
     }
     if(!roleCanAccessTab(item.key)) return '';
@@ -1269,6 +1272,11 @@ function globalSearchResults(q){
       results.push({ group:'Incidents', label:i.title, sub:i.severity, action:()=>{ go('safety',{stab:'incidents'}); openIncident(i.id); } });
     });
   }
+  if(roleCanAccessTab('punchList')){
+    (DB.punchItems||[]).filter(p=>p.description.toLowerCase().includes(q) || (p.project||'').toLowerCase().includes(q)).slice(0,6).forEach(p=>{
+      results.push({ group:'Punch List', label:p.description, sub:p.status, action:()=>{ go('punchList'); editPunchItem(p.id); } });
+    });
+  }
   return results;
 }
 function openGlobalSearch(){
@@ -1302,12 +1310,14 @@ const TRASH_TYPE_ARRAYS = {
   vendor:'vendors', order:'orders', transaction:'transactions', product:'products', user:'users',
   siteDiary:'siteDiaries', purchaseRequest:'purchaseRequests', vehicle:'vehicles',
   rfi:'rfis', submittal:'submittals', changeOrder:'changeOrders', incident:'incidents', inspection:'inspections',
+  punchItem:'punchItems', dailyLog:'dailyLogs',
 };
 const TRASH_TYPE_LABELS = {
   customer:'Project', material:'Material', equipment:'Equipment', employee:'Employee',
   vendor:'Supplier', order:'Order', transaction:'Transaction', product:'Product', user:'User', payrollRun:'Payroll Run',
   siteDiary:'Site Diary', purchaseRequest:'Purchase Request', vehicle:'Vehicle',
   rfi:'RFI', submittal:'Submittal', changeOrder:'Change Order', incident:'Incident', inspection:'Inspection',
+  punchItem:'Punch Item', dailyLog:'Daily Log',
 };
 function trashLabel(t){
   if(t.type==='payrollRun') return t.data.run.site ? `Payroll — ${t.data.run.site} (${fmtDate(t.data.run.payDate)})` : `Payroll run`;
@@ -1385,6 +1395,19 @@ function renderHelp(){
         <details class="faq-item"><summary>Settings — the control room</summary><p>Company info, tax rates, announcements, the landing page gallery and testimonials, Google Sheets mirror, and browser notifications all live in <b>⚙️ Settings</b>. This is also where you'll find <b>🗑️ Trash</b> — anything deleted across the whole app sits there for 30 days before it's really gone, so an accidental delete is always recoverable.</p></details>
         <details class="faq-item"><summary>Keeping an eye on things</summary><p>The <b>Notification Log</b> (bell icon, or Settings) keeps a permanent record of deletions, price changes, new accounts, and progress updates — who did what, and when. Worth checking periodically, especially as your team grows.</p></details>
         ` : ''}
+        ${isOffice ? `
+        <details class="faq-item"><summary>Punch List — tracking closeout items</summary><p>Under <b>Documents → Punch List</b>, you can track all items that need fixing before a project is handed over. Each item has a priority, category, assignee, and status. Use this to systematically close out projects — filter by project and status to see what's left.</p></details>
+        <details class="faq-item"><summary>Daily Log — documenting site activity</summary><p><b>Documents → Daily Log</b> is your daily construction journal. Record weather conditions, crew size, work performed, materials used, equipment on site, visitors, and any delays or issues. This creates a defensible project record for disputes, claims, and progress verification.</p></details>
+        ` : ''}
+        <details class="faq-item"><summary>Construction Best Practices</summary>
+          <p style="margin-bottom:8px"><b>1. Pre-Construction Planning:</b> Review all drawings, specs, and permits before breaking ground. Hold a pre-construction meeting with all stakeholders. Create a detailed schedule with milestones.</p>
+          <p style="margin-bottom:8px"><b>2. Budget Control:</b> Track costs against budget in real-time using Orders and Transactions. Review change orders promptly — scope creep is the biggest budget killer.</p>
+          <p style="margin-bottom:8px"><b>3. Daily Documentation:</b> Log site conditions, work performed, and issues daily. Photos are evidence. Use the Daily Log consistently — if it's not documented, it didn't happen.</p>
+          <p style="margin-bottom:8px"><b>4. Safety First:</b> Conduct daily toolbox talks. Report all incidents, including near misses. Ensure PPE compliance. Use the Safety module for inspections.</p>
+          <p style="margin-bottom:8px"><b>5. Material Management:</b> Order materials early — lead times can delay projects. Track inventory across sites. Set reorder points for critical materials.</p>
+          <p style="margin-bottom:8px"><b>6. Communication:</b> Use RFIs for formal questions. Track submittals for approvals. Keep all stakeholders informed of schedule changes.</p>
+          <p><b>7. Quality Control:</b> Inspect work before covering it up. Use the Punch List to track deficiencies. Don't accept "good enough" — rework costs more later.</p>
+        </details>
         <details class="faq-item"><summary>Something feels off, or a number looks wrong?</summary><p>Real people update this system every day, and honest mistakes happen. If something looks incorrect, it's always safe to ask whoever manages BuildSuite for your company rather than guessing — nothing here is permanent (see Trash, above, if you're an Admin) and it's always fixable.</p></details>
       </div>
     </div>
@@ -2732,6 +2755,17 @@ function renderDashboard(){
             <div style="display:flex;justify-content:space-between;padding:3px 0"><span class="mut">Open Incidents</span><a onclick="go('safety')" style="cursor:pointer;font-weight:600;color:${openIncidents?'var(--danger)':'var(--accent)'}">${openIncidents}</a></div>
             <div style="display:flex;justify-content:space-between;padding:3px 0"><span class="mut">Total Incidents</span><b>${(DB.incidents||[]).length}</b></div>
           </div>`:''}
+          ${(()=>{
+            const openPunch = (DB.punchItems||[]).filter(p=>p.status!=='Closed').length;
+            const totalPunch = (DB.punchItems||[]).length;
+            const todayLogs = (DB.dailyLogs||[]).filter(l=>l.date===todayISO()).length;
+            if(!totalPunch && !todayLogs && !(DB.dailyLogs||[]).length) return '';
+            return `<div class="panel" style="flex:1;min-width:200px;padding:16px">
+              <h4 style="margin:0 0 8px">📋 Site Activity</h4>
+              ${totalPunch?`<div style="display:flex;justify-content:space-between;padding:3px 0"><span class="mut">Open Punch Items</span><a onclick="go('punchList')" style="cursor:pointer;font-weight:600;color:${openPunch?'var(--warn)':'var(--green)'}">${openPunch}/${totalPunch}</a></div>`:''}
+              <div style="display:flex;justify-content:space-between;padding:3px 0"><span class="mut">Daily Logs Today</span><a onclick="go('dailyLog')" style="cursor:pointer;font-weight:600;color:${todayLogs?'var(--green)':'var(--muted)'}">${todayLogs}</a></div>
+            </div>`;
+          })()}
         </div>`;
       })()}
       <div class="ph"><h3>🔔 Recent Activity</h3><button class="btn ghost sm" onclick="go('notificationLog')">View Full Log</button></div>
@@ -5021,6 +5055,210 @@ function renderSafetyStats(){
       </div>
     </div>
   `;
+}
+
+/* ============================================================ PUNCH LIST ============================================================ */
+const PUNCH_STATUSES = ['Open','In Progress','Ready for Review','Closed'];
+const PUNCH_PRIORITIES = ['Critical','High','Medium','Low'];
+const PUNCH_CATEGORIES = ['Structural','Electrical','Plumbing','HVAC','Finishing','Painting','Flooring','Roofing','Landscaping','Other'];
+function renderPunchList(){
+  sub.punchProject = sub.punchProject || 'ALL';
+  sub.punchStatus = sub.punchStatus || 'ALL';
+  if(!DB.punchItems) DB.punchItems = [];
+  let rows = [...DB.punchItems];
+  if(sub.punchProject !== 'ALL') rows = rows.filter(p=>p.project===sub.punchProject);
+  if(sub.punchStatus !== 'ALL') rows = rows.filter(p=>p.status===sub.punchStatus);
+  rows.sort((a,b)=>(PUNCH_PRIORITIES.indexOf(a.priority)-PUNCH_PRIORITIES.indexOf(b.priority)) || (b.date||'').localeCompare(a.date||''));
+  const open = DB.punchItems.filter(p=>p.status!=='Closed').length;
+  const closed = DB.punchItems.filter(p=>p.status==='Closed').length;
+  document.getElementById('mainArea').innerHTML = `
+    <div class="crumb">Documents ▸ Punch List</div>
+    <div class="cards">
+      <div class="kpi"><div class="l">Total Items</div><div class="v">${DB.punchItems.length}</div></div>
+      <div class="kpi"><div class="l">Open</div><div class="v ${open?'danger':'green'}">${open}</div></div>
+      <div class="kpi"><div class="l">Closed</div><div class="v green">${closed}</div></div>
+      <div class="kpi"><div class="l">Completion</div><div class="v">${DB.punchItems.length?Math.round(closed/DB.punchItems.length*100):0}%</div></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><h3>Punch List</h3>${canEdit()?`<button class="btn pri" onclick="editPunchItem(null)">+ Add Item</button>`:''}</div>
+      <div class="searchbar">
+        <select onchange="sub.punchProject=this.value;renderPunchList()">
+          <option value="ALL">All Projects</option>
+          ${DB.customers.map(c=>`<option ${sub.punchProject===c.name?'selected':''}>${esc(c.name)}</option>`).join('')}
+        </select>
+        <select onchange="sub.punchStatus=this.value;renderPunchList()">
+          <option value="ALL">All Statuses</option>
+          ${PUNCH_STATUSES.map(s=>`<option ${sub.punchStatus===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </div>
+      <div class="twrap"><table>
+        <tr><th>#</th><th>Description</th><th>Project</th><th>Location</th><th>Category</th><th>Priority</th><th>Assigned To</th><th>Status</th><th>Date</th><th></th></tr>
+        ${rows.map(p=>`
+          <tr class="click" onclick="editPunchItem(${p.id})">
+            <td class="mono">${p.id}</td>
+            <td><b>${esc(p.description)}</b></td>
+            <td class="mut">${esc(p.project)}</td>
+            <td class="mut">${esc(p.location)||'—'}</td>
+            <td class="mut">${esc(p.category)||'—'}</td>
+            <td><span class="badge b-${p.priority==='Critical'?'danger':p.priority==='High'?'Pending':p.priority==='Medium'?'status':'Paid'}">${esc(p.priority)}</span></td>
+            <td class="mut">${esc(p.assignedTo)||'—'}</td>
+            <td><span class="badge b-status b-${esc(p.status)}">${esc(p.status)}</span></td>
+            <td class="mut">${fmtDate(p.date)}</td>
+            <td>${canEdit()?`<button class="x" onclick="event.stopPropagation();deletePunchItem(${p.id})">✕</button>`:''}</td>
+          </tr>`).join('') || `<tr><td colspan="10" class="empty">No punch list items yet — add one to start tracking closeout work</td></tr>`}
+      </table></div>
+    </div>
+  `;
+}
+function editPunchItem(id){
+  if(!canEdit()) return;
+  const p = id ? DB.punchItems.find(x=>x.id===id) : {id:null,description:'',project:'',location:'',category:'Other',priority:'Medium',assignedTo:'',status:'Open',date:todayISO(),dueDate:'',notes:'',closedDate:''};
+  openModal(`
+    <h3>${id?'Edit':'Add'} Punch List Item</h3>
+    <div class="field"><label class="fl" for="f_desc">Description *</label><input id="f_desc" value="${esc(p.description)}" placeholder="e.g. Touch-up paint on 2nd floor hallway"></div>
+    <div class="grid2">
+      <div class="field"><label class="fl" for="f_project">Project</label><select id="f_project">${siteSelectOptions(p.project)}</select></div>
+      <div class="field"><label class="fl" for="f_loc">Location / Area</label><input id="f_loc" value="${esc(p.location)}" placeholder="e.g. Room 204, 2nd Floor"></div>
+    </div>
+    ${siteDatalist()}
+    <div class="grid3">
+      <div class="field"><label class="fl" for="f_cat">Category</label><select id="f_cat">${PUNCH_CATEGORIES.map(c=>`<option ${p.category===c?'selected':''}>${c}</option>`).join('')}</select></div>
+      <div class="field"><label class="fl" for="f_pri">Priority</label><select id="f_pri">${PUNCH_PRIORITIES.map(pr=>`<option ${p.priority===pr?'selected':''}>${pr}</option>`).join('')}</select></div>
+      <div class="field"><label class="fl" for="f_status">Status</label><select id="f_status">${PUNCH_STATUSES.map(s=>`<option ${p.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label class="fl" for="f_assign">Assigned To</label><input id="f_assign" value="${esc(p.assignedTo)}" placeholder="Name or trade"></div>
+      <div class="field"><label class="fl" for="f_due">Due Date</label><input id="f_due" type="date" value="${esc(p.dueDate)}"></div>
+    </div>
+    <div class="field"><label class="fl" for="f_notes">Notes</label><textarea id="f_notes" rows="2">${esc(p.notes)}</textarea></div>
+    <div class="btnrow">
+      <button class="btn save" onclick="savePunchItem(${id})">Save</button>
+      ${id?`<button class="btn del" onclick="deletePunchItem(${id})">Delete</button>`:''}
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+    </div>
+  `);
+}
+function savePunchItem(id){
+  const description = document.getElementById('f_desc').value.trim();
+  if(!description){ toast('Please enter a description'); return; }
+  const vals = {
+    description, project: document.getElementById('f_project').value, location: document.getElementById('f_loc').value.trim(),
+    category: document.getElementById('f_cat').value, priority: document.getElementById('f_pri').value,
+    status: document.getElementById('f_status').value, assignedTo: document.getElementById('f_assign').value.trim(),
+    dueDate: document.getElementById('f_due').value, notes: document.getElementById('f_notes').value.trim(),
+    date: todayISO(),
+  };
+  if(vals.status === 'Closed') vals.closedDate = vals.closedDate || todayISO();
+  if(id){
+    const existing = DB.punchItems.find(x=>x.id===id);
+    if(existing.status !== 'Closed' && vals.status === 'Closed') vals.closedDate = todayISO();
+    Object.assign(existing, vals);
+  } else {
+    DB.punchItems.push({ id: nextId(DB.punchItems), ...vals });
+  }
+  saveDB(); closeModal(); toast('Punch list item saved'); renderPunchList();
+}
+function deletePunchItem(id){
+  if(!guardDelete()) return;
+  if(!confirm('Delete this punch list item?')) return;
+  DB.punchItems = DB.punchItems.filter(x=>x.id!==id);
+  saveDB(); closeModal(); toast('Item deleted'); renderPunchList();
+}
+
+/* ============================================================ DAILY LOG ============================================================ */
+const WEATHER_OPTIONS = ['Clear','Sunny','Partly Cloudy','Cloudy','Light Rain','Heavy Rain','Thunderstorm','Windy','Hot','Cold'];
+function renderDailyLog(){
+  sub.logProject = sub.logProject || 'ALL';
+  if(!DB.dailyLogs) DB.dailyLogs = [];
+  let rows = [...DB.dailyLogs];
+  if(sub.logProject !== 'ALL') rows = rows.filter(l=>l.project===sub.logProject);
+  rows.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  document.getElementById('mainArea').innerHTML = `
+    <div class="crumb">Documents ▸ Daily Log</div>
+    <div class="cards">
+      <div class="kpi"><div class="l">Total Entries</div><div class="v">${DB.dailyLogs.length}</div></div>
+      <div class="kpi"><div class="l">This Week</div><div class="v">${DB.dailyLogs.filter(l=>{const d=new Date(l.date);const now=new Date();const diff=(now-d)/(1000*60*60*24);return diff>=0&&diff<7;}).length}</div></div>
+      <div class="kpi"><div class="l">Projects Logged</div><div class="v">${new Set(DB.dailyLogs.map(l=>l.project)).size}</div></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><h3>Daily Construction Log</h3><button class="btn pri" onclick="editDailyLog(null)">+ New Entry</button></div>
+      <div class="searchbar">
+        <select onchange="sub.logProject=this.value;renderDailyLog()">
+          <option value="ALL">All Projects</option>
+          ${DB.customers.map(c=>`<option ${sub.logProject===c.name?'selected':''}>${esc(c.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="twrap"><table>
+        <tr><th>Date</th><th>Project</th><th>Weather</th><th>Crew Size</th><th>Work Performed</th><th>Issues / Delays</th><th>By</th><th></th></tr>
+        ${rows.map(l=>`
+          <tr class="click" onclick="editDailyLog(${l.id})">
+            <td class="mono"><b>${fmtDate(l.date)}</b></td>
+            <td>${esc(l.project)}</td>
+            <td class="mut">${esc(l.weather)||'—'}</td>
+            <td class="num">${l.crewSize||'—'}</td>
+            <td class="mut" style="max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.workPerformed)||'—'}</td>
+            <td class="mut" style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.delays)||'—'}</td>
+            <td class="mut">${esc(l.createdBy)||'—'}</td>
+            <td>${canEdit()?`<button class="x" onclick="event.stopPropagation();deleteDailyLog(${l.id})">✕</button>`:''}</td>
+          </tr>`).join('') || `<tr><td colspan="8" class="empty">No daily log entries yet — start documenting site activity</td></tr>`}
+      </table></div>
+    </div>
+  `;
+}
+function editDailyLog(id){
+  const l = id ? DB.dailyLogs.find(x=>x.id===id) : {id:null,date:todayISO(),project:'',weather:'Clear',tempHigh:'',tempLow:'',crewSize:'',workPerformed:'',materialsUsed:'',equipmentUsed:'',visitors:'',delays:'',safetyNotes:'',createdBy:session.name,photos:''};
+  openModal(`
+    <h3>${id?'Edit':'New'} Daily Log Entry</h3>
+    <div class="grid2">
+      <div class="field"><label class="fl" for="f_date">Date *</label><input id="f_date" type="date" value="${esc(l.date)}"></div>
+      <div class="field"><label class="fl" for="f_project">Project *</label><select id="f_project">${siteSelectOptions(l.project)}</select></div>
+    </div>
+    ${siteDatalist()}
+    <div class="grid3">
+      <div class="field"><label class="fl" for="f_weather">Weather</label><select id="f_weather">${WEATHER_OPTIONS.map(w=>`<option ${l.weather===w?'selected':''}>${w}</option>`).join('')}</select></div>
+      <div class="field"><label class="fl" for="f_temphi">Temp High (°C)</label><input id="f_temphi" type="number" value="${l.tempHigh}" placeholder="e.g. 34"></div>
+      <div class="field"><label class="fl" for="f_templo">Temp Low (°C)</label><input id="f_templo" type="number" value="${l.tempLow}" placeholder="e.g. 26"></div>
+    </div>
+    <div class="field"><label class="fl" for="f_crew">Crew Size (workers on site)</label><input id="f_crew" type="number" value="${l.crewSize}" placeholder="e.g. 12"></div>
+    <div class="field"><label class="fl" for="f_work">Work Performed *</label><textarea id="f_work" rows="3" placeholder="Describe work completed today — concrete pouring, framing, rebar installation, etc.">${esc(l.workPerformed)}</textarea></div>
+    <div class="field"><label class="fl" for="f_materials">Materials Used</label><textarea id="f_materials" rows="2" placeholder="e.g. 50 bags cement, 20 pcs rebar #16">${esc(l.materialsUsed)}</textarea></div>
+    <div class="field"><label class="fl" for="f_equipment">Equipment Used</label><input id="f_equipment" value="${esc(l.equipmentUsed)}" placeholder="e.g. Backhoe, concrete mixer, vibrator"></div>
+    <div class="field"><label class="fl" for="f_visitors">Site Visitors</label><input id="f_visitors" value="${esc(l.visitors)}" placeholder="e.g. Architect, DPWH inspector"></div>
+    <div class="field"><label class="fl" for="f_delays">Issues / Delays</label><textarea id="f_delays" rows="2" placeholder="Weather delays, material shortages, equipment breakdowns, etc.">${esc(l.delays)}</textarea></div>
+    <div class="field"><label class="fl" for="f_safety">Safety Notes</label><input id="f_safety" value="${esc(l.safetyNotes)}" placeholder="PPE compliance, near misses, toolbox talk topic"></div>
+    <div class="btnrow">
+      <button class="btn save" onclick="saveDailyLog(${id})">Save</button>
+      ${id?`<button class="btn del" onclick="deleteDailyLog(${id})">Delete</button>`:''}
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+    </div>
+  `);
+}
+function saveDailyLog(id){
+  const date = document.getElementById('f_date').value;
+  const project = document.getElementById('f_project').value.trim();
+  const workPerformed = document.getElementById('f_work').value.trim();
+  if(!date || !project){ toast('Please enter a date and project'); return; }
+  if(!workPerformed){ toast('Please describe the work performed today'); return; }
+  const vals = {
+    date, project, weather: document.getElementById('f_weather').value,
+    tempHigh: document.getElementById('f_temphi').value, tempLow: document.getElementById('f_templo').value,
+    crewSize: document.getElementById('f_crew').value, workPerformed,
+    materialsUsed: document.getElementById('f_materials').value.trim(),
+    equipmentUsed: document.getElementById('f_equipment').value.trim(),
+    visitors: document.getElementById('f_visitors').value.trim(),
+    delays: document.getElementById('f_delays').value.trim(),
+    safetyNotes: document.getElementById('f_safety').value.trim(),
+    createdBy: session.name,
+  };
+  if(id){ Object.assign(DB.dailyLogs.find(x=>x.id===id), vals); }
+  else { DB.dailyLogs.push({ id: nextId(DB.dailyLogs), ...vals }); }
+  saveDB(); closeModal(); toast('Daily log saved'); renderDailyLog();
+}
+function deleteDailyLog(id){
+  if(!guardDelete()) return;
+  if(!confirm('Delete this daily log entry?')) return;
+  DB.dailyLogs = DB.dailyLogs.filter(x=>x.id!==id);
+  saveDB(); closeModal(); toast('Entry deleted'); renderDailyLog();
 }
 
 const VENDOR_CLASSIFICATIONS = ['HARDWARE SUPPLIER','ELECTRICAL SUPPLIER','METAL SUPPLIER','PAINT SUPPLIER','SAFETY PRODUCT SUPPLIER','PLUMBING SUPPLIER','CONCRETE SUPPLIER','LUMBER SUPPLIER','EQUIPMENT RENTAL','OTHER'];
@@ -8120,7 +8358,7 @@ function dismissReview(id){
   u.reviewed = true;
   saveDB(); toast('Marked as reviewed'); renderUsers();
 }
-const CUSTOM_TAB_LIST = [['dashboard','Dashboard'],['orders','Orders'],['products','Products'],['leads','Leads'],['customers','Projects'],['rfis','RFIs'],['submittals','Submittals'],['changeOrders','Change Orders'],['safety','Safety'],['vendors','Suppliers'],['employees','Employees'],['fleet','Fleet'],['inventory','Inventory'],['payroll','Payroll'],['transactions','Transactions']];
+const CUSTOM_TAB_LIST = [['dashboard','Dashboard'],['orders','Orders'],['products','Products'],['leads','Leads'],['customers','Projects'],['rfis','RFIs'],['submittals','Submittals'],['changeOrders','Change Orders'],['punchList','Punch List'],['dailyLog','Daily Log'],['safety','Safety'],['vendors','Suppliers'],['employees','Employees'],['fleet','Fleet'],['inventory','Inventory'],['payroll','Payroll'],['transactions','Transactions']];
 function editUser(id){
   if(session.type !== 'Admin'){ toast('Only an Admin can edit user accounts.'); return; }
   const u = id ? DB.users.find(x=>x.id===id) : {id:null,name:'',username:'',password:'',type:'Clerk',position:'',canRequestForSite:false,customTabs:[]};
@@ -8884,6 +9122,7 @@ window.addEventListener('beforeunload', () => {
     });
   }catch(e){}
 });
+document.addEventListener('click', () => { document.querySelectorAll('.nav-group.open').forEach(g => g.classList.remove('open')); });
 document.addEventListener('DOMContentLoaded', boot);
 
 </script>
