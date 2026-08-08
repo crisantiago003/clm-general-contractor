@@ -1189,14 +1189,39 @@ function toggleSidebar(){
   sb.classList.toggle('open');
   ov.classList.toggle('show');
 }
+let _navFromPop = false;
 function go(v, params){
   const group = NAV.find(g => g.key === v && g.children);
   if(group) v = firstAccessibleChild(group);
+  const prevView = view;
   view = v;
   sub = params || {};
+  if(!_navFromPop){
+    const state = { view: v, sub: sub };
+    if(prevView === undefined){
+      history.replaceState(state, '', '');
+    } else {
+      history.pushState(state, '', '');
+    }
+  }
+  _navFromPop = false;
   render();
   window.scrollTo(0,0);
 }
+window.addEventListener('popstate', function(e){
+  if(!session){
+    history.replaceState(null, '', '');
+    return;
+  }
+  if(e.state && e.state.view){
+    _navFromPop = true;
+    go(e.state.view, e.state.sub);
+  } else {
+    _navFromPop = true;
+    go(view || 'dashboard', sub || {});
+    history.replaceState({ view: view, sub: sub }, '', '');
+  }
+});
 function render(){
   if(session && session.type === 'Pending'){ renderPendingScreen(); return; }
   if(view !== 'dashboard' && !roleCanAccessTab(view)){
@@ -2421,6 +2446,7 @@ async function doLogin(){
 function enterApp(){
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('appRoot').style.display = 'flex';
+  history.replaceState({ view: 'dashboard', sub: {} }, '', '');
   if(session.type === 'Pending'){
     renderPendingScreen();
   } else {
@@ -9168,6 +9194,7 @@ async function boot(){
   if(session){
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('appRoot').style.display = 'flex';
+    history.replaceState({ view: 'dashboard', sub: {} }, '', '');
     if(session.type === 'Pending'){ renderPendingScreen(); }
     else { go('dashboard'); }
     if(cloud.connected){ syncOnBoot(); startCloudPolling(); }
