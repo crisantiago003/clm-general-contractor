@@ -5905,7 +5905,959 @@ function renderCalculator(){
   (TAB_UPDATE[active]||window.updateConcreteCalc)();
 }
 
+/* ================= Project Schedule (Gantt + S-Curve) ================= */
+const SCHEDULE_STATUSES = ['Not Started','In Progress','Completed','Delayed'];
+function scheduleStatusBadgeClass(s){
+  if(s==='Completed') return 'b-Paid';
+  if(s==='In Progress') return 'b-Pending';
+  if(s==='Delayed') return 'b-danger';
+  return 'b-status';
+}
+function seedScheduleActivities(projectId){
+  const defs = [
+    ['Mobilization/Demobilization',85000,10],
+    ['Clearing & Earthworks',125000,12],
+    ['Foundations',75000,14],
+    ['Columns',50000,10],
+    ['Beams',75000,12],
+    ['Masonry Works',150000,21],
+    ['Electrical Rough-ins',35000,10],
+    ['Plumbing Rough-ins',65000,10],
+    ['Roofing',145000,18],
+    ['Plastering',95000,14],
+    ['Tile Works',120000,16],
+    ['Doors & Windows',80000,10],
+    ['Painting',65000,12],
+    ['Electrical Finishing',55000,8],
+    ['Plumbing Finishing',45000,8],
+    ['Landscaping & Cleanup',35000,7],
+  ];
+  const today = new Date();
+  const projectStart = new Date(today.getFullYear(), today.getMonth()-2, 1); // started ~2 months ago
+  let cursor = new Date(projectStart);
+  const startId = nextId(DB.scheduleActivities);
+  defs.forEach((d,i)=>{
+    const [name,cost,dur] = d;
+    const plannedStart = new Date(cursor);
+    const plannedEnd = new Date(cursor); plannedEnd.setDate(plannedEnd.getDate()+dur-1);
+    // stagger the next activity to start a few days before the current one ends (typical overlap)
+    const overlap = Math.max(2, Math.round(dur*0.25));
+    cursor = new Date(plannedEnd); cursor.setDate(cursor.getDate()-overlap+1);
+    let actualStart='', actualEnd='', status='Not Started';
+    if(plannedEnd < today){
+      // activity should already be done or nearly done — mark completed, occasionally a touch delayed
+      status = (i===5||i===8) ? 'Delayed' : 'Completed';
+      actualStart = plannedStart.toISOString().slice(0,10);
+      const slip = status==='Delayed' ? Math.round(dur*0.3) : 0;
+      const ae = new Date(plannedEnd); ae.setDate(ae.getDate()+slip);
+      actualEnd = (ae>today?today:ae).toISOString().slice(0,10);
+    } else if(plannedStart <= today && today <= new Date(plannedEnd.getTime()+7*86400000)){
+      status = 'In Progress';
+      actualStart = plannedStart.toISOString().slice(0,10);
+    } else {
+      status = 'Not Started';
+    }
+    DB.scheduleActivities.push({
+      id: startId+i, projectId,
+      name, cost,
+      plannedStart: plannedStart.toISOString().slice(0,10),
+      plannedEnd: plannedEnd.toISOString().slice(0,10),
+      actualStart, actualEnd, status
+    });
+  });
+}
+function scheduleDaysBetween(a,b){
+  const d1 = new Date(a), d2 = new Date(b);
+  if(isNaN(d1)||isNaN(d2)) return null;
+  return Math.round((d2-d1)/86400000)+1; // inclusive
+}
+function scheduleActivityFractionAt(start,end,t,fallbackDur){
+  const s = new Date(start);
+  if(isNaN(s) || t < s) return 0;
+  let e = new Date(end);
+  if(isNaN(e)){
+    e = new Date(s); e.setDate(e.getDate()+(fallbackDur||7));
+  }
+  if(t >= e) return 1;
+  const total = e - s;
+  if(total<=0) return 1;
+  return (t-s)/total;
+}
+function scheduleProgressFraction(a){
+  if(a.status==='Completed') return 1;
+  if(a.status==='Not Started') return 0;
+  if(!a.actualStart) return 0;
+  const today = new Date();
+  const plannedDur = scheduleDaysBetween(a.plannedStart,a.plannedEnd) || 7;
+  return Math.min(0.97, scheduleActivityFractionAt(a.actualStart, a.actualEnd, today, plannedDur));
+}
+function scheduleBuildSeries(rows, minD, maxD){
+  // weekly points from minD to maxD (inclusive), planned & actual cumulative % curves
+  const totalCost = rows.reduce((s,a)=>s+(Number(a.cost)||0),0) || 1;
+  const today = new Date();
+  const points = [];
+  let t = new Date(minD);
+  const stepDays = Math.max(1, Math.round((maxD-minD)/(86400000*24))); // ~24 samples across range
+  while(t <= maxD){
+    let plannedPct = 0, actualPct = 0;
+    rows.forEach(a=>{
+      const w = (Number(a.cost)||0)/totalCost;
+      const pDur = scheduleDaysBetween(a.plannedStart,a.plannedEnd) || 7;
+      plannedPct += w * scheduleActivityFractionAt(a.plannedStart, a.plannedEnd, t, pDur);
+      if(a.actualStart && t >= new Date(a.actualStart) && t <= today){
+        const aDur = scheduleDaysBetween(a.actualStart, a.actualEnd) || pDur;
+        let frac;
+        if(a.actualEnd){ frac = scheduleActivityFractionAt(a.actualStart, a.actualEnd, t, aDur); }
+        else if(a.status==='Completed'){ frac = 1; }
+        else { frac = Math.min(0.97, scheduleActivityFractionAt(a.actualStart, null, t, pDur)); }
+        actualPct += w*frac;
+      } else if(a.actualStart && t > today){
+        // no future actual data — hold flat at current progress fraction so the actual line stops at "today"
+      }
+    });
+    points.push({ date: new Date(t), planned: plannedPct*100, actual: (t<=today? actualPct*100 : null) });
+    t = new Date(t); t.setDate(t.getDate()+stepDays);
+  }
+  // ensure the final point lands exactly on maxD
+  if(points.length && points[points.length-1].date.getTime()!==maxD.getTime()){
+    let plannedPct=0, actualPct=0;
+    rows.forEach(a=>{
+      const w=(Number(a.cost)||0)/totalCost;
+      const pDur = scheduleDaysBetween(a.plannedStart,a.plannedEnd) || 7;
+      plannedPct += w*scheduleActivityFractionAt(a.plannedStart,a.plannedEnd,maxD,pDur);
+      if(a.actualStart && maxD<=today){
+        const aDur = scheduleDaysBetween(a.actualStart,a.actualEnd) || pDur;
+        let frac;
+        if(a.actualEnd) frac = scheduleActivityFractionAt(a.actualStart,a.actualEnd,maxD,aDur);
+        else if(a.status==='Completed') frac = 1;
+        else frac = Math.min(0.97, scheduleActivityFractionAt(a.actualStart,null,maxD,pDur));
+        actualPct += w*frac;
+      }
+    });
+    points.push({ date:new Date(maxD), planned:plannedPct*100, actual:(maxD<=today? actualPct*100 : null) });
+  }
+  return points;
+}
+function scheduleDateForPct(series, pct){
+  // interpolate the date at which the planned series first reaches `pct`
+  for(let i=1;i<series.length;i++){
+    const p0=series[i-1], p1=series[i];
+    if(p1.planned>=pct){
+      if(p1.planned===p0.planned) return p1.date;
+      const frac = (pct-p0.planned)/(p1.planned-p0.planned);
+      return new Date(p0.date.getTime() + frac*(p1.date.getTime()-p0.date.getTime()));
+    }
+  }
+  return series.length ? series[series.length-1].date : new Date();
+}
+function scheduleWeekLabel(d){ return d.toLocaleDateString(undefined,{month:'short',day:'numeric'}); }
+
+function renderSchedule(){
+  if(!DB.scheduleActivities) DB.scheduleActivities = [];
+  sub.schedProject = sub.schedProject===undefined ? 'ALL' : sub.schedProject;
+  if(DB.scheduleActivities.length===0 && DB.customers.length){
+    seedScheduleActivities(DB.customers[0].id);
+    saveDB();
+  }
+
+  const rows = sub.schedProject==='ALL' ? DB.scheduleActivities : DB.scheduleActivities.filter(a=>String(a.projectId)===String(sub.schedProject));
+  const sorted = [...rows].sort((a,b)=>(a.plannedStart||'').localeCompare(b.plannedStart||''));
+  const totalCost = rows.reduce((s,a)=>s+(Number(a.cost)||0),0);
+
+  // ---- date range for the whole chart ----
+  const allDates = [];
+  rows.forEach(a=>{
+    if(a.plannedStart) allDates.push(new Date(a.plannedStart));
+    if(a.plannedEnd) allDates.push(new Date(a.plannedEnd));
+    if(a.actualStart) allDates.push(new Date(a.actualStart));
+    if(a.actualEnd) allDates.push(new Date(a.actualEnd));
+  });
+  const today = new Date(); today.setHours(0,0,0,0);
+  let minD, maxD;
+  if(allDates.length){
+    minD = new Date(Math.min(...allDates, today));
+    maxD = new Date(Math.max(...allDates, today));
+  } else {
+    minD = new Date(today); minD.setDate(minD.getDate()-14);
+    maxD = new Date(today); maxD.setDate(maxD.getDate()+14);
+  }
+  // pad range by ~4% on each side so bars don't touch the edges
+  const padMs = Math.max(3*86400000, (maxD-minD)*0.03);
+  minD = new Date(minD.getTime()-padMs);
+  maxD = new Date(maxD.getTime()+padMs);
+  const rangeMs = Math.max(1, maxD-minD);
+  const pct = d => ((new Date(d)-minD)/rangeMs)*100;
+
+  // ---- KPIs ----
+  const plannedStartAll = rows.length ? new Date(Math.min(...rows.map(a=>new Date(a.plannedStart||today)))) : null;
+  const plannedEndAll = rows.length ? new Date(Math.max(...rows.map(a=>new Date(a.plannedEnd||today)))) : null;
+  const plannedDurationDays = (plannedStartAll && plannedEndAll) ? scheduleDaysBetween(plannedStartAll, plannedEndAll) : 0;
+  const actualStarts = rows.filter(a=>a.actualStart).map(a=>new Date(a.actualStart));
+  const actualEnds = rows.filter(a=>a.actualEnd).map(a=>new Date(a.actualEnd));
+  const actualStartAll = actualStarts.length ? new Date(Math.min(...actualStarts)) : null;
+  const allDone = rows.length && rows.every(a=>a.status==='Completed');
+  const actualEndAll = allDone && actualEnds.length ? new Date(Math.max(...actualEnds)) : null;
+  const actualDurationDays = actualStartAll ? scheduleDaysBetween(actualStartAll, actualEndAll || today) : null;
+
+  const pctComplete = totalCost ? rows.reduce((s,a)=>s + (Number(a.cost)||0)*scheduleProgressFraction(a), 0)/totalCost*100 : 0;
+
+  const series = rows.length ? scheduleBuildSeries(rows, minD, maxD) : [];
+  const plannedPctToday = (()=>{
+    if(!series.length) return 0;
+    // interpolate planned % at "today"
+    for(let i=1;i<series.length;i++){ if(series[i].date>=today){ const p0=series[i-1],p1=series[i]; const span=p1.date-p0.date; const f= span>0 ? (today-p0.date)/span : 0; return p0.planned + f*(p1.planned-p0.planned); } }
+    return series[series.length-1].planned;
+  })();
+  let scheduleVarianceDays = null;
+  if(series.length && totalCost){
+    const plannedDateForActual = scheduleDateForPct(series, pctComplete);
+    scheduleVarianceDays = Math.round((plannedDateForActual - today)/86400000);
+  }
+  const plannedCostToDate = totalCost * (plannedPctToday/100);
+  const actualCostToDate = totalCost * (pctComplete/100);
+
+  // ---- Gantt rows ----
+  const monthMarks = [];
+  { let m = new Date(minD.getFullYear(), minD.getMonth(), 1);
+    while(m<=maxD){ monthMarks.push(new Date(m)); m = new Date(m.getFullYear(), m.getMonth()+1, 1); } }
+
+  const ganttRows = sorted.map(a=>{
+    const pLeft = pct(a.plannedStart||today), pRight = pct(a.plannedEnd||a.plannedStart||today);
+    const pWidth = Math.max(0.6, pRight-pLeft);
+    let barsHtml = `<div class="gbar gbar-planned" style="left:${pLeft}%;width:${pWidth}%" title="Planned: ${fmtDate(a.plannedStart)} — ${fmtDate(a.plannedEnd)}"></div>`;
+    if(a.actualStart){
+      const aLeft = pct(a.actualStart);
+      const aEndDate = a.actualEnd || (a.status==='In Progress'||a.status==='Delayed' ? todayISO() : a.plannedEnd);
+      const aRight = pct(aEndDate);
+      const aWidth = Math.max(0.6, aRight-aLeft);
+      const delayed = a.status==='Delayed' || (a.plannedEnd && aEndDate && new Date(aEndDate) > new Date(a.plannedEnd) && a.status!=='In Progress');
+      const cls = a.status==='Delayed' ? 'gbar-delayed' : (delayed ? 'gbar-delayed' : 'gbar-actual');
+      barsHtml += `<div class="gbar ${cls}" style="left:${aLeft}%;width:${aWidth}%" title="Actual: ${fmtDate(a.actualStart)} — ${a.actualEnd?fmtDate(a.actualEnd):'ongoing'}"></div>`;
+    }
+    return `<div class="grow">
+      <div class="glabel" title="${esc(a.name)}">${esc(a.name)}</div>
+      <div class="gtrack">${barsHtml}</div>
+    </div>`;
+  }).join('') || `<div class="empty">No activities to chart yet — add some below.</div>`;
+
+  const todayLeft = (today>=minD && today<=maxD) ? pct(today) : null;
+
+  document.getElementById('mainArea').innerHTML = `
+    <style>
+      .sched-kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:18px}
+      .gantt-wrap{overflow-x:auto}
+      .gantt-inner{min-width:760px}
+      .gaxis{display:flex;margin-left:200px;border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:4px;position:relative;height:16px}
+      .gaxis span{position:absolute;font-size:10.5px;color:var(--muted);white-space:nowrap;transform:translateX(-2px)}
+      .grow{display:flex;align-items:center;min-height:26px;margin-bottom:3px}
+      .glabel{width:200px;flex:0 0 200px;font-size:12px;padding-right:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+      .gtrack{position:relative;flex:1;height:18px;background:var(--chip);border-radius:4px}
+      .gbar{position:absolute;top:2px;height:6px;border-radius:3px}
+      .gbar-planned{top:2px;background:var(--accent2)}
+      .gbar-actual{top:10px;background:var(--green)}
+      .gbar-delayed{top:10px;background:var(--danger)}
+      .gtoday{position:absolute;top:0;bottom:0;width:0;border-left:2px dashed var(--danger);z-index:2}
+      .gtoday-lbl{position:absolute;top:-16px;font-size:9.5px;color:var(--danger);font-weight:700;transform:translateX(-50%);white-space:nowrap}
+      .gantt-body{position:relative}
+      .gantt-months{position:relative;margin-left:200px;height:18px;margin-bottom:6px}
+      .gantt-months span{position:absolute;font-size:10.5px;color:var(--muted);border-left:1px solid var(--line);padding-left:4px}
+      .sched-legend{display:flex;gap:16px;font-size:11.5px;margin-bottom:10px;flex-wrap:wrap}
+      .sched-legend .dot{width:9px;height:9px;border-radius:2px;display:inline-block;margin-right:5px}
+      .scurve-wrap{position:relative}
+      #scurveCanvas{width:100%;height:320px;display:block}
+      .weight-cell{color:var(--muted);font-size:11.5px}
+    </style>
+    <div class="crumb">Schedule</div>
+
+    <div class="panel">
+      <div class="ph">
+        <h3 style="text-transform:none;font-size:18px;color:var(--text)">Project Activity List</h3>
+        <div class="btnrow" style="margin:0">
+          <button class="btn pri" onclick="editScheduleActivity(null)">+ New Activity</button>
+        </div>
+      </div>
+      <div class="searchbar">
+        <select onchange="sub.schedProject=this.value;renderSchedule()" style="width:auto">
+          <option value="ALL" ${sub.schedProject==='ALL'?'selected':''}>All Projects</option>
+          ${DB.customers.map(c=>`<option value="${c.id}" ${String(sub.schedProject)===String(c.id)?'selected':''}>${esc(c.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="twrap"><table>
+        <tr>
+          <th>No</th><th>Activity</th><th class="right">Cost</th><th class="right">% Weight</th>
+          <th>Planned Start</th><th>Planned End</th><th>Actual Start</th><th>Actual End</th>
+          <th class="right">Plan Days</th><th class="right">Actual Days</th><th>Status</th><th></th>
+        </tr>
+        ${sorted.map((a,i)=>{
+          const w = totalCost ? (Number(a.cost)||0)/totalCost*100 : 0;
+          const pd = scheduleDaysBetween(a.plannedStart,a.plannedEnd);
+          const ad = a.actualStart ? scheduleDaysBetween(a.actualStart, a.actualEnd||todayISO()) : null;
+          return `<tr class="click" onclick="editScheduleActivity(${a.id})">
+            <td class="mut">${i+1}</td>
+            <td><b>${esc(a.name)}</b><div class="mut" style="font-size:11px">${esc((customerById(a.projectId)||{}).name||'—')}</div></td>
+            <td class="num">${money0(a.cost)}</td>
+            <td class="num weight-cell">${w.toFixed(1)}%</td>
+            <td class="mut">${fmtDate(a.plannedStart)}</td>
+            <td class="mut">${fmtDate(a.plannedEnd)}</td>
+            <td class="mut">${a.actualStart?fmtDate(a.actualStart):'—'}</td>
+            <td class="mut">${a.actualEnd?fmtDate(a.actualEnd):'—'}</td>
+            <td class="num">${pd!=null?pd:'—'}</td>
+            <td class="num">${ad!=null?ad:'—'}</td>
+            <td><span class="badge ${scheduleStatusBadgeClass(a.status)}">${esc(a.status)}</span></td>
+            <td><button class="x" onclick="event.stopPropagation();deleteScheduleActivity(${a.id})">✕</button></td>
+          </tr>`;
+        }).join('') || `<tr><td colspan="12" class="empty">No activities yet — add one to start building the schedule.</td></tr>`}
+        ${rows.length ? `<tr style="font-weight:800"><td></td><td>Total</td><td class="num">${money0(totalCost)}</td><td class="num">100.0%</td><td colspan="8"></td></tr>` : ''}
+      </table></div>
+    </div>
+
+    <div class="cards sched-kpi-row">
+      <div class="kpi"><div class="l">Total Project Cost</div><div class="v">${money0(totalCost)}</div></div>
+      <div class="kpi"><div class="l">Planned Duration</div><div class="v">${plannedDurationDays||'—'} days</div></div>
+      <div class="kpi"><div class="l">Actual Duration</div><div class="v">${actualDurationDays!=null?actualDurationDays+' days':'—'}</div></div>
+      <div class="kpi"><div class="l">% Complete (cost-weighted)</div><div class="v ${pctComplete>=plannedPctToday?'green':'amber'}">${pctComplete.toFixed(1)}%</div></div>
+      <div class="kpi"><div class="l">Schedule Variance</div><div class="v ${scheduleVarianceDays==null?'':(scheduleVarianceDays>=0?'green':'danger')}">${scheduleVarianceDays==null?'—':(scheduleVarianceDays===0?'On schedule':(scheduleVarianceDays>0?scheduleVarianceDays+'d ahead':Math.abs(scheduleVarianceDays)+'d behind'))}</div></div>
+      <div class="kpi"><div class="l">Cost Performance (to date)</div><div class="v ${actualCostToDate<=plannedCostToDate?'green':'danger'}">${money0(actualCostToDate)} <span class="mut" style="font-size:11px;font-weight:400">/ ${money0(plannedCostToDate)} plan</span></div></div>
+    </div>
+
+    <div class="panel">
+      <div class="ph"><h3>Gantt Chart</h3>
+        <div class="sched-legend" style="margin:0">
+          <span><span class="dot" style="background:var(--accent2)"></span>Planned</span>
+          <span><span class="dot" style="background:var(--green)"></span>Actual (on time)</span>
+          <span><span class="dot" style="background:var(--danger)"></span>Actual (delayed)</span>
+          <span><span class="dot" style="background:var(--danger);border-radius:0;width:2px;height:11px"></span>Today</span>
+        </div>
+      </div>
+      <div class="gantt-wrap"><div class="gantt-inner">
+        <div class="gantt-months">
+          ${monthMarks.map(m=>`<span style="left:${pct(m)}%">${m.toLocaleDateString(undefined,{month:'short','year':'2-digit'})}</span>`).join('')}
+        </div>
+        <div class="gantt-body">
+          ${todayLeft!=null?`<div class="gtoday" style="left:${todayLeft}%"><span class="gtoday-lbl" style="left:0">Today</span></div>`:''}
+          ${ganttRows}
+        </div>
+      </div></div>
+    </div>
+
+    <div class="panel">
+      <div class="ph"><h3>S-Curve — Cumulative % Completion</h3>
+        <div class="sched-legend" style="margin:0">
+          <span><span class="dot" style="background:var(--accent2)"></span>Planned</span>
+          <span><span class="dot" style="background:${pctComplete>=plannedPctToday?'var(--green)':'var(--danger)'}"></span>Actual</span>
+        </div>
+      </div>
+      <div class="scurve-wrap">
+        <canvas id="scurveCanvas"></canvas>
+      </div>
+    </div>
+  `;
+
+  setTimeout(()=>drawScheduleSCurve(series, minD, maxD, today), 10);
+}
+
+function drawScheduleSCurve(series, minD, maxD, today){
+  const canvas = document.getElementById('scurveCanvas');
+  if(!canvas) return;
+  const cs = getComputedStyle(document.documentElement);
+  const colorLine = (cs.getPropertyValue('--line')||'#333').trim();
+  const colorMuted = (cs.getPropertyValue('--muted')||'#888').trim();
+  const colorText = (cs.getPropertyValue('--text')||'#eee').trim();
+  const colorPlanned = (cs.getPropertyValue('--accent2')||'#3fb6c9').trim();
+  const colorGreen = (cs.getPropertyValue('--green')||'#38b775').trim();
+  const colorDanger = (cs.getPropertyValue('--danger')||'#e0524f').trim();
+
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const W = Math.max(300, rect.width), H = 320;
+  canvas.width = W*dpr; canvas.height = H*dpr;
+  canvas.style.height = H+'px';
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,W,H);
+
+  const padL = 44, padR = 16, padT = 14, padB = 30;
+  const plotW = W-padL-padR, plotH = H-padT-padB;
+  if(!series.length){
+    ctx.fillStyle = colorMuted; ctx.font = '13px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('No activity data to chart yet', W/2, H/2);
+    return;
+  }
+  const x0 = series[0].date.getTime(), x1 = series[series.length-1].date.getTime();
+  const xr = Math.max(1, x1-x0);
+  const xPix = d => padL + ((d.getTime()-x0)/xr)*plotW;
+  const yPix = v => padT + plotH - (Math.max(0,Math.min(100,v))/100)*plotH;
+
+  // grid lines at 0/25/50/75/100
+  ctx.strokeStyle = colorLine; ctx.lineWidth = 1;
+  ctx.fillStyle = colorMuted; ctx.font = '10.5px sans-serif'; ctx.textAlign='right'; ctx.textBaseline='middle';
+  [0,25,50,75,100].forEach(v=>{
+    const y = yPix(v);
+    ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(W-padR,y); ctx.globalAlpha=0.5; ctx.stroke(); ctx.globalAlpha=1;
+    ctx.fillText(v+'%', padL-6, y);
+  });
+  // x-axis date labels (about 6 ticks)
+  ctx.textAlign='center'; ctx.textBaseline='top';
+  const tickCount = Math.min(6, series.length);
+  for(let i=0;i<tickCount;i++){
+    const idx = Math.round(i*(series.length-1)/(tickCount-1||1));
+    const p = series[idx];
+    const x = xPix(p.date);
+    ctx.fillText(scheduleWeekLabel(p.date), x, padT+plotH+6);
+  }
+  // axis lines
+  ctx.strokeStyle = colorText; ctx.globalAlpha=0.4;
+  ctx.beginPath(); ctx.moveTo(padL,padT); ctx.lineTo(padL,padT+plotH); ctx.lineTo(W-padR,padT+plotH); ctx.stroke();
+  ctx.globalAlpha=1;
+
+  // today vertical marker
+  if(today>=series[0].date && today<=series[series.length-1].date){
+    const tx = xPix(today);
+    ctx.save();
+    ctx.strokeStyle = colorDanger; ctx.setLineDash([4,3]); ctx.lineWidth=1.3;
+    ctx.beginPath(); ctx.moveTo(tx,padT); ctx.lineTo(tx,padT+plotH); ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawLine(key, color){
+    ctx.beginPath();
+    let started = false;
+    let lastPt = null;
+    series.forEach(p=>{
+      const v = p[key];
+      if(v==null) return;
+      const x = xPix(p.date), y = yPix(v);
+      if(!started){ ctx.moveTo(x,y); started = true; }
+      else if(lastPt){
+        // smooth-ish curve using quadratic midpoint
+        const mx = (lastPt.x+x)/2, my=(lastPt.y+y)/2;
+        ctx.quadraticCurveTo(lastPt.x,lastPt.y, mx, my);
+      }
+      lastPt = {x,y};
+    });
+    if(lastPt) ctx.lineTo(lastPt.x,lastPt.y);
+    ctx.strokeStyle = color; ctx.lineWidth = 2.4; ctx.lineJoin='round'; ctx.lineCap='round';
+    ctx.stroke();
+  }
+  drawLine('planned', colorPlanned);
+  const finalActual = [...series].reverse().find(p=>p.actual!=null);
+  // color the actual line green if current actual% >= planned% at "today", else red
+  const isAhead = finalActual ? finalActual.actual >= (()=>{
+    for(let i=1;i<series.length;i++){ if(series[i].date>=today) return series[i-1].planned; }
+    return series[series.length-1].planned;
+  })() : true;
+  drawLine('actual', isAhead ? colorGreen : colorDanger);
+
+  // dots on last known points
+  function dot(pt,key,color){ if(!pt) return; ctx.beginPath(); ctx.arc(xPix(pt.date), yPix(pt[key]), 3, 0, Math.PI*2); ctx.fillStyle=color; ctx.fill(); }
+  dot(series[series.length-1], 'planned', colorPlanned);
+  if(finalActual){ dot(finalActual, 'actual', isAhead?colorGreen:colorDanger); }
+}
+
+/* ---- activity CRUD ---- */
+function scheduleActivityById(id){ return DB.scheduleActivities.find(a=>a.id===id); }
+function editScheduleActivity(id){
+  const a = id ? scheduleActivityById(id) : {
+    id:null, projectId: (sub.schedProject && sub.schedProject!=='ALL') ? Number(sub.schedProject) : (DB.customers[0]?DB.customers[0].id:''),
+    name:'', cost:'', plannedStart:'', plannedEnd:'', actualStart:'', actualEnd:'', status:'Not Started'
+  };
+  openModal(`
+    <h3>${id?'Edit':'New'} Activity</h3>
+    <div class="field"><label class="fl" for="sa_project">Project</label>
+      <select id="sa_project">${DB.customers.map(c=>`<option value="${c.id}" ${String(a.projectId)===String(c.id)?'selected':''}>${esc(c.name)}</option>`).join('')}</select>
+    </div>
+    <div class="field"><label class="fl" for="sa_name">Activity Name *</label><input id="sa_name" value="${esc(a.name)}" placeholder="e.g. Foundations"></div>
+    <div class="grid2">
+      <div class="field"><label class="fl" for="sa_cost">Cost (₱)</label><input id="sa_cost" type="number" step="0.01" value="${a.cost===''?'':a.cost}"></div>
+      <div class="field"><label class="fl" for="sa_status">Status</label>
+        <select id="sa_status">${SCHEDULE_STATUSES.map(s=>`<option ${a.status===s?'selected':''}>${s}</option>`).join('')}</select>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label class="fl" for="sa_pstart">Planned Start</label><input id="sa_pstart" type="date" value="${esc(a.plannedStart)}"></div>
+      <div class="field"><label class="fl" for="sa_pend">Planned End</label><input id="sa_pend" type="date" value="${esc(a.plannedEnd)}"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label class="fl" for="sa_astart">Actual Start</label><input id="sa_astart" type="date" value="${esc(a.actualStart)}"></div>
+      <div class="field"><label class="fl" for="sa_aend">Actual End</label><input id="sa_aend" type="date" value="${esc(a.actualEnd)}"></div>
+    </div>
+    <div class="btnrow">
+      <button class="btn save" onclick="saveScheduleActivity(${id})">Save</button>
+      ${id?`<button class="btn del" onclick="deleteScheduleActivity(${id})">Delete</button>`:''}
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+    </div>
+  `);
+}
+function saveScheduleActivity(id){
+  const name = document.getElementById('sa_name').value.trim();
+  if(!name){ toast('Please add an activity name'); return; }
+  const vals = {
+    projectId: Number(document.getElementById('sa_project').value) || document.getElementById('sa_project').value,
+    name,
+    cost: Number(document.getElementById('sa_cost').value)||0,
+    plannedStart: document.getElementById('sa_pstart').value,
+    plannedEnd: document.getElementById('sa_pend').value,
+    actualStart: document.getElementById('sa_astart').value,
+    actualEnd: document.getElementById('sa_aend').value,
+    status: document.getElementById('sa_status').value,
+  };
+  if(id){ Object.assign(scheduleActivityById(id), vals); }
+  else { DB.scheduleActivities.push({ id: nextId(DB.scheduleActivities), ...vals }); }
+  saveDB(); closeModal(); toast('Activity saved'); renderSchedule();
+}
+function deleteScheduleActivity(id){
+  if(!confirm('Delete this activity?')) return;
+  DB.scheduleActivities = DB.scheduleActivities.filter(a=>a.id!==id);
+  saveDB(); toast('Activity deleted'); renderSchedule();
+}
+
 const VENDOR_CLASSIFICATIONS = ['HARDWARE SUPPLIER','ELECTRICAL SUPPLIER','METAL SUPPLIER','PAINT SUPPLIER','SAFETY PRODUCT SUPPLIER','PLUMBING SUPPLIER','CONCRETE SUPPLIER','LUMBER SUPPLIER','EQUIPMENT RENTAL','OTHER'];
+/* ================= Cost Estimator ================= */
+const DEFAULT_COST_MATERIALS = [
+  { description:'Cement', unit:'bag', unitPrice:250.00, supplier:'' },
+  { description:'Sand', unit:'m³', unitPrice:1100.00, supplier:'' },
+  { description:'Gravel G-1', unit:'m³', unitPrice:1100.00, supplier:'' },
+  { description:'Gravel G-3/4', unit:'m³', unitPrice:1100.00, supplier:'' },
+  { description:'Rebar GRD 33', unit:'kg', unitPrice:47.00, supplier:'' },
+  { description:'Rebar GRD 40', unit:'kg', unitPrice:47.96, supplier:'' },
+  { description:'Rebar GRD 60', unit:'kg', unitPrice:49.94, supplier:'' },
+  { description:'CHB 4" Load Bearing', unit:'pc', unitPrice:16.00, supplier:'' },
+  { description:'CHB 4" Non-Load', unit:'pc', unitPrice:14.00, supplier:'' },
+  { description:'CHB 6" Load Bearing', unit:'pc', unitPrice:22.00, supplier:'' },
+  { description:'CHB 6" Non-Load', unit:'pc', unitPrice:18.00, supplier:'' },
+  { description:'CHB 8" Load Bearing', unit:'pc', unitPrice:24.00, supplier:'' },
+  { description:'Plywood 1/4" Ordinary', unit:'pc', unitPrice:380.00, supplier:'' },
+  { description:'Plywood 1/2" Ordinary', unit:'pc', unitPrice:680.00, supplier:'' },
+  { description:'Good Lumber', unit:'bd.ft', unitPrice:30.00, supplier:'' },
+  { description:'Common Wire Nails', unit:'kg', unitPrice:22.00, supplier:'' },
+  { description:'Polyethylene Sheet', unit:'kg', unitPrice:150.00, supplier:'' },
+  { description:'Soil Poison', unit:'gal', unitPrice:4500.00, supplier:'' },
+  { description:'Tile Adhesive', unit:'bag', unitPrice:350.00, supplier:'' },
+  { description:'Paint (Latex)', unit:'gal', unitPrice:650.00, supplier:'' },
+  { description:'GI Sheet (Long Span)', unit:'pc', unitPrice:450.00, supplier:'' },
+];
+const DEFAULT_LABOR_RATES = [
+  { role:'Foreman', dailyRate:700, adjustment:55 },
+  { role:'Surveyor', dailyRate:650, adjustment:50 },
+  { role:'Survey Aide', dailyRate:550, adjustment:35 },
+  { role:'Leadman', dailyRate:650, adjustment:45 },
+  { role:'Carpenter', dailyRate:650, adjustment:40 },
+  { role:'Helper Carpenter', dailyRate:550, adjustment:30 },
+  { role:'Mason', dailyRate:650, adjustment:40 },
+  { role:'Helper Mason', dailyRate:500, adjustment:25 },
+  { role:'Electrician', dailyRate:650, adjustment:40 },
+  { role:'Plumber', dailyRate:650, adjustment:40 },
+  { role:'Painter', dailyRate:600, adjustment:35 },
+  { role:'Laborer', dailyRate:500, adjustment:25 },
+  { role:'Equipment Operator', dailyRate:700, adjustment:50 },
+];
+const COST_CATEGORIES = [
+  'Clearing & Layout',
+  'Excavation (Manual)',
+  'Excavation (Machine)',
+  'Backfilling & Compaction',
+  'Formworks (Footing/Column/Beam/Slab)',
+  'Rebar Works',
+  'Concrete Works',
+  'CHB Wall',
+  'Plastering',
+  'Tile Works',
+  'Painting',
+  'Roofing',
+];
+function costTemplateFor(category){
+  const rate = (role)=>{ const l = DB.laborRates.find(x=>x.role===role); return l ? (Number(l.dailyRate)||0)+(Number(l.adjustment)||0) : 0; };
+  const T = {
+    'Clearing & Layout': { unit:'m²',
+      materials:[ {desc:'Stakes, Twine & Chalk (allowance)', qty:1, unitPrice:5} ],
+      labor:[ {role:'Surveyor', rate:rate('Surveyor'), productivity:800}, {role:'Laborer', rate:rate('Laborer'), productivity:300} ],
+      equipment:[] },
+    'Excavation (Manual)': { unit:'m³',
+      materials:[],
+      labor:[ {role:'Laborer', rate:rate('Laborer'), productivity:3} ],
+      equipment:[] },
+    'Excavation (Machine)': { unit:'m³',
+      materials:[],
+      labor:[ {role:'Equipment Operator', rate:rate('Equipment Operator'), productivity:150}, {role:'Laborer', rate:rate('Laborer'), productivity:150} ],
+      equipment:[ {desc:'Backhoe (0.80 m³ bucket)', hourlyRate:2500, productivity:20} ] },
+    'Backfilling & Compaction': { unit:'m³',
+      materials:[ {desc:'Select/Borrow Fill', qty:1.1, unitPrice:350} ],
+      labor:[ {role:'Laborer', rate:rate('Laborer'), productivity:12} ],
+      equipment:[ {desc:'Plate Compactor', hourlyRate:350, productivity:5} ] },
+    'Formworks (Footing/Column/Beam/Slab)': { unit:'m² (contact area)',
+      materials:[ {desc:'Plywood 1/2" Ordinary', qty:0.15, unitPrice:680}, {desc:'Good Lumber', qty:2.5, unitPrice:30}, {desc:'Common Wire Nails', qty:0.10, unitPrice:22} ],
+      labor:[ {role:'Carpenter', rate:rate('Carpenter'), productivity:8}, {role:'Helper Carpenter', rate:rate('Helper Carpenter'), productivity:8} ],
+      equipment:[] },
+    'Rebar Works': { unit:'kg',
+      materials:[ {desc:'Rebar GRD 40', qty:1.05, unitPrice:47.96}, {desc:'Tie Wire (GI #16)', qty:0.02, unitPrice:65} ],
+      labor:[ {role:'Carpenter', rate:rate('Carpenter'), productivity:250}, {role:'Helper Carpenter', rate:rate('Helper Carpenter'), productivity:250} ],
+      equipment:[] },
+    'Concrete Works': { unit:'m³ (Class A, 1:2:4)',
+      materials:[ {desc:'Cement', qty:9, unitPrice:250}, {desc:'Sand', qty:0.5, unitPrice:1100}, {desc:'Gravel G-3/4', qty:1, unitPrice:1100} ],
+      labor:[ {role:'Mason', rate:rate('Mason'), productivity:4}, {role:'Laborer', rate:rate('Laborer'), productivity:4} ],
+      equipment:[ {desc:'One-Bagger Concrete Mixer', hourlyRate:150, productivity:0.5} ] },
+    'CHB Wall': { unit:'m²',
+      materials:[ {desc:'CHB 4" Load Bearing', qty:12.5, unitPrice:16}, {desc:'Cement', qty:0.5, unitPrice:250}, {desc:'Sand', qty:0.02, unitPrice:1100} ],
+      labor:[ {role:'Mason', rate:rate('Mason'), productivity:8}, {role:'Helper Mason', rate:rate('Helper Mason'), productivity:8} ],
+      equipment:[] },
+    'Plastering': { unit:'m²',
+      materials:[ {desc:'Cement', qty:0.13, unitPrice:250}, {desc:'Sand', qty:0.018, unitPrice:1100} ],
+      labor:[ {role:'Mason', rate:rate('Mason'), productivity:10}, {role:'Helper Mason', rate:rate('Helper Mason'), productivity:10} ],
+      equipment:[] },
+    'Tile Works': { unit:'m²',
+      materials:[ {desc:'Tile Adhesive', qty:0.20, unitPrice:350}, {desc:'Floor/Wall Tiles (incl. 5% waste)', qty:1.05, unitPrice:450} ],
+      labor:[ {role:'Mason', rate:rate('Mason'), productivity:6}, {role:'Helper Mason', rate:rate('Helper Mason'), productivity:6} ],
+      equipment:[] },
+    'Painting': { unit:'m²',
+      materials:[ {desc:'Paint (Latex)', qty:0.06, unitPrice:650} ],
+      labor:[ {role:'Painter', rate:rate('Painter'), productivity:20} ],
+      equipment:[] },
+    'Roofing': { unit:'m²',
+      materials:[ {desc:'GI Sheet (Long Span)', qty:0.35, unitPrice:450}, {desc:'Common Wire Nails', qty:0.05, unitPrice:22} ],
+      labor:[ {role:'Carpenter', rate:rate('Carpenter'), productivity:15}, {role:'Helper Carpenter', rate:rate('Helper Carpenter'), productivity:15} ],
+      equipment:[] },
+  };
+  return T[category] || { unit:'unit', materials:[], labor:[], equipment:[] };
+}
+function laborCalc(l){
+  const basicDay = (Number(l.dailyRate)||0) + (Number(l.adjustment)||0);
+  const ot = basicDay * (3/8) * 1.25;
+  const totalDay = basicDay + ot;
+  const monthly = basicDay * 26;
+  const sss = 920, philhealth = 100, pagibig = 100;
+  const netDaily = (monthly - sss - philhealth - pagibig) / 26;
+  return { basicDay, ot, totalDay, monthly, sss, philhealth, pagibig, netDaily };
+}
+function estimateTotals(est){
+  const muc = (est.materials||[]).reduce((s,m)=>s+((Number(m.qty)||0)*(Number(m.unitPrice)||0)),0);
+  const luc = (est.labor||[]).reduce((s,l)=>s+((Number(l.productivity)||0)>0 ? (Number(l.rate)||0)/Number(l.productivity) : 0),0);
+  const euc = (est.equipment||[]).reduce((s,e)=>s+((Number(e.productivity)||0)>0 ? (Number(e.hourlyRate)||0)/Number(e.productivity) : 0),0);
+  const tuc = muc+luc+euc;
+  const totalCost = tuc * (Number(est.quantity)||0);
+  return { muc, luc, euc, tuc, totalCost };
+}
+function renderCostEstimator(){
+  if(!DB.costMaterials) DB.costMaterials = [];
+  if(!DB.laborRates) DB.laborRates = [];
+  if(!DB.costEstimates) DB.costEstimates = [];
+  if(!DB.costMaterials.length){ DEFAULT_COST_MATERIALS.forEach(m=>DB.costMaterials.push({ id: nextId(DB.costMaterials), ...m })); saveDB(); }
+  if(!DB.laborRates.length){ DEFAULT_LABOR_RATES.forEach(l=>DB.laborRates.push({ id: nextId(DB.laborRates), ...l })); saveDB(); }
+  window._costTab = window._costTab || 'materials';
+  const tab = window._costTab;
+  document.getElementById('mainArea').innerHTML = `
+    <div class="crumb">Cost Estimator</div>
+    <div class="panel">
+      <div class="ph"><h3 style="text-transform:none;font-size:18px;color:var(--text)">Cost Estimator</h3></div>
+      <div class="pillnav">
+        <button class="${tab==='materials'?'on':''}" onclick="switchCostTab('materials')">Material Price Database</button>
+        <button class="${tab==='labor'?'on':''}" onclick="switchCostTab('labor')">Labor Rate Calculator</button>
+        <button class="${tab==='worksheet'?'on':''}" onclick="switchCostTab('worksheet')">Cost Analysis Worksheet</button>
+      </div>
+    </div>
+    ${tab==='materials' ? costMaterialsTabHtml() : tab==='labor' ? costLaborTabHtml() : costWorksheetTabHtml()}
+  `;
+}
+function switchCostTab(tab){ window._costTab = tab; renderCostEstimator(); }
+
+/* ---- Tab 1: Material Price Database ---- */
+function costMaterialsTabHtml(){
+  sub.costMatSearch = sub.costMatSearch || '';
+  let rows = DB.costMaterials;
+  if(sub.costMatSearch){ const q=sub.costMatSearch.toLowerCase(); rows = rows.filter(m=>m.description.toLowerCase().includes(q) || (m.supplier||'').toLowerCase().includes(q)); }
+  rows = [...rows].sort((a,b)=>a.description.localeCompare(b.description));
+  return `
+    <div class="panel">
+      <div class="ph"><h3>Material Price Database</h3><button class="btn pri" onclick="editCostMaterial(null)">+ Add Material</button></div>
+      <div class="searchbar"><input placeholder="Search materials or suppliers..." value="${esc(sub.costMatSearch)}" oninput="searchInput(this,()=>{sub.costMatSearch=this.value;renderCostEstimator();})"></div>
+      <div class="twrap"><table>
+        <tr><th>Item No.</th><th>Description</th><th>Unit</th><th class="right">Unit Price</th><th>Supplier</th><th></th></tr>
+        ${rows.map(m=>`<tr class="click" onclick="editCostMaterial(${m.id})">
+            <td class="mut">${m.id}</td>
+            <td><b>${esc(m.description)}</b></td>
+            <td class="mut">${esc(m.unit)}</td>
+            <td class="num mono">${money(m.unitPrice)}</td>
+            <td class="mut">${esc(m.supplier)||'—'}</td>
+            <td><button class="x" onclick="event.stopPropagation();deleteCostMaterial(${m.id})">✕</button></td>
+          </tr>`).join('') || `<tr><td colspan="6" class="empty">No materials found</td></tr>`}
+      </table></div>
+    </div>
+  `;
+}
+function editCostMaterial(id){
+  const m = id ? DB.costMaterials.find(x=>x.id===id) : {id:null, description:'', unit:'', unitPrice:0, supplier:''};
+  openModal(`
+    <h3>${id?'Edit':'Add'} Material</h3>
+    <div class="field"><label class="fl" for="f_desc">Description *</label><input id="f_desc" value="${esc(m.description)}" placeholder="e.g. Cement"></div>
+    <div class="grid2">
+      <div class="field"><label class="fl" for="f_unit">Unit</label><input id="f_unit" value="${esc(m.unit)}" placeholder="e.g. bag, m³, pc, kg"></div>
+      <div class="field"><label class="fl" for="f_price">Unit Price (₱)</label><input id="f_price" type="number" step="0.01" value="${m.unitPrice}"></div>
+    </div>
+    <div class="field"><label class="fl" for="f_sup">Supplier</label><input id="f_sup" value="${esc(m.supplier)}"></div>
+    <div class="btnrow">
+      <button class="btn save" onclick="saveCostMaterial(${id})">Save</button>
+      ${id?`<button class="btn del" onclick="deleteCostMaterial(${id})">Delete</button>`:''}
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+    </div>
+  `);
+}
+function saveCostMaterial(id){
+  const description = document.getElementById('f_desc').value.trim();
+  if(!description){ toast('Please enter a description'); return; }
+  const vals = { description, unit: document.getElementById('f_unit').value.trim()||'unit', unitPrice: Number(document.getElementById('f_price').value)||0, supplier: document.getElementById('f_sup').value.trim() };
+  if(id){ Object.assign(DB.costMaterials.find(x=>x.id===id), vals); }
+  else { DB.costMaterials.push({ id: nextId(DB.costMaterials), ...vals }); }
+  saveDB(); closeModal(); toast('Material saved'); renderCostEstimator();
+}
+function deleteCostMaterial(id){
+  if(!confirm('Delete this material?')) return;
+  DB.costMaterials = DB.costMaterials.filter(x=>x.id!==id);
+  saveDB(); closeModal(); toast('Material deleted'); renderCostEstimator();
+}
+
+/* ---- Tab 2: Labor Rate Calculator ---- */
+function costLaborTabHtml(){
+  const rows = [...DB.laborRates].sort((a,b)=>a.role.localeCompare(b.role));
+  return `
+    <div class="panel">
+      <div class="ph"><h3>Labor Rate Calculator</h3><button class="btn pri" onclick="editLaborRate(null)">+ Add Role</button></div>
+      <p class="mut" style="font-size:12.5px;margin-top:-6px;margin-bottom:12px">Government-mandated employer contributions (SSS ₱920, PhilHealth ₱100, Pag-IBIG ₱100 per month) are deducted from the derived monthly salary to compute the Net Daily Rate.</p>
+      <div class="twrap"><table>
+        <tr><th>Role</th><th class="right">Daily Rate</th><th class="right">Adj.</th><th class="right">Basic/Day</th><th class="right">OT (3hrs)</th><th class="right">Total/Day</th><th class="right">Monthly</th><th class="right">SSS</th><th class="right">PhilHealth</th><th class="right">Pag-IBIG</th><th class="right">Net Daily Rate</th><th></th></tr>
+        ${rows.map(l=>{ const c = laborCalc(l); return `<tr class="click" onclick="editLaborRate(${l.id})">
+            <td><b>${esc(l.role)}</b></td>
+            <td class="num">${money(l.dailyRate)}</td>
+            <td class="num">${money(l.adjustment)}</td>
+            <td class="num mono">${money(c.basicDay)}</td>
+            <td class="num mono">${money(c.ot)}</td>
+            <td class="num mono"><b>${money(c.totalDay)}</b></td>
+            <td class="num mut">${money(c.monthly)}</td>
+            <td class="num mut">${money(c.sss)}</td>
+            <td class="num mut">${money(c.philhealth)}</td>
+            <td class="num mut">${money(c.pagibig)}</td>
+            <td class="num mono"><b>${money(c.netDaily)}</b></td>
+            <td><button class="x" onclick="event.stopPropagation();deleteLaborRate(${l.id})">✕</button></td>
+          </tr>`; }).join('') || `<tr><td colspan="12" class="empty">No labor roles found</td></tr>`}
+      </table></div>
+    </div>
+  `;
+}
+function editLaborRate(id){
+  const l = id ? DB.laborRates.find(x=>x.id===id) : {id:null, role:'', dailyRate:0, adjustment:0};
+  openModal(`
+    <h3>${id?'Edit':'Add'} Labor Role</h3>
+    <div class="field"><label class="fl" for="f_role">Role *</label><input id="f_role" value="${esc(l.role)}" placeholder="e.g. Carpenter"></div>
+    <div class="grid2">
+      <div class="field"><label class="fl" for="f_rate">Daily Rate (₱)</label><input id="f_rate" type="number" step="0.01" value="${l.dailyRate}"></div>
+      <div class="field"><label class="fl" for="f_adj">Adjustment (₱)</label><input id="f_adj" type="number" step="0.01" value="${l.adjustment}"></div>
+    </div>
+    <div class="btnrow">
+      <button class="btn save" onclick="saveLaborRate(${id})">Save</button>
+      ${id?`<button class="btn del" onclick="deleteLaborRate(${id})">Delete</button>`:''}
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+    </div>
+  `);
+}
+function saveLaborRate(id){
+  const role = document.getElementById('f_role').value.trim();
+  if(!role){ toast('Please enter a role name'); return; }
+  const vals = { role, dailyRate: Number(document.getElementById('f_rate').value)||0, adjustment: Number(document.getElementById('f_adj').value)||0 };
+  if(id){ Object.assign(DB.laborRates.find(x=>x.id===id), vals); }
+  else { DB.laborRates.push({ id: nextId(DB.laborRates), ...vals }); }
+  saveDB(); closeModal(); toast('Labor role saved'); renderCostEstimator();
+}
+function deleteLaborRate(id){
+  if(!confirm('Delete this labor role?')) return;
+  DB.laborRates = DB.laborRates.filter(x=>x.id!==id);
+  saveDB(); closeModal(); toast('Labor role deleted'); renderCostEstimator();
+}
+
+/* ---- Tab 3: Cost Analysis Worksheet ---- */
+function costWorksheetTabHtml(){
+  const estimates = [...DB.costEstimates].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const openId = window._wsEstimateId;
+  const openEst = openId ? DB.costEstimates.find(e=>e.id===openId) : null;
+  return `
+    <div class="panel">
+      <div class="ph"><h3>Cost Analysis Worksheet</h3><button class="btn pri" onclick="newCostEstimate()">+ New Estimate</button></div>
+      <div class="twrap"><table>
+        <tr><th>Name</th><th>Category</th><th>Unit</th><th class="right">Qty</th><th class="right">Total Unit Cost</th><th class="right">Total Cost</th><th></th></tr>
+        ${estimates.map(e=>{ const t = estimateTotals(e); return `<tr class="click" onclick="openCostEstimate(${e.id})">
+            <td><b>${esc(e.name)}</b></td>
+            <td class="mut">${esc(e.category)}</td>
+            <td class="mut">${esc(e.unit)}</td>
+            <td class="num">${Number(e.quantity)||0}</td>
+            <td class="num mono">${money(t.tuc)}</td>
+            <td class="num mono"><b>${money(t.totalCost)}</b></td>
+            <td><button class="x" onclick="event.stopPropagation();deleteCostEstimate(${e.id})">✕</button></td>
+          </tr>`; }).join('') || `<tr><td colspan="7" class="empty">No cost estimates yet — click "+ New Estimate" to start</td></tr>`}
+      </table></div>
+    </div>
+    ${openEst ? costEstimateEditorHtml(openEst) : ''}
+  `;
+}
+function newCostEstimate(){
+  const category = COST_CATEGORIES[0];
+  const tpl = costTemplateFor(category);
+  const est = {
+    id: nextId(DB.costEstimates), name: category, category, unit: tpl.unit, quantity: 1, date: todayISO(),
+    materials: tpl.materials.map(m=>({ id: uid(), desc:m.desc, qty:m.qty, unitPrice:m.unitPrice })),
+    labor: tpl.labor.map(l=>({ id: uid(), role:l.role, rate:l.rate, productivity:l.productivity })),
+    equipment: tpl.equipment.map(e=>({ id: uid(), desc:e.desc, hourlyRate:e.hourlyRate, productivity:e.productivity })),
+  };
+  DB.costEstimates.push(est);
+  saveDB(); window._wsEstimateId = est.id; renderCostEstimator();
+}
+function openCostEstimate(id){ window._wsEstimateId = id; renderCostEstimator(); }
+function closeCostEstimate(){ window._wsEstimateId = null; renderCostEstimator(); }
+function deleteCostEstimate(id){
+  if(!confirm('Delete this cost estimate?')) return;
+  DB.costEstimates = DB.costEstimates.filter(x=>x.id!==id);
+  if(window._wsEstimateId===id) window._wsEstimateId = null;
+  saveDB(); toast('Estimate deleted'); renderCostEstimator();
+}
+function updEstField(id, field, value){
+  const e = DB.costEstimates.find(x=>x.id===id);
+  e[field] = value;
+  saveDB(); renderCostEstimator();
+}
+function updEstCategory(id, category){
+  const e = DB.costEstimates.find(x=>x.id===id);
+  const tpl = costTemplateFor(category);
+  const applyTemplate = e.materials.length===0 && e.labor.length===0 && e.equipment.length===0
+    || confirm('Load the default Material/Labor/Equipment breakdown for this category? This will replace the current line items.');
+  e.category = category;
+  if(applyTemplate){
+    e.unit = tpl.unit;
+    e.materials = tpl.materials.map(m=>({ id: uid(), desc:m.desc, qty:m.qty, unitPrice:m.unitPrice }));
+    e.labor = tpl.labor.map(l=>({ id: uid(), role:l.role, rate:l.rate, productivity:l.productivity }));
+    e.equipment = tpl.equipment.map(eq=>({ id: uid(), desc:eq.desc, hourlyRate:eq.hourlyRate, productivity:eq.productivity }));
+  }
+  saveDB(); renderCostEstimator();
+}
+function addEstMaterial(id){
+  const e = DB.costEstimates.find(x=>x.id===id);
+  e.materials.push({ id: uid(), desc:'', qty:1, unitPrice:0 });
+  saveDB(); renderCostEstimator();
+}
+function updEstMaterial(id, rowId, field, value){
+  const e = DB.costEstimates.find(x=>x.id===id);
+  const row = e.materials.find(r=>r.id===rowId);
+  row[field] = value;
+  if(field==='desc'){
+    const match = DB.costMaterials.find(m=>m.description.toLowerCase()===String(value).trim().toLowerCase());
+    if(match) row.unitPrice = Number(match.unitPrice)||0;
+  }
+  saveDB(); renderCostEstimator();
+}
+function removeEstMaterial(id, rowId){
+  const e = DB.costEstimates.find(x=>x.id===id);
+  e.materials = e.materials.filter(r=>r.id!==rowId);
+  saveDB(); renderCostEstimator();
+}
+function addEstLabor(id){
+  const e = DB.costEstimates.find(x=>x.id===id);
+  e.labor.push({ id: uid(), role:'', rate:0, productivity:1 });
+  saveDB(); renderCostEstimator();
+}
+function updEstLabor(id, rowId, field, value){
+  const e = DB.costEstimates.find(x=>x.id===id);
+  const row = e.labor.find(r=>r.id===rowId);
+  row[field] = value;
+  if(field==='role'){
+    const match = DB.laborRates.find(l=>l.role===value);
+    if(match) row.rate = laborCalc(match).basicDay;
+  }
+  saveDB(); renderCostEstimator();
+}
+function removeEstLabor(id, rowId){
+  const e = DB.costEstimates.find(x=>x.id===id);
+  e.labor = e.labor.filter(r=>r.id!==rowId);
+  saveDB(); renderCostEstimator();
+}
+function addEstEquipment(id){
+  const e = DB.costEstimates.find(x=>x.id===id);
+  e.equipment.push({ id: uid(), desc:'', hourlyRate:0, productivity:1 });
+  saveDB(); renderCostEstimator();
+}
+function updEstEquipment(id, rowId, field, value){
+  const e = DB.costEstimates.find(x=>x.id===id);
+  const row = e.equipment.find(r=>r.id===rowId);
+  row[field] = value;
+  saveDB(); renderCostEstimator();
+}
+function removeEstEquipment(id, rowId){
+  const e = DB.costEstimates.find(x=>x.id===id);
+  e.equipment = e.equipment.filter(r=>r.id!==rowId);
+  saveDB(); renderCostEstimator();
+}
+function costEstimateEditorHtml(e){
+  const t = estimateTotals(e);
+  const matDL = `<datalist id="costMatDL">${DB.costMaterials.map(m=>`<option value="${esc(m.description)}">`).join('')}</datalist>`;
+  return `
+    <div class="panel">
+      <div class="ph"><h3>${esc(e.name)||'Cost Estimate'}</h3><button class="btn ghost sm" onclick="closeCostEstimate()">Close</button></div>
+      ${matDL}
+      <div class="grid3">
+        <div class="field"><label class="fl">Estimate Name</label><input value="${esc(e.name)}" onchange="updEstField(${e.id},'name',this.value)"></div>
+        <div class="field"><label class="fl">Work Item Category</label><select onchange="updEstCategory(${e.id},this.value)">${COST_CATEGORIES.map(c=>`<option ${e.category===c?'selected':''}>${esc(c)}</option>`).join('')}</select></div>
+        <div class="field"><label class="fl">Unit</label><input value="${esc(e.unit)}" onchange="updEstField(${e.id},'unit',this.value)"></div>
+      </div>
+      <div class="field" style="max-width:220px"><label class="fl">Quantity (${esc(e.unit)})</label><input type="number" step="0.01" value="${e.quantity}" onchange="updEstField(${e.id},'quantity',Number(this.value)||0)"></div>
+
+      <h3 style="margin-top:18px">Material Unit Cost (MUC)</h3>
+      <div class="twrap"><table class="itemsedit">
+        <tr><th style="min-width:220px">Description</th><th style="width:100px">Qty / ${esc(e.unit)}</th><th style="width:120px">Unit Price</th><th class="right" style="width:120px">Line Cost</th><th style="width:40px"></th></tr>
+        ${e.materials.map(m=>`<tr>
+            <td><input list="costMatDL" value="${esc(m.desc)}" onchange="updEstMaterial(${e.id},'${m.id}','desc',this.value)"></td>
+            <td><input type="number" step="0.001" class="num" value="${m.qty}" onchange="updEstMaterial(${e.id},'${m.id}','qty',Number(this.value)||0)"></td>
+            <td><input type="number" step="0.01" class="num" value="${m.unitPrice}" onchange="updEstMaterial(${e.id},'${m.id}','unitPrice',Number(this.value)||0)"></td>
+            <td class="num mono">${money((Number(m.qty)||0)*(Number(m.unitPrice)||0))}</td>
+            <td><button class="x" onclick="removeEstMaterial(${e.id},'${m.id}')">✕</button></td>
+          </tr>`).join('') || `<tr><td colspan="5" class="empty">No material lines</td></tr>`}
+      </table></div>
+      <div class="btnrow" style="margin-top:8px"><button class="btn ghost sm" onclick="addEstMaterial(${e.id})">+ Add Material</button></div>
+      <div class="stat-row"><span class="mut">Material Unit Cost (MUC)</span><span class="mono"><b>${money(t.muc)}</b></span></div>
+
+      <h3 style="margin-top:18px">Labor Unit Cost (LUC)</h3>
+      <div class="twrap"><table class="itemsedit">
+        <tr><th style="min-width:170px">Role</th><th style="width:120px">Rate (₱/day)</th><th style="width:140px">Productivity (${esc(e.unit)}/day)</th><th class="right" style="width:120px">Line Cost</th><th style="width:40px"></th></tr>
+        ${e.labor.map(l=>`<tr>
+            <td><select onchange="updEstLabor(${e.id},'${l.id}','role',this.value)">
+              <option value="">— role —</option>
+              ${DB.laborRates.map(r=>`<option ${l.role===r.role?'selected':''}>${esc(r.role)}</option>`).join('')}
+            </select></td>
+            <td><input type="number" step="0.01" class="num" value="${l.rate}" onchange="updEstLabor(${e.id},'${l.id}','rate',Number(this.value)||0)"></td>
+            <td><input type="number" step="0.01" class="num" value="${l.productivity}" onchange="updEstLabor(${e.id},'${l.id}','productivity',Number(this.value)||0)"></td>
+            <td class="num mono">${money((Number(l.productivity)||0)>0 ? (Number(l.rate)||0)/Number(l.productivity) : 0)}</td>
+            <td><button class="x" onclick="removeEstLabor(${e.id},'${l.id}')">✕</button></td>
+          </tr>`).join('') || `<tr><td colspan="5" class="empty">No labor lines</td></tr>`}
+      </table></div>
+      <div class="btnrow" style="margin-top:8px"><button class="btn ghost sm" onclick="addEstLabor(${e.id})">+ Add Labor</button></div>
+      <div class="stat-row"><span class="mut">Labor Unit Cost (LUC)</span><span class="mono"><b>${money(t.luc)}</b></span></div>
+
+      <h3 style="margin-top:18px">Equipment Unit Cost (EUC)</h3>
+      <div class="twrap"><table class="itemsedit">
+        <tr><th style="min-width:200px">Equipment</th><th style="width:130px">Rate (₱/hr)</th><th style="width:150px">Productivity (${esc(e.unit)}/hr)</th><th class="right" style="width:120px">Line Cost</th><th style="width:40px"></th></tr>
+        ${e.equipment.map(eq=>`<tr>
+            <td><input value="${esc(eq.desc)}" onchange="updEstEquipment(${e.id},'${eq.id}','desc',this.value)"></td>
+            <td><input type="number" step="0.01" class="num" value="${eq.hourlyRate}" onchange="updEstEquipment(${e.id},'${eq.id}','hourlyRate',Number(this.value)||0)"></td>
+            <td><input type="number" step="0.01" class="num" value="${eq.productivity}" onchange="updEstEquipment(${e.id},'${eq.id}','productivity',Number(this.value)||0)"></td>
+            <td class="num mono">${money((Number(eq.productivity)||0)>0 ? (Number(eq.hourlyRate)||0)/Number(eq.productivity) : 0)}</td>
+            <td><button class="x" onclick="removeEstEquipment(${e.id},'${eq.id}')">✕</button></td>
+          </tr>`).join('') || `<tr><td colspan="5" class="empty">No equipment lines</td></tr>`}
+      </table></div>
+      <div class="btnrow" style="margin-top:8px"><button class="btn ghost sm" onclick="addEstEquipment(${e.id})">+ Add Equipment</button></div>
+      <div class="stat-row"><span class="mut">Equipment Unit Cost (EUC)</span><span class="mono"><b>${money(t.euc)}</b></span></div>
+
+      <div class="cards" style="margin-top:16px;margin-bottom:0">
+        <div class="kpi"><div class="l">Total Unit Cost (MUC+LUC+EUC)</div><div class="v cyan">${money(t.tuc)}</div><div class="mut" style="font-size:11px">per ${esc(e.unit)}</div></div>
+        <div class="kpi"><div class="l">Quantity</div><div class="v">${Number(e.quantity)||0}</div><div class="mut" style="font-size:11px">${esc(e.unit)}</div></div>
+        <div class="kpi"><div class="l">Total Direct Cost</div><div class="v green">${money(t.totalCost)}</div></div>
+      </div>
+    </div>
+  `;
+}
+
 function renderVendors(){
   sub.search = sub.search || '';
   sub.vendClass = sub.vendClass || 'ALL';
