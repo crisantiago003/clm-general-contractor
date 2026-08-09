@@ -134,6 +134,42 @@ main{max-width:1280px;margin:0 auto;padding:22px 18px 60px;width:100%}
 .bar-pair .bars{display:flex;flex-direction:column;gap:3px}
 .bar-pair .bar{height:9px;border-radius:3px;background:var(--chip);overflow:hidden}
 .bar-pair .bar > div{height:100%}
+.dash-welcome{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px}
+.dash-welcome h1{font-size:22px;font-weight:800;margin:0;line-height:1.2}
+.dash-welcome .dash-date{font-size:13px;color:var(--muted);margin-top:2px}
+.dash-quick-actions{display:flex;gap:8px;flex-wrap:wrap}
+.dash-quick-actions .btn{font-size:12px;padding:6px 14px}
+.dash-grid6{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:18px}
+@media(max-width:1100px){.dash-grid6{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:600px){.dash-grid6{grid-template-columns:repeat(2,1fr)}}
+.dash-kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;position:relative;overflow:hidden}
+.dash-kpi .dk-icon{position:absolute;top:12px;right:12px;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center}
+.dash-kpi .dk-icon svg{width:18px;height:18px}
+.dash-kpi .dk-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-weight:700;margin-bottom:8px}
+.dash-kpi .dk-value{font-size:26px;font-weight:800;font-family:var(--mono);line-height:1.1}
+.dash-kpi .dk-sub{font-size:11.5px;color:var(--muted);margin-top:6px}
+.dash-grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
+@media(max-width:900px){.dash-grid3{grid-template-columns:1fr}}
+.dash-alert-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.dash-alert-row:last-child{border-bottom:none}
+.dash-alert-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dash-proj-card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:10px;cursor:pointer;transition:border-color .15s}
+.dash-proj-card:hover{border-color:var(--accent2)}
+.dash-proj-card .dpc-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.dash-proj-card .dpc-name{font-weight:700;font-size:13.5px}
+.dash-proj-card .dpc-pct{font-family:var(--mono);font-weight:800;font-size:13px}
+.dash-cashflow{display:flex;gap:14px;margin-bottom:12px;flex-wrap:wrap}
+.dash-cashflow .cf-item{flex:1;min-width:120px;text-align:center;padding:14px;border-radius:8px;background:var(--surface)}
+.dash-cashflow .cf-label{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;margin-bottom:4px}
+.dash-cashflow .cf-val{font-size:20px;font-weight:800;font-family:var(--mono)}
+.dash-timeline{position:relative;padding-left:20px}
+.dash-timeline::before{content:'';position:absolute;left:5px;top:4px;bottom:4px;width:2px;background:var(--line)}
+.dash-tl-item{position:relative;padding:6px 0 12px 0;font-size:13px}
+.dash-tl-item::before{content:'';position:absolute;left:-19px;top:10px;width:10px;height:10px;border-radius:50%;background:var(--accent2);border:2px solid var(--panel)}
+.dash-tl-item.tl-danger::before{background:var(--danger)}
+.dash-tl-item.tl-green::before{background:var(--green)}
+.dash-tl-item.tl-warn::before{background:var(--warn)}
+.dash-tl-item .tl-time{font-size:11px;color:var(--muted);font-family:var(--mono)}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:16px}
 .panel h3{font-size:14px;letter-spacing:.01em;color:var(--text);margin-bottom:14px}
 .panel h3.section-label{font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
@@ -2587,6 +2623,11 @@ const KPI_ICONS = {
   profit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>',
   jobs: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="1.5"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 12h18"/></svg>',
   stock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>',
+  employees: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+  fleet: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>',
+  calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
+  alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+  materials: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
 };
 function kpiTrend(current, previous){
   if(!previous) return { label: 'No prior data', cls: 'flat', arrow: '' };
@@ -2603,10 +2644,12 @@ function renderDashboard(){
   const spend = purchases.reduce((s,o)=>s+orderTotal(o),0);
   const outstanding = invoices.filter(o=>!['Paid','Completed','Closed'].includes(o.status)).reduce((s,o)=>s+orderTotal(o),0);
   const lowStock = DB.products.filter(p=>stockFor(p.id) < 5);
-  const activeJobs = DB.jobs.length;
+  const activeProjects = DB.customers.filter(c=>c.projectStatus==='Active');
   const totalProfit = invoices.reduce((s,o)=>s+(orderProfit(o)||0),0);
+  const activeEmps = DB.employees.filter(e=>e.active);
+  const activeVehicles = DB.vehicles.filter(v=>v.active);
+  const payrollSpend = DB.paidEmployees.reduce((s,pe)=>s+(Number(pe.netPay)||0),0);
 
-  // revenue AND expenses by month (last 8 months with data)
   const byMonth = {};
   invoices.forEach(o=>{ const m=(o.date||'').slice(0,7); if(!m) return; byMonth[m]=(byMonth[m]||0)+orderTotal(o); });
   const expByMonth = {};
@@ -2617,8 +2660,6 @@ function renderDashboard(){
   const maxM = Math.max(1, ...months.map(m=>Math.max(byMonth[m]||0, expByMonth[m]||0)));
   const fmtMonth = m => { const d=new Date(m+'-02'); return isNaN(d)?m:d.toLocaleString(undefined,{month:'short',year:'2-digit'}); };
 
-  // month-over-month trends for the flow metrics (revenue, purchases, profit) — snapshot metrics like
-  // Outstanding/Active Jobs/Low Stock don't have a meaningful "vs last month" the same way, so we skip those.
   const now = new Date();
   const thisMonthKey = now.toISOString().slice(0,7);
   const lastMonthKey = new Date(now.getFullYear(), now.getMonth()-1, 2).toISOString().slice(0,7);
@@ -2628,36 +2669,133 @@ function renderDashboard(){
   const purchaseTrend = kpiTrend(sumForMonth(purchases, thisMonthKey), sumForMonth(purchases, lastMonthKey));
   const profitTrend = kpiTrend(profitForMonth(thisMonthKey), profitForMonth(lastMonthKey));
 
+  const totalExpenses = spend + payrollSpend + DB.transactions.filter(t=>t.accountType!=='Income').reduce((s,t)=>s+(Number(t.amount)||0),0);
+  const cashFlow = revenue - totalExpenses;
+
   const recentOrders = [...DB.orders].filter(o=>o.date).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,6);
   const upcomingPayroll = DB.payrolls.filter(p=>p.status!=='Paid').sort((a,b)=>(a.payDate||'').localeCompare(b.payDate||''))[0];
 
+  const maintenanceDue = allReminders().map(r=>({...r, info: reminderStatusInfo(r)})).filter(r=>['Overdue','Due Soon'].includes(r.info.label)).sort((a,b)=>(a.nextDate||'').localeCompare(b.nextDate||''));
+  const equipDue = DB.equipmentReminders ? DB.equipmentReminders.filter(r=>r.status==='Active' && r.nextDate && r.nextDate <= todayISO()).length : 0;
+  const overdueInvoices = accountsReceivable().filter(r=>r.overdue);
+  const delayedActivities = (DB.scheduleActivities||[]).filter(a=>a.status==='Delayed');
+  const pendingPRs = (DB.purchaseRequests||[]).filter(pr=>pr.status==='Pending');
+
+  const alertItems = [];
+  if(overdueInvoices.length) alertItems.push({color:'var(--danger)', text:`${overdueInvoices.length} overdue invoice${overdueInvoices.length>1?'s':''} (${money0(overdueInvoices.reduce((s,r)=>s+r.balance,0))})`, action:"go('receivables')"});
+  if(delayedActivities.length) alertItems.push({color:'var(--danger)', text:`${delayedActivities.length} delayed activit${delayedActivities.length>1?'ies':'y'} across projects`, action:"go('schedule')"});
+  if(maintenanceDue.filter(r=>r.info.label==='Overdue').length) alertItems.push({color:'var(--danger)', text:`${maintenanceDue.filter(r=>r.info.label==='Overdue').length} overdue vehicle maintenance`, action:"go('fleet',{ftab:'maintenance'})"});
+  if(lowStock.length) alertItems.push({color:'var(--warn)', text:`${lowStock.length} item${lowStock.length>1?'s':''} below minimum stock level`, action:"go('products')"});
+  if(pendingPRs.length) alertItems.push({color:'var(--accent2)', text:`${pendingPRs.length} purchase request${pendingPRs.length>1?'s':''} awaiting approval`, action:"go('inventory')"});
+  if(maintenanceDue.filter(r=>r.info.label==='Due Soon').length) alertItems.push({color:'var(--warn)', text:`${maintenanceDue.filter(r=>r.info.label==='Due Soon').length} vehicle maintenance due soon`, action:"go('fleet',{ftab:'maintenance'})"});
+
+  const greeting = now.getHours()<12 ? 'Good morning' : now.getHours()<17 ? 'Good afternoon' : 'Good evening';
+  const dateStr = now.toLocaleDateString(undefined, {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+
   document.getElementById('mainArea').innerHTML = `
-    <div class="crumb">Overview</div>
-    <div class="hero-cards">
-      <div class="kpi-hero">
-        <div class="icon-wrap" style="background:rgba(56,183,117,.14);color:var(--green)">${KPI_ICONS.revenue}</div>
-        <div>
-          <div class="l">Revenue (Invoices)</div>
-          <div class="v" style="color:var(--green)">${money0(revenue)}</div>
-          <div class="kpi-trend ${revenueTrend.cls}">${revenueTrend.arrow} ${revenueTrend.label}</div>
-        </div>
+    <div class="dash-welcome">
+      <div>
+        <h1>${greeting}, ${esc(session.name.split(' ')[0])}</h1>
+        <div class="dash-date">${dateStr}</div>
       </div>
-      <div class="kpi-hero">
-        <div class="icon-wrap" style="background:rgba(63,182,201,.14);color:var(--accent2)">${KPI_ICONS.profit}</div>
-        <div>
-          <div class="l">Est. Job Profit${revenue ? ` (${((totalProfit/revenue)*100).toFixed(1)}% margin)` : ''}</div>
-          <div class="v" style="color:var(--accent2)">${money0(totalProfit)}</div>
-          <div class="kpi-trend ${profitTrend.cls}">${profitTrend.arrow} ${profitTrend.label}</div>
-        </div>
+      <div class="dash-quick-actions">
+        ${canEdit()?'<button class="btn pri sm" onclick="editCustomer(null)">+ New Project</button>':''}
+        <button class="btn ghost sm" onclick="go('orders',{newOrder:'INVOICE'})">+ Invoice</button>
+        <button class="btn ghost sm" onclick="go('orders',{newOrder:'PURCHASE'})">+ Purchase</button>
+        <button class="btn ghost sm" onclick="go('schedule')">Schedule</button>
       </div>
     </div>
-    <div class="cards">
-      <div class="kpi-sec"><div class="icon-wrap" style="background:rgba(242,169,59,.14);color:var(--accent)">${KPI_ICONS.purchases}</div><div><div class="l">Purchases</div><div class="v" style="color:var(--accent)">${money0(spend)}</div><div class="kpi-trend ${purchaseTrend.cls}" style="font-size:11px">${purchaseTrend.arrow} ${purchaseTrend.label}</div></div></div>
-      <div class="kpi-sec"><div class="icon-wrap" style="background:${outstanding>0?'rgba(224,82,79,.14)':'rgba(56,183,117,.14)'};color:${outstanding>0?'var(--danger)':'var(--green)'}">${KPI_ICONS.outstanding}</div><div><div class="l">Outstanding</div><div class="v" style="color:${outstanding>0?'var(--danger)':'var(--green)'}">${money0(outstanding)}</div></div></div>
-      <div class="kpi-sec"><div class="icon-wrap" style="background:rgba(153,153,153,.14);color:var(--text)">${KPI_ICONS.jobs}</div><div><div class="l">Active Jobs</div><div class="v">${activeJobs}</div></div></div>
-      <div class="kpi-sec"><div class="icon-wrap" style="background:${lowStock.length?'rgba(224,82,79,.14)':'rgba(56,183,117,.14)'};color:${lowStock.length?'var(--danger)':'var(--green)'}">${KPI_ICONS.stock}</div><div><div class="l">Low Stock Items</div><div class="v" style="color:${lowStock.length?'var(--danger)':'var(--green)'}">${lowStock.length}</div></div></div>
+
+    ${alertItems.length ? `
+    <div class="panel" style="border-left:3px solid var(--danger);margin-bottom:18px;padding:14px 18px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="color:var(--danger)">${KPI_ICONS.alert}</span>
+        <b style="font-size:13px">Action Required</b>
+        <span class="badge b-danger" style="font-size:10px">${alertItems.length}</span>
+      </div>
+      ${alertItems.map(a=>`
+        <div class="dash-alert-row click" onclick="${a.action}">
+          <div class="dash-alert-dot" style="background:${a.color}"></div>
+          <span style="font-size:13px;flex:1">${a.text}</span>
+          <span class="mut" style="font-size:11px">View &rarr;</span>
+        </div>
+      `).join('')}
+    </div>` : ''}
+
+    <div class="dash-grid6">
+      <div class="dash-kpi">
+        <div class="dk-icon" style="background:rgba(56,183,117,.14);color:var(--green)">${KPI_ICONS.revenue}</div>
+        <div class="dk-label">Total Revenue</div>
+        <div class="dk-value" style="color:var(--green)">${money0(revenue)}</div>
+        <div class="kpi-trend ${revenueTrend.cls}">${revenueTrend.arrow} ${revenueTrend.label}</div>
+      </div>
+      <div class="dash-kpi">
+        <div class="dk-icon" style="background:rgba(63,182,201,.14);color:var(--accent2)">${KPI_ICONS.profit}</div>
+        <div class="dk-label">Net Profit</div>
+        <div class="dk-value" style="color:var(--accent2)">${money0(totalProfit)}</div>
+        <div class="kpi-trend ${profitTrend.cls}">${profitTrend.arrow} ${profitTrend.label}</div>
+      </div>
+      <div class="dash-kpi">
+        <div class="dk-icon" style="background:rgba(242,169,59,.14);color:var(--accent)">${KPI_ICONS.purchases}</div>
+        <div class="dk-label">Expenses</div>
+        <div class="dk-value" style="color:var(--accent)">${money0(totalExpenses)}</div>
+        <div class="kpi-trend ${purchaseTrend.cls}">${purchaseTrend.arrow} ${purchaseTrend.label}</div>
+      </div>
+      <div class="dash-kpi">
+        <div class="dk-icon" style="background:${outstanding>0?'rgba(224,82,79,.14)':'rgba(56,183,117,.14)'};color:${outstanding>0?'var(--danger)':'var(--green)'}">${KPI_ICONS.outstanding}</div>
+        <div class="dk-label">Outstanding</div>
+        <div class="dk-value" style="color:${outstanding>0?'var(--danger)':'var(--green)'}">${money0(outstanding)}</div>
+        <div class="dk-sub">${invoices.filter(o=>!['Paid','Completed','Closed'].includes(o.status)).length} unpaid invoice${invoices.filter(o=>!['Paid','Completed','Closed'].includes(o.status)).length!==1?'s':''}</div>
+      </div>
+      <div class="dash-kpi">
+        <div class="dk-icon" style="background:rgba(63,182,201,.14);color:var(--accent2)">${KPI_ICONS.jobs}</div>
+        <div class="dk-label">Active Projects</div>
+        <div class="dk-value">${activeProjects.length}</div>
+        <div class="dk-sub">${DB.customers.filter(c=>c.projectStatus==='Completed').length} completed</div>
+      </div>
+      <div class="dash-kpi">
+        <div class="dk-icon" style="background:rgba(153,153,153,.14);color:var(--text)">${KPI_ICONS.employees}</div>
+        <div class="dk-label">Workforce</div>
+        <div class="dk-value">${activeEmps.length}</div>
+        <div class="dk-sub">${activeVehicles.length} vehicle${activeVehicles.length!==1?'s':''} in fleet</div>
+      </div>
     </div>
+
+    <div class="panel" style="margin-bottom:18px">
+      <h3 class="section-label">Cash Flow Summary</h3>
+      <div class="dash-cashflow">
+        <div class="cf-item"><div class="cf-label">Money In</div><div class="cf-val" style="color:var(--green)">${money0(revenue)}</div></div>
+        <div class="cf-item"><div class="cf-label">Money Out</div><div class="cf-val" style="color:var(--danger)">${money0(totalExpenses)}</div></div>
+        <div class="cf-item" style="background:${cashFlow>=0?'rgba(56,183,117,.08)':'rgba(224,82,79,.08)'}"><div class="cf-label">Net Cash Flow</div><div class="cf-val" style="color:${cashFlow>=0?'var(--green)':'var(--danger)'}">${cashFlow>=0?'+':''}${money0(cashFlow)}</div></div>
+        ${revenue?`<div class="cf-item"><div class="cf-label">Profit Margin</div><div class="cf-val" style="color:var(--accent2)">${((totalProfit/revenue)*100).toFixed(1)}%</div></div>`:''}
+      </div>
+    </div>
+
     <div class="grid2">
+      <div class="panel">
+        <div class="ph"><h3>Active Projects</h3><button class="btn ghost sm" onclick="go('customers')">View all</button></div>
+        ${(() => {
+          if(!activeProjects.length) return '<div class="empty">No active projects</div>';
+          return activeProjects.sort((a,b)=>projectCompletionPct(b)-projectCompletionPct(a)).slice(0,6).map(c=>{
+            const pct = projectCompletionPct(c);
+            const acts = projectActivities(c);
+            const delayed = acts.filter(a=>a.status==='Delayed').length;
+            return `
+            <div class="dash-proj-card" onclick="sub.dashProjectId=${c.id};renderDashboard();document.getElementById('dashDetailSection')?.scrollIntoView({behavior:'smooth'})">
+              <div class="dpc-header">
+                <span class="dpc-name">${esc(c.name)}</span>
+                <span class="dpc-pct" style="color:${pct>=100?'var(--green)':pct>=50?'var(--accent2)':'var(--muted)'}">${pct}%</span>
+              </div>
+              <div class="progress" style="height:6px;margin-bottom:6px"><div style="width:${pct}%;background:${pct>=100?'var(--green)':pct>=50?'var(--accent2)':'var(--accent)'}"></div></div>
+              <div style="display:flex;gap:12px;font-size:11px;color:var(--muted)">
+                <span>${acts.length} activit${acts.length!==1?'ies':'y'}</span>
+                ${delayed?`<span style="color:var(--danger)">${delayed} delayed</span>`:''}
+                ${acts.filter(a=>a.status==='In Progress').length?`<span style="color:var(--accent2)">${acts.filter(a=>a.status==='In Progress').length} in progress</span>`:''}
+              </div>
+            </div>`;
+          }).join('') + (activeProjects.length > 6 ? `<div class="mut" style="text-align:center;font-size:12px;padding:4px">+ ${activeProjects.length-6} more projects</div>` : '');
+        })()}
+      </div>
       <div class="panel">
         <div class="ph"><h3>Revenue vs. Expenses</h3><div class="chart-legend"><span><span class="dot" style="background:var(--green)"></span>Revenue</span><span><span class="dot" style="background:var(--danger)"></span>Expenses</span></div></div>
         ${months.length ? months.map(m=>`
@@ -2668,8 +2806,55 @@ function renderDashboard(){
               <div class="bar"><div style="width:${((expByMonth[m]||0)/maxM*100).toFixed(0)}%;background:var(--danger)"></div></div>
             </div>
             <span class="num" style="font-size:11px">${money0(byMonth[m]||0)}<br><span class="mut">${money0(expByMonth[m]||0)}</span></span>
-          </div>`).join('') : `<div class="empty">No revenue or expense history yet</div>`}
+          </div>`).join('') : `<div class="empty">No revenue or expense data yet</div>`}
       </div>
+    </div>
+
+    <div class="dash-grid3">
+      <div class="panel">
+        <div class="ph"><h3>Accounts Receivable</h3><button class="btn ghost sm" onclick="go('receivables')">View all</button></div>
+        ${(() => {
+          const ar = accountsReceivable();
+          const total = ar.reduce((s,r)=>s+r.balance,0);
+          if(!ar.length) return '<div class="empty">Fully collected</div>';
+          const b30 = ar.filter(r=>r.daysOutstanding<=30).reduce((s,r)=>s+r.balance,0);
+          const b60 = ar.filter(r=>r.daysOutstanding>30&&r.daysOutstanding<=60).reduce((s,r)=>s+r.balance,0);
+          const b90 = ar.filter(r=>r.daysOutstanding>60&&r.daysOutstanding<=90).reduce((s,r)=>s+r.balance,0);
+          const b90p = ar.filter(r=>r.daysOutstanding>90).reduce((s,r)=>s+r.balance,0);
+          return `
+            <div class="stat-row" style="font-weight:800"><span>Total</span><span class="mono" style="color:var(--danger)">${money(total)}</span></div>
+            <div style="display:flex;gap:6px;margin:8px 0 10px;flex-wrap:wrap">
+              <span class="badge b-status" style="font-size:10px">0-30d: ${money0(b30)}</span>
+              ${b60?`<span class="badge b-Pending" style="font-size:10px">31-60d: ${money0(b60)}</span>`:''}
+              ${b90?`<span class="badge b-danger" style="font-size:10px">61-90d: ${money0(b90)}</span>`:''}
+              ${b90p?`<span class="badge b-danger" style="font-size:10px;font-weight:800">90+d: ${money0(b90p)}</span>`:''}
+            </div>
+            ${ar.slice(0,4).map(r=>`<div class="stat-row" style="font-size:12.5px"><span>${esc(partyName(r.order))}${r.overdue?' <span style="color:var(--danger);font-size:10px">OVERDUE</span>':''}</span><span class="mono">${money(r.balance)}</span></div>`).join('')}
+            ${ar.length>4?`<div class="mut" style="text-align:center;padding:4px;font-size:11px">+ ${ar.length-4} more</div>`:''}
+          `;
+        })()}
+      </div>
+      <div class="panel">
+        <div class="ph"><h3>Payroll & Workforce</h3><button class="btn ghost sm" onclick="go('payroll')">Payroll</button></div>
+        ${upcomingPayroll ? `
+          <div class="stat-row"><span>Next payroll</span><span class="mono">${fmtDate(upcomingPayroll.payDate)}</span></div>
+          <div class="stat-row"><span>Status</span><span class="badge b-status b-${esc(upcomingPayroll.status)}">${esc(upcomingPayroll.status)}</span></div>
+        ` : `<div class="stat-row"><span>Next payroll</span><span class="mut">None scheduled</span></div>`}
+        <div class="stat-row"><span>Active employees</span><span class="mono">${activeEmps.length}</span></div>
+        <div class="stat-row"><span>Total payroll paid</span><span class="mono">${money0(payrollSpend)}</span></div>
+        <div class="stat-row"><span>Work orders open</span><span class="mono">${workOrders.filter(o=>!['Completed','Closed'].includes(o.status)).length}</span></div>
+      </div>
+      <div class="panel">
+        <div class="ph"><h3>Fleet & Equipment</h3><button class="btn ghost sm" onclick="go('fleet')">Fleet</button></div>
+        <div class="stat-row"><span>Vehicles active</span><span class="mono">${activeVehicles.length}</span></div>
+        <div class="stat-row"><span>Fleet spend</span><span class="mono">${money0(fleetTotalSpend())}</span></div>
+        <div class="stat-row"><span>Maintenance overdue</span><span class="mono" style="color:${overdueCount()?'var(--danger)':'var(--green)'}">${overdueCount()}</span></div>
+        <div class="stat-row"><span>Equipment items</span><span class="mono">${(DB.equipment||[]).length}</span></div>
+        <div class="stat-row"><span>Low stock materials</span><span class="mono" style="color:${lowStock.length?'var(--warn)':'var(--green)'}">${lowStock.length}</span></div>
+      </div>
+    </div>
+
+    <div class="grid2">
       <div class="panel">
         <div class="ph"><h3>Recent Orders</h3><button class="btn ghost sm" onclick="go('orders')">View all</button></div>
         <div class="twrap"><table>
@@ -2685,82 +2870,38 @@ function renderDashboard(){
             </tr>`).join('') || `<tr><td colspan="6" class="empty">No orders yet</td></tr>`}
         </table></div>
       </div>
-    </div>
-    <div class="grid2">
       <div class="panel">
-        <div class="ph"><h3>Low Stock (below 5 units)</h3><button class="btn ghost sm" onclick="go('products')">View all</button></div>
-        ${lowStock.length ? lowStock.slice(0,6).map(p=>`
-          <div class="stat-row"><span>${esc(p.name)}</span><span class="lowstock mono">${stockFor(p.id)} on hand</span></div>`).join('') + (lowStock.length > 6 ? `<div class="mut" style="text-align:center;padding:6px;font-size:12px">+ ${lowStock.length-6} more items</div>` : '')
-          : `<div class="empty">Stock levels look healthy 👍</div>`}
-      </div>
-      <div class="panel">
-        <div class="ph"><h3>Payroll</h3><button class="btn ghost sm" onclick="go('payroll')">Open payroll</button></div>
-        ${upcomingPayroll ? `
-          <div class="stat-row"><span>Next run</span><span class="mono">${fmtDate(upcomingPayroll.payDate)}</span></div>
-          <div class="stat-row"><span>Status</span><span class="badge b-status b-${esc(upcomingPayroll.status)}">${esc(upcomingPayroll.status)}</span></div>
-          <div class="stat-row"><span>Period</span><span class="mut">${fmtDate(upcomingPayroll.fromDate)} – ${fmtDate(upcomingPayroll.toDate)}</span></div>
-        ` : `<div class="empty">No pending payroll runs</div>`}
-        <div class="stat-row"><span>Active employees</span><span class="mono">${DB.employees.filter(e=>e.active).length}</span></div>
-        <div class="stat-row"><span>Work orders in progress</span><span class="mono">${workOrders.filter(o=>!['Completed','Closed'].includes(o.status)).length}</span></div>
-      </div>
-    </div>
-    <div class="grid2">
-      <div class="panel">
-        <div class="ph"><h3>Fleet</h3><button class="btn ghost sm" onclick="go('fleet')">Open fleet</button></div>
-        <div class="stat-row"><span class="mut">Vehicles in service</span><span class="mono">${DB.vehicles.filter(v=>v.active).length}</span></div>
-        <div class="stat-row"><span class="mut">Fleet spend (all time)</span><span class="mono">${money(fleetTotalSpend())}</span></div>
-        <div class="stat-row"><span class="mut">Maintenance overdue</span><span class="mono" style="color:${overdueCount()?'var(--danger)':'var(--green)'}">${overdueCount()}</span></div>
-      </div>
-      <div class="panel">
-        <div class="ph"><h3>Maintenance Due Soon</h3><button class="btn ghost sm" onclick="go('fleet',{ftab:'maintenance'})">View schedule</button></div>
+        <div class="ph"><h3>Recent Activity</h3><button class="btn ghost sm" onclick="go('notificationLog')">Full Log</button></div>
         ${(() => {
-          const due = allReminders().map(r=>({...r, info: reminderStatusInfo(r)})).filter(r=>['Overdue','Due Soon'].includes(r.info.label)).sort((a,b)=>(a.nextDate||'').localeCompare(b.nextDate||'')).slice(0,5);
-          return due.length ? due.map(r=>`
-            <div class="stat-row"><span>${esc(r.vehicle?r.vehicle.name:'—')} — ${esc(r.name)}</span><span class="badge ${r.info.cls}">${r.info.label}</span></div>
-          `).join('') : `<div class="empty">Nothing due — fleet maintenance is up to date 👍</div>`;
+          const recent = [...DB.notificationLog].sort((a,b)=>(b.time||'').localeCompare(a.time||'')).slice(0,8);
+          if(!recent.length) return '<div class="empty">No activity yet</div>';
+          return `<div class="dash-timeline">${recent.map(n=>{
+            const cls = n.type==='Alert'||n.type==='Overdue'?'tl-danger':n.type==='Completed'?'tl-green':n.type==='Warning'?'tl-warn':'';
+            return `<div class="dash-tl-item ${cls} click" onclick="markLogRead(${n.id});${n.actionView?`go('${n.actionView}'${n.actionSub?`,${JSON.stringify(n.actionSub)}`:''})`:''}">
+              <div style="${n.read?'':'font-weight:600'}">${!n.read?'<span style="color:var(--accent)">● </span>':''}${esc(n.message)}</div>
+              <div class="tl-time">${fmtDate(n.date)}</div>
+            </div>`;
+          }).join('')}</div>`;
         })()}
       </div>
     </div>
+
     <div class="panel">
-      <div class="ph"><h3>Accounts Receivable</h3><button class="btn ghost sm" onclick="go('receivables')">View all</button></div>
-      ${(() => {
-        const ar = accountsReceivable();
-        const total = ar.reduce((s,r)=>s+r.balance,0);
-        if(!ar.length) return `<div class="empty">No outstanding invoices — you're fully collected 👍</div>`;
-        const b30 = ar.filter(r=>r.daysOutstanding<=30).reduce((s,r)=>s+r.balance,0);
-        const b60 = ar.filter(r=>r.daysOutstanding>30&&r.daysOutstanding<=60).reduce((s,r)=>s+r.balance,0);
-        const b90 = ar.filter(r=>r.daysOutstanding>60&&r.daysOutstanding<=90).reduce((s,r)=>s+r.balance,0);
-        const b90p = ar.filter(r=>r.daysOutstanding>90).reduce((s,r)=>s+r.balance,0);
-        return `
-          <div class="stat-row" style="font-weight:800"><span>Total Outstanding</span><span class="mono" style="color:var(--danger)">${money(total)}</span></div>
-          <div style="display:flex;gap:8px;margin:8px 0 12px;flex-wrap:wrap">
-            <span class="badge b-status" style="font-size:11px">0-30d: ${money0(b30)}</span>
-            ${b60?`<span class="badge b-Pending" style="font-size:11px">31-60d: ${money0(b60)}</span>`:''}
-            ${b90?`<span class="badge b-danger" style="font-size:11px">61-90d: ${money0(b90)}</span>`:''}
-            ${b90p?`<span class="badge b-danger" style="font-size:11px;font-weight:800">90+d: ${money0(b90p)}</span>`:''}
-          </div>
-          ${ar.slice(0,5).map(r=>`
-            <div class="stat-row"><span>${esc(partyName(r.order))} — #${r.order.id}${r.overdue?' <span style="color:var(--danger);font-size:11px">OVERDUE</span>':''}</span><span class="mono">${money(r.balance)} <span class="mut" style="font-size:11px">(${r.daysOutstanding}d)</span></span></div>
-          `).join('')}
-          ${ar.length>5?`<div class="mut" style="text-align:center;padding:6px;font-size:12px">+ ${ar.length-5} more invoices</div>`:''}
-        `;
-      })()}
-    </div>
-    <div class="panel">
-      <div class="ph"><h3>Project Profit & Expense Report</h3>${canEdit()?'<button class="btn ghost sm" onclick="editCustomer(null)">+ New Project</button>':''}</div>
-      <div class="mut" style="font-size:12.5px;margin-bottom:12px">Pick a project and a date range to see its revenue, costs, and profit pulled from orders, payroll, materials, fuel, and other expenses.</div>
+      <div class="ph"><h3>Project Profit & Expense Report</h3></div>
+      <div class="mut" style="font-size:12.5px;margin-bottom:12px">Select a project and date range to generate a detailed financial report.</div>
       <div class="grid3">
         <div class="field"><label class="fl" for="dashProjSelect">Project Site</label>
           <select id="dashProjSelect">
-            <option value="">— select a project —</option>
+            <option value="">-- select a project --</option>
             ${[...DB.customers].sort((a,b)=>a.name.localeCompare(b.name)).map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}
           </select>
         </div>
         <div class="field"><label class="fl" for="dashProjFrom">From</label><input id="dashProjFrom" type="date"></div>
         <div class="field"><label class="fl" for="dashProjTo">To</label><input id="dashProjTo" type="date" value="${todayISO()}"></div>
       </div>
-      <button class="btn pri" onclick="viewProjectReport()">View Report</button>
+      <button class="btn pri sm" onclick="viewProjectReport()">Generate Report</button>
     </div>
+
     <div class="panel">
       <div class="ph">
         <h3>Completed Projects</h3>
@@ -2774,14 +2915,14 @@ function renderDashboard(){
       ${(() => {
         const year = sub.dashYear || new Date().getFullYear();
         const completed = completedProjectsInYear(year);
-        if(!completed.length) return `<div class="empty">No projects marked Completed with a completion date in ${year}. Set a project's status to "Completed" and pick a completion date to see it here.</div>`;
+        if(!completed.length) return `<div class="empty">No completed projects in ${year}</div>`;
         const totalRevenue = completed.reduce((s,r)=>s+r.revenue,0);
         const totalProfit = completed.reduce((s,r)=>s+r.profit,0);
         return `
           <div class="grid3" style="margin-bottom:14px">
-            <div class="stat-row"><span class="mut">Projects Completed</span><span class="mono">${completed.length}</span></div>
-            <div class="stat-row"><span class="mut">Total Revenue</span><span class="mono">${money(totalRevenue)}</span></div>
-            <div class="stat-row"><span class="mut">Total Profit</span><span class="mono" style="color:${totalProfit>=0?'var(--green)':'var(--danger)'}">${money(totalProfit)}</span></div>
+            <div class="stat-row"><span class="mut">Completed</span><span class="mono">${completed.length}</span></div>
+            <div class="stat-row"><span class="mut">Revenue</span><span class="mono">${money(totalRevenue)}</span></div>
+            <div class="stat-row"><span class="mut">Profit</span><span class="mono" style="color:${totalProfit>=0?'var(--green)':'var(--danger)'}">${money(totalProfit)}</span></div>
           </div>
           <div class="twrap"><table>
             <tr><th>Project</th><th>Completed</th><th class="right">Revenue</th><th class="right">Expenses</th><th class="right">Profit</th><th></th></tr>
@@ -2798,27 +2939,16 @@ function renderDashboard(){
         `;
       })()}
     </div>
-    <div class="panel">
-      <div class="ph"><h3>🏗️ Project Site Overview</h3></div>
+
+    <div class="panel" id="dashDetailSection">
+      <div class="ph"><h3>Project Details & Schedule</h3></div>
       <div class="field" style="margin-bottom:14px">
         <label class="fl">Select a Project</label>
         <select id="dashProjectSelect" onchange="sub.dashProjectId=Number(this.value);renderDashboard()">
-          <option value="">— choose a project to view details —</option>
+          <option value="">-- choose a project --</option>
           ${[...DB.customers].sort((a,b)=>a.name.localeCompare(b.name)).map(c=>`<option value="${c.id}" ${sub.dashProjectId==c.id?'selected':''}>${esc(c.name)} ${c.projectStatus==='Active'?'(Active)':c.projectStatus==='Completed'?'(Completed)':''}</option>`).join('')}
         </select>
       </div>
-      ${(() => {
-        const active = DB.customers.filter(c=>c.projectStatus==='Active').sort((a,b)=>projectCompletionPct(b)-projectCompletionPct(a));
-        if(!active.length) return `<div class="empty">No active projects right now</div>`;
-        return active.map(c=>{
-          const pct = projectCompletionPct(c);
-          return `
-          <div class="click" style="padding:8px 0" onclick="document.getElementById('dashProjectSelect').value='${c.id}';sub.dashProjectId=${c.id};renderDashboard()">
-            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><b>${esc(c.name)}</b><span class="mono mut">${pct}%</span></div>
-            <div class="progress"><div style="width:${pct}%;background:${pct>=100?'var(--green)':'var(--accent2)'}"></div></div>
-          </div>
-        `;}).join('');
-      })()}
     </div>
     ${(() => {
       const pid = sub.dashProjectId;
@@ -2860,7 +2990,7 @@ function renderDashboard(){
 
       return `
       <div class="panel" style="border:2px solid var(--accent);border-radius:var(--r)">
-        <div class="ph"><h3>📐 ${esc(proj.name)} — Project Details</h3>
+        <div class="ph"><h3>${esc(proj.name)} — Project Details</h3>
           <div style="display:flex;gap:6px">
             <button class="btn ghost sm" onclick="go('customers',{custId:${pid}})">Open Project</button>
             <button class="btn ghost sm" onclick="go('schedule')">Full Schedule</button>
@@ -2936,21 +3066,6 @@ function renderDashboard(){
         ` : ''}
       </div>`;
     })()}
-    <div class="panel">
-      <div class="ph"><h3>🔔 Recent Activity</h3><button class="btn ghost sm" onclick="go('notificationLog')">View Full Log</button></div>
-      ${(() => {
-        const recent = [...DB.notificationLog].sort((a,b)=>(b.time||'').localeCompare(a.time||'')).slice(0,8);
-        if(!recent.length) return `<div class="empty">No activity yet</div>`;
-        return `<div class="twrap"><table>
-          ${recent.map(n=>`
-            <tr class="click" onclick="markLogRead(${n.id});${n.actionView?`go('${n.actionView}'${n.actionSub?`,${JSON.stringify(n.actionSub)}`:''})`:''}">
-              <td style="width:90px"><span class="badge b-status">${esc(n.type)}</span></td>
-              <td style="${n.read?'':'font-weight:600'}">${!n.read?'<span style="color:var(--accent)">●</span> ':''}${esc(n.message)}</td>
-              <td class="mut" style="width:90px">${fmtDate(n.date)}</td>
-            </tr>`).join('')}
-        </table></div>`;
-      })()}
-    </div>
   `;
   if(sub.dashProjectId){
     const _rows = DB.scheduleActivities.filter(a=>String(a.projectId)===String(sub.dashProjectId));
