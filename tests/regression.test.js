@@ -676,6 +676,174 @@ async function testDataIntegrity() {
 }
 
 // ═══════════════════════════════════════════════════════════
+// DAY 7 TESTS — Final verification & accessibility
+// ═══════════════════════════════════════════════════════════
+
+async function testAccessibilityAria() {
+  console.log('\n[16] Accessibility — aria-labels on icon buttons');
+  await withApp(async (page) => {
+    await page.evaluate(() => { renderHeader(); });
+    await page.waitForTimeout(200);
+
+    // 16a: sidebar toggle has aria-label
+    let result = await page.evaluate(() => {
+      const btn = document.querySelector('.sidebar-toggle');
+      return btn && btn.getAttribute('aria-label');
+    });
+    check('Sidebar toggle has aria-label', result && result.length > 0);
+
+    // 16b: theme button has aria-label
+    result = await page.evaluate(() => {
+      const btn = document.getElementById('themeBtn');
+      return btn && btn.getAttribute('aria-label');
+    });
+    check('Theme toggle has aria-label', result && result.length > 0);
+
+    // 16c: notification button has aria-label
+    result = await page.evaluate(() => {
+      const btn = document.querySelector('[title="Notifications"]');
+      return btn && btn.getAttribute('aria-label');
+    });
+    check('Notification button has aria-label', result && result.length > 0);
+
+    // 16d: close (x) buttons have aria-label — toggle notifications panel which contains x buttons
+    result = await page.evaluate(() => {
+      toggleNotifications();
+      const xBtn = document.querySelector('.x');
+      const hasLabel = xBtn && xBtn.getAttribute('aria-label') === 'Close';
+      const panel = document.getElementById('notifPanel');
+      if(panel) panel.remove();
+      return hasLabel;
+    });
+    check('Close (x) buttons have aria-label="Close"', result === true);
+  });
+}
+
+async function testThemeSystem() {
+  console.log('\n[17] Theme system — FOUT prevention & toggle');
+  await withApp(async (page) => {
+    // 17a: theme is applied before boot (inline script sets data-theme)
+    let result = await page.evaluate(() => {
+      return document.documentElement.dataset.theme === 'dark' || document.documentElement.dataset.theme === 'light';
+    });
+    check('Theme data attribute is set on <html>', result === true);
+
+    // 17b: toggle theme changes the attribute
+    result = await page.evaluate(() => {
+      const before = document.documentElement.dataset.theme;
+      toggleTheme();
+      const after = document.documentElement.dataset.theme;
+      toggleTheme(); // restore
+      return before !== after;
+    });
+    check('toggleTheme() switches between dark and light', result === true);
+
+    // 17c: applyTheme persists to localStorage
+    result = await page.evaluate(() => {
+      applyTheme('light');
+      const stored = localStorage.getItem('buildsuite_theme');
+      applyTheme('dark'); // restore
+      return stored === 'light';
+    });
+    check('applyTheme() persists choice to localStorage', result === true);
+  });
+}
+
+async function testSkipLink() {
+  console.log('\n[18] Accessibility — skip-to-content link');
+  await withApp(async (page) => {
+    let result = await page.evaluate(() => {
+      const link = document.querySelector('.skip-link');
+      return link && link.getAttribute('href') === '#mainArea' && link.textContent.includes('Skip');
+    });
+    check('Skip-to-content link exists and targets #mainArea', result === true);
+  });
+}
+
+async function testInputValidation() {
+  console.log('\n[19] Input validation — maxlength & field constraints');
+  await withApp(async (page) => {
+    // 19a: login form has maxlength
+    await page.evaluate(() => { sub = { authMode: 'signin' }; renderLogin(); });
+    await page.waitForTimeout(200);
+    let result = await page.evaluate(() => {
+      const el = document.getElementById('loginUser');
+      return el && el.maxLength > 0;
+    });
+    check('Login username field has maxlength', result === true);
+
+    // 19b: signup form has maxlength on name fields
+    await page.evaluate(() => { sub.authMode = 'signup'; renderLogin(); });
+    await page.waitForTimeout(200);
+    result = await page.evaluate(() => {
+      const fn = document.getElementById('suFirstName');
+      const ln = document.getElementById('suLastName');
+      const un = document.getElementById('suUsername');
+      return fn && fn.maxLength > 0 && ln && ln.maxLength > 0 && un && un.maxLength > 0;
+    });
+    check('Signup name/username fields have maxlength', result === true);
+
+    // 19c: signup email has type=email
+    result = await page.evaluate(() => {
+      const el = document.getElementById('suEmail');
+      return el && el.type === 'email';
+    });
+    check('Signup email field has type=email', result === true);
+
+    // Restore app state
+    await page.evaluate(() => {
+      session = { id: 999999, name: 'Test Admin', type: 'Admin' };
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('appRoot').style.display = 'flex';
+    });
+  });
+}
+
+async function testEdgeCases() {
+  console.log('\n[20] Edge cases — empty data, boundary conditions');
+  await withApp(async (page) => {
+    // 20a: esc handles null/undefined gracefully
+    let result = await page.evaluate(() => {
+      return esc(null) === '' && esc(undefined) === '' && esc(0) === '0';
+    });
+    check('esc() handles null, undefined, and 0 gracefully', result === true);
+
+    // 20b: money handles edge values
+    result = await page.evaluate(() => {
+      const zero = money(0);
+      const neg = money(-1234.5);
+      const big = money(9999999.99);
+      return zero.includes('0') && neg.includes('1,234') && big.includes('9,999,999');
+    });
+    check('money() handles zero, negative, and large values', result === true);
+
+    // 20c: orderTotal handles missing items array
+    result = await page.evaluate(() => {
+      try { return orderTotal({}) === 0; } catch(e) { return false; }
+    });
+    check('orderTotal({}) returns 0 when items is missing', result === true);
+
+    // 20d: mergeDB with completely empty objects
+    result = await page.evaluate(() => {
+      const m = mergeDB({}, {});
+      return typeof m === 'object';
+    });
+    check('mergeDB({}, {}) returns an object without crashing', result === true);
+
+    // 20e: nextId on empty array returns 1
+    result = await page.evaluate(() => nextId([]));
+    check('nextId([]) returns 1', result === 1);
+
+    // 20f: projectCompletionPct with no activities
+    result = await page.evaluate(() => {
+      const c = { id: 99990 };
+      return projectCompletionPct(c);
+    });
+    check('projectCompletionPct returns 0 for project with no activities', result === 0);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
 // RUN ALL TESTS
 // ═══════════════════════════════════════════════════════════
 
@@ -705,6 +873,16 @@ async function testDataIntegrity() {
   await testCRUDLifecycle();
   await testNetPayFloor();
   await testDataIntegrity();
+
+  console.log('\n' + '═'.repeat(55));
+  console.log('DAY 7 TESTS — Final Verification');
+  console.log('═'.repeat(55));
+
+  await testAccessibilityAria();
+  await testThemeSystem();
+  await testSkipLink();
+  await testInputValidation();
+  await testEdgeCases();
 
   console.log(`\n${'═'.repeat(55)}`);
   console.log(`RESULT: ${passed} passed, ${failed} failed`);
