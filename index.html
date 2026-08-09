@@ -1086,12 +1086,16 @@ function foremanSite(){
 }
 const ACTIVITY_COLORS = ['#3fb6c9','#f2a93b','#7c9cf2','#38b775','#e0524f','#c98fe0','#e0a55c','#5cc9b0'];
 function activityColor(index){ return ACTIVITY_COLORS[index % ACTIVITY_COLORS.length]; }
+function projectActivities(c){
+  if(!DB.scheduleActivities) DB.scheduleActivities = [];
+  return DB.scheduleActivities.filter(a=>a.projectId===c.id);
+}
 function projectCompletionPct(c){
-  const acts = c.activities || [];
-  if(!acts.length) return 0; // no activities logged = no verified progress, not a leftover manual number
-  const totalWeight = acts.reduce((s,a)=>s+(Number(a.weight)||0), 0);
-  if(!totalWeight) return Math.round(acts.reduce((s,a)=>s+(Number(a.pct)||0), 0) / acts.length);
-  return Math.round(acts.reduce((s,a)=>s+((Number(a.weight)||0) * (Number(a.pct)||0)), 0) / totalWeight);
+  const acts = projectActivities(c);
+  if(!acts.length) return 0;
+  const totalCost = acts.reduce((s,a)=>s+(Number(a.cost)||0), 0);
+  if(!totalCost) return Math.round(acts.reduce((s,a)=>s+scheduleProgressFraction(a)*100, 0) / acts.length);
+  return Math.round(acts.reduce((s,a)=>s+((Number(a.cost)||0)/totalCost)*scheduleProgressFraction(a)*100, 0));
 }
 function canCreateForSite(siteName){
   if(canEdit()) return true;
@@ -3471,10 +3475,10 @@ function renderProducts(){
 const BULK_IMPORT_CONFIG = {
   activities: {
     label: 'Activities',
-    columns: ['Activity Name', 'Weight', 'Planned Start (YYYY-MM-DD)', 'Planned End (YYYY-MM-DD)'],
-    example: 'Foundation\t20\t2026-08-01\t2026-08-15',
-    build: (cells) => ({ id: uid(), name: cells[0]||'', weight: Number(cells[1])||1, pct: 0, plannedStart: cells[2]||'', plannedEnd: cells[3]||'' }),
-    push: (rec, custId) => { const c = customerById(custId); if(!c.activities) c.activities = []; c.activities.push(rec); },
+    columns: ['Activity Name', 'Cost / Budget', 'Planned Start (YYYY-MM-DD)', 'Planned End (YYYY-MM-DD)'],
+    example: 'Foundation\t85000\t2026-08-01\t2026-08-15',
+    build: (cells) => ({ name: cells[0]||'', cost: Number(cells[1])||0, plannedStart: cells[2]||'', plannedEnd: cells[3]||'' }),
+    push: (rec, custId) => { if(!DB.scheduleActivities) DB.scheduleActivities=[]; DB.scheduleActivities.push({ id: nextId(DB.scheduleActivities), projectId: custId, ...rec, actualStart:'', actualEnd:'', status:'Not Started' }); },
   },
   vendors: {
     label: 'Suppliers',
@@ -3655,11 +3659,12 @@ function openAddActivity(custId){
     <h3>Add Project Activity</h3>
     <p style="font-size:13px;color:var(--muted)">Break the project into phases matching your actual Project Program — Foundation, Framing, Roofing, etc. — so progress can be logged against real work, not a guess.</p>
     <div class="field"><label class="fl" for="act_name">Activity Name</label><input id="act_name" placeholder="e.g. Foundation"></div>
-    <div class="field"><label class="fl">Weight <span class="mut" style="text-transform:none;font-weight:400">(how much of the whole project this represents — e.g. 20)</span></label><input id="act_weight" type="number" value="10" min="1"></div>
+    <div class="field"><label class="fl">Cost / Budget Amount <span class="mut" style="text-transform:none;font-weight:400">(determines weight)</span></label><input id="act_cost" type="number" value="0" min="0" step="0.01"></div>
     <div class="grid2">
-      <div class="field"><label class="fl">Planned Start <span class="mut" style="text-transform:none;font-weight:400">(optional)</span></label><input id="act_pstart" type="date"></div>
-      <div class="field"><label class="fl">Planned End <span class="mut" style="text-transform:none;font-weight:400">(optional)</span></label><input id="act_pend" type="date"></div>
+      <div class="field"><label class="fl">Planned Start</label><input id="act_pstart" type="date"></div>
+      <div class="field"><label class="fl">Planned End</label><input id="act_pend" type="date"></div>
     </div>
+    <div class="field"><label class="fl">Status</label><select id="act_status">${SCHEDULE_STATUSES.map(s=>`<option>${s}</option>`).join('')}</select></div>
     <div class="btnrow">
       <button class="btn save" onclick="saveActivity(${custId})">Add</button>
       <button class="btn ghost" onclick="closeModal()">Cancel</button>
@@ -3667,72 +3672,89 @@ function openAddActivity(custId){
   `);
 }
 function saveActivity(custId){
-  const c = customerById(custId);
   const name = document.getElementById('act_name').value.trim();
   if(!name){ toast('Please name this activity'); return; }
-  const weight = Number(document.getElementById('act_weight').value)||1;
-  const plannedStart = document.getElementById('act_pstart').value;
-  const plannedEnd = document.getElementById('act_pend').value;
-  if(!c.activities) c.activities = [];
-  c.activities.push({ id: uid(), name, weight, pct: 0, plannedStart, plannedEnd });
+  if(!DB.scheduleActivities) DB.scheduleActivities = [];
+  DB.scheduleActivities.push({
+    id: nextId(DB.scheduleActivities),
+    projectId: custId,
+    name,
+    cost: Number(document.getElementById('act_cost').value)||0,
+    plannedStart: document.getElementById('act_pstart').value,
+    plannedEnd: document.getElementById('act_pend').value,
+    actualStart: '', actualEnd: '',
+    status: document.getElementById('act_status').value
+  });
   saveDB(); closeModal(); toast('Activity added'); go('customers',{custId});
 }
 function openEditActivity(custId, activityId){
   if(session.type !== 'Admin'){ toast('Only an Admin can edit activities.'); return; }
-  const c = customerById(custId);
-  const a = (c.activities||[]).find(x=>x.id===activityId);
+  const a = (DB.scheduleActivities||[]).find(x=>x.id===activityId);
   if(!a) return;
   openModal(`
     <h3>Edit Activity</h3>
     <div class="field"><label class="fl" for="act_name">Activity Name</label><input id="act_name" value="${esc(a.name)}"></div>
-    <div class="field"><label class="fl" for="act_weight">Weight</label><input id="act_weight" type="number" value="${a.weight}" min="1"></div>
+    <div class="field"><label class="fl" for="act_cost">Cost / Budget Amount</label><input id="act_cost" type="number" value="${a.cost||0}" min="0" step="0.01"></div>
     <div class="grid2">
-      <div class="field"><label class="fl" for="act_pstart">Planned Start</label><input id="act_pstart" type="date" value="${esc(a.plannedStart)}"></div>
-      <div class="field"><label class="fl" for="act_pend">Planned End</label><input id="act_pend" type="date" value="${esc(a.plannedEnd)}"></div>
+      <div class="field"><label class="fl" for="act_pstart">Planned Start</label><input id="act_pstart" type="date" value="${esc(a.plannedStart||'')}"></div>
+      <div class="field"><label class="fl" for="act_pend">Planned End</label><input id="act_pend" type="date" value="${esc(a.plannedEnd||'')}"></div>
     </div>
-    <div class="mut" style="font-size:11.5px">Current logged completion: ${a.pct||0}%. Use "Log Update" instead if you just want to record new progress — this is for fixing the name, weight, or schedule.</div>
+    <div class="grid2">
+      <div class="field"><label class="fl" for="act_astart">Actual Start</label><input id="act_astart" type="date" value="${esc(a.actualStart||'')}"></div>
+      <div class="field"><label class="fl" for="act_aend">Actual End</label><input id="act_aend" type="date" value="${esc(a.actualEnd||'')}"></div>
+    </div>
+    <div class="field"><label class="fl">Status</label><select id="act_status">${SCHEDULE_STATUSES.map(s=>`<option ${a.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
     <div class="btnrow">
-      <button class="btn save" onclick="saveEditActivity(${custId},'${activityId}')">Save</button>
+      <button class="btn save" onclick="saveEditActivity(${custId},${activityId})">Save</button>
       <button class="btn ghost" onclick="closeModal()">Cancel</button>
     </div>
   `);
 }
 function saveEditActivity(custId, activityId){
   if(session.type !== 'Admin') return;
-  const c = customerById(custId);
-  const a = (c.activities||[]).find(x=>x.id===activityId);
+  const a = (DB.scheduleActivities||[]).find(x=>x.id===activityId);
   if(!a) return;
   const name = document.getElementById('act_name').value.trim();
   if(!name){ toast('Please name this activity'); return; }
-  const oldName = a.name;
   a.name = name;
-  a.weight = Number(document.getElementById('act_weight').value)||1;
+  a.cost = Number(document.getElementById('act_cost').value)||0;
   a.plannedStart = document.getElementById('act_pstart').value;
   a.plannedEnd = document.getElementById('act_pend').value;
-  // keep the activity log's display name in sync with any rename
-  (c.activityLog||[]).forEach(l=>{ if(l.activityId===activityId) l.activityName = name; });
-  c.completionPct = projectCompletionPct(c);
+  a.actualStart = document.getElementById('act_astart').value;
+  a.actualEnd = document.getElementById('act_aend').value;
+  a.status = document.getElementById('act_status').value;
+  const c = customerById(custId);
+  if(c){
+    (c.activityLog||[]).forEach(l=>{ if(l.activityId===activityId) l.activityName = name; });
+    c.completionPct = projectCompletionPct(c);
+  }
   saveDB(); closeModal(); toast('Activity updated'); go('customers',{custId});
 }
 function deleteActivity(custId, activityId){
   if(session.type !== 'Admin'){ toast('Only an Admin can delete activities.'); return; }
   if(!confirm('Remove this activity and its logged history?')) return;
+  DB.scheduleActivities = (DB.scheduleActivities||[]).filter(a=>a.id!==activityId);
   const c = customerById(custId);
-  c.activities = (c.activities||[]).filter(a=>a.id!==activityId);
-  c.activityLog = (c.activityLog||[]).filter(l=>l.activityId!==activityId);
+  if(c) c.activityLog = (c.activityLog||[]).filter(l=>l.activityId!==activityId);
   saveDB(); toast('Activity removed'); go('customers',{custId});
 }
 function openLogActivityUpdate(custId, activityId){
   const c = customerById(custId);
   if(!canCreateForSite(c.name)){ toast('You don\'t have permission to update this.'); return; }
-  const a = (c.activities||[]).find(x=>x.id===activityId);
+  const a = (DB.scheduleActivities||[]).find(x=>x.id===activityId);
   if(!a) return;
+  const curPct = Math.round(scheduleProgressFraction(a)*100);
   openModal(`
     <h3>Log Update — ${esc(a.name)}</h3>
     <div class="field"><label class="fl" for="log_note">What was done</label><textarea id="log_note" rows="3" placeholder="e.g. Finished pouring the second floor slab today"></textarea></div>
-    <div class="field"><label class="fl" for="log_pct">New Completion for this activity</label><input id="log_pct" type="range" min="0" max="100" step="5" value="${a.pct||0}" oninput="document.getElementById('logPctLabel').textContent=this.value+'%'"><div class="mut" style="text-align:right;font-size:12px" id="logPctLabel">${a.pct||0}%</div></div>
+    <div class="field"><label class="fl">Status</label><select id="log_status">${SCHEDULE_STATUSES.map(s=>`<option ${a.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
+    <div class="grid2">
+      <div class="field"><label class="fl">Actual Start</label><input id="log_astart" type="date" value="${esc(a.actualStart||'')}"></div>
+      <div class="field"><label class="fl">Actual End</label><input id="log_aend" type="date" value="${esc(a.actualEnd||'')}"></div>
+    </div>
+    <div class="mut" style="font-size:11.5px;margin-bottom:8px">Current progress: ${curPct}% (computed from status and dates)</div>
     <div class="btnrow">
-      <button class="btn save" onclick="saveActivityLogUpdate(${custId},'${activityId}')">Save Update</button>
+      <button class="btn save" onclick="saveActivityLogUpdate(${custId},${activityId})">Save Update</button>
       <button class="btn ghost" onclick="closeModal()">Cancel</button>
     </div>
   `);
@@ -3740,14 +3762,20 @@ function openLogActivityUpdate(custId, activityId){
 async function saveActivityLogUpdate(custId, activityId){
   const c = customerById(custId);
   if(!c || !canCreateForSite(c.name)) return;
-  const a = (c.activities||[]).find(x=>x.id===activityId);
+  const a = (DB.scheduleActivities||[]).find(x=>x.id===activityId);
   if(!a) return;
   const note = document.getElementById('log_note').value.trim();
-  const pct = Number(document.getElementById('log_pct').value)||0;
-  a.pct = pct;
+  const newStatus = document.getElementById('log_status').value;
+  a.status = newStatus;
+  a.actualStart = document.getElementById('log_astart').value;
+  a.actualEnd = document.getElementById('log_aend').value;
+  if(newStatus==='In Progress' && !a.actualStart) a.actualStart = todayISO();
+  if(newStatus==='Completed' && !a.actualEnd) a.actualEnd = todayISO();
+  if(newStatus==='Completed' && !a.actualStart) a.actualStart = a.plannedStart || todayISO();
+  const pct = Math.round(scheduleProgressFraction(a)*100);
   if(!c.activityLog) c.activityLog = [];
   c.activityLog.push({ id: uid(), activityId, activityName: a.name, date: todayISO(), by: session.name, note, pctAfter: pct });
-  c.completionPct = projectCompletionPct(c); // keep synced for the Dashboard panel and anywhere else reading it directly
+  c.completionPct = projectCompletionPct(c);
   logNotification('Progress Update', `${c.name} — ${a.name} updated to ${pct}%${note?': '+note:''}`, 'customers', {custId});
   const r = await saveDBAndConfirmSync();
   closeModal();
@@ -4155,8 +4183,8 @@ function parseMoney(str){
   return isNaN(n) ? 0 : n;
 }
 function openImportProgram(custId){
-  const c = customerById(custId);
-  window.__programDraft = (c.activities||[]).map(a=>({ itemNo: a.itemNo||'', name: a.name, budgetAmount: a.budgetAmount||0 }));
+  const existing = (DB.scheduleActivities||[]).filter(a=>a.projectId===custId);
+  window.__programDraft = existing.map(a=>({ itemNo: a.itemNo||'', name: a.name, budgetAmount: Number(a.cost)||0 }));
   renderProgramEditor(custId);
 }
 function renderProgramEditor(custId){
@@ -4255,14 +4283,24 @@ function saveProgramDraft(custId){
   const c = customerById(custId);
   const totalBudget = draft.reduce((s,r)=>s+r.budgetAmount, 0);
   if(totalBudget <= 0){ toast('Total budget came out to ₱0 — check the amounts entered'); return; }
-  const hasExistingProgress = (c.activities||[]).some(a=>(a.pct||0) > 0);
+  if(!DB.scheduleActivities) DB.scheduleActivities = [];
+  const existing = DB.scheduleActivities.filter(a=>a.projectId===custId);
+  const hasExistingProgress = existing.some(a=>a.status==='In Progress'||a.status==='Completed'||a.actualStart);
   const doSave = async () => {
-    c.activities = draft.map(r=>({
-      id: uid(), name: r.name, itemNo: r.itemNo, budgetAmount: r.budgetAmount,
-      weight: Math.round((r.budgetAmount/totalBudget)*10000)/100,
-      pct: 0, plannedStart: '', plannedEnd: '',
-    }));
+    DB.scheduleActivities = DB.scheduleActivities.filter(a=>a.projectId!==custId);
+    draft.forEach(r=>{
+      DB.scheduleActivities.push({
+        id: nextId(DB.scheduleActivities),
+        projectId: custId,
+        name: r.name, itemNo: r.itemNo,
+        cost: r.budgetAmount,
+        plannedStart: '', plannedEnd: '',
+        actualStart: '', actualEnd: '',
+        status: 'Not Started'
+      });
+    });
     c.budget = totalBudget;
+    c.completionPct = projectCompletionPct(c);
     window.__programDraft = null; closeModal();
     const r2 = await saveDBAndConfirmSync();
     toast(r2.synced ? `Saved ${draft.length} items — total budget ${money(totalBudget)}` : `⚠️ Saved here, but failed to sync — ${r2.error||'check your connection'}. Try again, or log out and back in.`);
@@ -4272,8 +4310,8 @@ function saveProgramDraft(custId){
     window.__pendingProgramImport = doSave;
     closeModal();
     openModal(`
-      <h3>⚠️ Replace Existing Progress?</h3>
-      <p style="font-size:13.5px">This project already has activities with progress logged. Saving this program replaces the entire activity list — any progress already recorded on the current activities will be lost (though it stays visible in the project's activity log history).</p>
+      <h3>⚠️ Replace Existing Activities?</h3>
+      <p style="font-size:13.5px">This project already has activities with progress. Saving this program replaces the entire activity list — any progress already recorded will be lost (though it stays visible in the project's activity log history).</p>
       <div class="btnrow">
         <button class="btn del" onclick="window.__pendingProgramImport()">Replace Anyway</button>
         <button class="btn ghost" onclick="closeModal()">Cancel</button>
@@ -4298,32 +4336,39 @@ function renderCustomerDetail(id){
     <div class="crumb"><a onclick="go('customers')" style="color:var(--muted);text-decoration:none">Projects</a> &nbsp;/&nbsp; <b>${esc(c.name)}</b></div>
     <div class="panel">
       <div class="ph"><h3>Project Progress</h3>${session.type==='Admin'?`<div class="btnrow" style="margin:0"><button class="btn ghost sm" onclick="openImportProgram(${id})">📋 Import Program of Work</button><button class="btn ghost sm" onclick="openBulkImport('activities',${id})">Bulk Import</button><button class="btn ghost sm" onclick="openAddActivity(${id})">+ Add Activity</button></div>`:''}</div>
+      ${(() => {
+        const acts = projectActivities(c);
+        const compPct = projectCompletionPct(c);
+        return `
       <div class="progress-tooltip-wrap">
-        <div class="progress" style="margin-top:4px"><div style="width:${projectCompletionPct(c)}%;background:${projectCompletionPct(c)>=100?'var(--green)':'var(--accent2)'}"></div></div>
+        <div class="progress" style="margin-top:4px"><div style="width:${compPct}%;background:${compPct>=100?'var(--green)':'var(--accent2)'}"></div></div>
         <div class="progress-tooltip">
-          <b>${projectCompletionPct(c)}% complete overall</b>
-          ${(c.activities&&c.activities.length) ? `<div style="margin-top:6px">${c.activities.map((a,i)=>`<div style="display:flex;align-items:center;gap:6px;margin-top:3px"><span style="width:8px;height:8px;border-radius:50%;background:${activityColor(i)};flex-shrink:0"></span><span style="flex:1">${esc(a.name)}</span><span class="mono">${a.pct||0}%</span></div>`).join('')}</div>` : `<div class="mut" style="margin-top:4px">No activities defined yet</div>`}
+          <b>${compPct}% complete overall</b>
+          ${acts.length ? `<div style="margin-top:6px">${acts.map((a,i)=>{const pct=Math.round(scheduleProgressFraction(a)*100);return `<div style="display:flex;align-items:center;gap:6px;margin-top:3px"><span style="width:8px;height:8px;border-radius:50%;background:${activityColor(i)};flex-shrink:0"></span><span style="flex:1">${esc(a.name)}</span><span class="mono">${pct}%</span></div>`;}).join('')}</div>` : `<div class="mut" style="margin-top:4px">No activities defined yet</div>`}
         </div>
       </div>
-      <div class="mut" style="font-size:12px;margin-top:6px">${projectCompletionPct(c)}% complete${(c.activities&&c.activities.length)?` — weighted across ${c.activities.length} activit${c.activities.length===1?'y':'ies'}`:''}</div>
-      ${(c.activities && c.activities.length) ? `
+      <div class="mut" style="font-size:12px;margin-top:6px">${compPct}% complete${acts.length?` — weighted across ${acts.length} activit${acts.length===1?'y':'ies'}`:''}</div>
+      ${acts.length ? `
         <div style="margin-top:14px">
-          ${c.activities.map((a,i)=>{
+          ${acts.map((a,i)=>{
             const color = activityColor(i);
+            const pct = Math.round(scheduleProgressFraction(a)*100);
             const recentLogs = (c.activityLog||[]).filter(l=>l.activityId===a.id).sort((x,y)=>(y.date||'').localeCompare(x.date||'')).slice(0,3);
             const today = todayISO();
-            const behindSchedule = a.plannedEnd && today > a.plannedEnd && (a.pct||0) < 100;
+            const behindSchedule = a.plannedEnd && today > a.plannedEnd && a.status!=='Completed';
+            const totalCost = acts.reduce((s,x)=>s+(Number(x.cost)||0),0);
+            const weight = totalCost ? ((Number(a.cost)||0)/totalCost*100).toFixed(1) : '—';
             return `
             <div style="padding:8px 0;border-top:1px solid var(--line)">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-                <div style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:9px;border-radius:50%;background:${color};flex-shrink:0"></span><b style="font-size:13px">${esc(a.name)}</b> <span class="mut" style="font-size:11px">(weight ${a.weight})</span>${behindSchedule?`<span class="badge b-danger" style="font-size:9.5px">Behind Schedule</span>`:''}</div>
-                <div style="display:flex;align-items:center;gap:8px"><span class="mono" style="font-size:12px">${a.pct||0}%</span>${canCreateForSite(c.name)?`<button class="btn ghost sm" onclick="openLogActivityUpdate(${id},'${a.id}')">Log Update</button>`:''}${session.type==='Admin'?`<button class="btn ghost sm" onclick="openEditActivity(${id},'${a.id}')">Edit</button><button class="x" onclick="deleteActivity(${id},'${a.id}')">✕</button>`:''}</div>
+                <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span style="width:9px;height:9px;border-radius:50%;background:${color};flex-shrink:0"></span><b style="font-size:13px">${esc(a.name)}</b> <span class="mut" style="font-size:11px">(${weight}% · ${money0(Number(a.cost)||0)})</span><span class="badge ${scheduleStatusBadgeClass(a.status)}" style="font-size:9.5px">${esc(a.status)}</span>${behindSchedule?`<span class="badge b-danger" style="font-size:9.5px">Behind Schedule</span>`:''}</div>
+                <div style="display:flex;align-items:center;gap:8px"><span class="mono" style="font-size:12px">${pct}%</span>${canCreateForSite(c.name)?`<button class="btn ghost sm" onclick="openLogActivityUpdate(${id},${a.id})">Log Update</button>`:''}${session.type==='Admin'?`<button class="btn ghost sm" onclick="openEditActivity(${id},${a.id})">Edit</button><button class="x" onclick="deleteActivity(${id},${a.id})">✕</button>`:''}</div>
               </div>
-              ${(a.plannedStart||a.plannedEnd) ? `<div class="mut" style="font-size:10.5px;margin-bottom:4px">Planned: ${a.plannedStart?fmtDate(a.plannedStart):'—'} → ${a.plannedEnd?fmtDate(a.plannedEnd):'—'}</div>` : ''}
+              ${(a.plannedStart||a.plannedEnd) ? `<div class="mut" style="font-size:10.5px;margin-bottom:4px">Planned: ${a.plannedStart?fmtDate(a.plannedStart):'—'} → ${a.plannedEnd?fmtDate(a.plannedEnd):'—'}${a.actualStart?' · Actual: '+fmtDate(a.actualStart)+' → '+(a.actualEnd?fmtDate(a.actualEnd):'ongoing'):''}</div>` : ''}
               <div class="progress-tooltip-wrap">
-                <div class="progress" style="height:6px"><div style="width:${a.pct||0}%;background:${color}"></div></div>
+                <div class="progress" style="height:6px"><div style="width:${pct}%;background:${color}"></div></div>
                 <div class="progress-tooltip">
-                  <b>${esc(a.name)} — ${a.pct||0}%</b>
+                  <b>${esc(a.name)} — ${pct}%</b>
                   ${(a.plannedStart||a.plannedEnd) ? `<div class="mut" style="margin-top:3px">Planned: ${a.plannedStart?fmtDate(a.plannedStart):'—'} → ${a.plannedEnd?fmtDate(a.plannedEnd):'—'}</div>` : ''}
                   ${recentLogs.length ? `<div style="margin-top:6px;border-top:1px solid var(--line);padding-top:6px">${recentLogs.map(l=>`<div style="margin-top:4px"><div style="display:flex;justify-content:space-between"><b class="mono">${l.pctAfter}%</b><span class="mut" style="font-size:10.5px">${fmtDate(l.date)}</span></div>${l.note?`<div class="mut" style="font-size:11px">${esc(l.note)}</div>`:''}</div>`).join('')}</div>` : `<div class="mut" style="margin-top:6px">No updates logged yet</div>`}
                 </div>
@@ -4338,7 +4383,7 @@ function renderCustomerDetail(id){
         <div class="mut" style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;font-weight:700;margin:16px 0 8px">Recent Progress Log</div>
         <div style="max-height:220px;overflow-y:auto">
           ${[...c.activityLog].sort((x,y)=>(y.date||'').localeCompare(x.date||'')).slice(0,15).map(l=>{
-            const actIdx = (c.activities||[]).findIndex(a=>a.id===l.activityId);
+            const actIdx = acts.findIndex(a=>a.id===l.activityId);
             const color = actIdx>=0 ? activityColor(actIdx) : '#888';
             return `
             <div style="padding:6px 0;border-top:1px solid var(--line);font-size:12.5px">
@@ -4348,7 +4393,8 @@ function renderCustomerDetail(id){
             </div>
           `;}).join('')}
         </div>
-      ` : ''}
+      ` : ''}`;
+      })()}
     </div>
     ${c.budget ? (() => {
       const rpt = projectReport(id, '', todayISO());
@@ -4356,7 +4402,8 @@ function renderCustomerDetail(id){
       const donePct = projectCompletionPct(c);
       const gap = spentPct - donePct;
       let note, noteColor;
-      if(!c.activities || !c.activities.length){
+      const acts = projectActivities(c);
+      if(!acts.length){
         note = 'Add activities to compare spending pace against real physical progress.'; noteColor = 'var(--muted)';
       } else if(gap > 15){
         note = `Spending is ${gap}pts ahead of physical progress — worth a closer look.`; noteColor = 'var(--danger)';
@@ -10540,6 +10587,34 @@ function runMigrationV32(){
   saveDB();
 }
 
+const MIGRATION_V33_KEY = 'buildsuite_migration_v33';
+function runMigrationV33(){
+  if(localStorage.getItem(MIGRATION_V33_KEY)) return;
+  if(!DB.scheduleActivities) DB.scheduleActivities = [];
+  DB.customers.forEach(c=>{
+    if(!c.activities || !c.activities.length) return;
+    c.activities.forEach(a=>{
+      const exists = DB.scheduleActivities.some(sa=>sa.projectId===c.id && sa.name===a.name);
+      if(!exists){
+        DB.scheduleActivities.push({
+          id: nextId(DB.scheduleActivities),
+          projectId: c.id,
+          name: a.name,
+          itemNo: a.itemNo || '',
+          cost: Number(a.budgetAmount) || 0,
+          plannedStart: a.plannedStart || '',
+          plannedEnd: a.plannedEnd || '',
+          actualStart: '',
+          actualEnd: (a.pct >= 100) ? todayISO() : '',
+          status: (a.pct >= 100) ? 'Completed' : (a.pct > 0) ? 'In Progress' : 'Not Started'
+        });
+      }
+    });
+  });
+  localStorage.setItem(MIGRATION_V33_KEY, '1');
+  saveDB();
+}
+
 function mergeDB(local, cloud){
   // Union-merge: never silently drop a record either side added. On a genuine conflict
   // (same id/name edited differently on both sides) local wins, since that's the copy
@@ -10713,6 +10788,7 @@ async function boot(){
   runMigrationV30();
   runMigrationV31();
   runMigrationV32();
+  runMigrationV33();
   loadCloudConfig();
   await restoreAuthSession();
   applyTheme(localStorage.getItem('buildsuite_theme') || (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
