@@ -315,6 +315,7 @@ const SEED = JSON.parse(document.getElementById('seed-data').textContent);
 const STORAGE_KEY = 'buildsuite_v1';
 
 let DB = null;
+let _dbSnap = null;      // snapshot for change-detection stamping
 let session = null;      // {id,name,type}
 let view = 'dashboard';
 let sub = {};             // per-view transient state (editing ids, filters, tabs)
@@ -540,6 +541,7 @@ async function preLoginCloudConnect(){
       ensureAdminAccount();
       localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
       localStorage.setItem('buildsuite_updated_at', existing.updated_at || new Date().toISOString());
+      takeSnapshot();
       startCloudPolling();
       closeModal();
       toast('Connected — this device now has your company\'s real data');
@@ -570,13 +572,14 @@ async function connectFromPendingScreen(){
       backfillMissingKeys(cloudDB);
       const alreadyThere = myOwnAccount && cloudDB.users.some(u=>(u.username||u.name).toLowerCase()===(myOwnAccount.username||myOwnAccount.name).toLowerCase());
       if(myOwnAccount && !alreadyThere){ cloudDB.users.push(myOwnAccount); }
-      DB = mergeDB(DB, cloudDB); // merge, never a raw replace — otherwise anything sitting in this device's local Trash would be silently discarded and its stale cloud copy would come back
+      DB = mergeDB(DB, cloudDB);
       ensureAdminAccount();
       cloud.connected = true;
       saveCloudConfig();
       localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
       localStorage.setItem('buildsuite_updated_at', new Date().toISOString());
-      if(myOwnAccount && !alreadyThere){ await cloudPush(); } // make sure this account reaches everyone else too
+      takeSnapshot();
+      if(myOwnAccount && !alreadyThere){ await cloudPush(); }
       startCloudPolling();
       closeModal();
       const liveUser = DB.users.find(u=>u.id===session.id);
@@ -639,10 +642,11 @@ async function finishCloudConnect(direction){
   if(direction === 'pull'){
     const row = await cloudPull();
     if(row && row.data){
-      DB = mergeDB(DB, row.data); // merge, never a raw replace — same reasoning as connectFromPendingScreen above
+      DB = mergeDB(DB, row.data);
       backfillMissingKeys(DB);
       ensureAdminAccount();
       localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
+      takeSnapshot();
       toast('Loaded your data from the cloud');
     }
   } else {
@@ -697,9 +701,30 @@ function loadDB(){
   DB = JSON.parse(JSON.stringify(SEED));
   saveDB();
 }
+function stampChangedRecords(){
+  const now = Date.now();
+  Object.keys(DB).forEach(key => {
+    if(!Array.isArray(DB[key])) return;
+    DB[key].forEach(rec => {
+      if(!rec || typeof rec !== 'object') return;
+      if(!rec._ts){ rec._ts = now; return; }
+      if(!_dbSnap) return;
+      const snapArr = _dbSnap[key];
+      if(!Array.isArray(snapArr)) { rec._ts = now; return; }
+      const snapRec = rec.id != null ? snapArr.find(r => r.id === rec.id) : null;
+      if(!snapRec){ rec._ts = now; return; }
+      const a = Object.assign({}, rec); delete a._ts;
+      const b = Object.assign({}, snapRec); delete b._ts;
+      if(JSON.stringify(a) !== JSON.stringify(b)) rec._ts = now;
+    });
+  });
+}
+function takeSnapshot(){ _dbSnap = JSON.parse(JSON.stringify(DB)); }
 function saveDB(){
+  stampChangedRecords();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
   localStorage.setItem('buildsuite_updated_at', new Date().toISOString());
+  takeSnapshot();
   scheduleCloudPush();
 }
 function resetAll(){
@@ -2340,6 +2365,7 @@ async function doLogin(){
           ensureAdminAccount();
           localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
           localStorage.setItem('buildsuite_updated_at', new Date().toISOString());
+          takeSnapshot();
         }
       } else {
         // Not signed up on the real backend yet (or wrong password). Rather than reading the
@@ -2394,6 +2420,7 @@ async function doLogin(){
         ensureAdminAccount();
         localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
         localStorage.setItem('buildsuite_updated_at', new Date().toISOString());
+        takeSnapshot();
         const freshUser = DB.users.find(u => u.id === res.user.id);
         if(freshUser) res.user = freshUser;
       }
@@ -2462,13 +2489,12 @@ async function checkApprovalNow(){
       DB = mergeDB(DB, row.data);
       backfillMissingKeys(DB);
       ensureAdminAccount();
-      // mergeDB prefers local data on conflicts (to protect active edits elsewhere), but for the
-      // logged-in person's OWN account, the cloud's role is always the one that should win here.
       if(cloudUser){
         const localUser = DB.users.find(u=>u.id===session.id);
         if(localUser) Object.assign(localUser, cloudUser);
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
+      takeSnapshot();
       const liveUser = DB.users.find(u=>u.id===session.id);
       if(liveUser && liveUser.type !== 'Pending'){
         session = { id: liveUser.id, name: liveUser.name, type: liveUser.type };
@@ -9738,14 +9764,8 @@ function runMigrationV33(){
 }
 
 function mergeDB(local, cloud){
-  // Union-merge: never silently drop a record either side added. On a genuine conflict
-  // (same id/name edited differently on both sides) local wins, since that's the copy
-  // the person is actively looking at right now.
   const merged = JSON.parse(JSON.stringify(local));
 
-  // Anything sitting in local Trash was DELIBERATELY deleted — if the cloud's copy hasn't
-  // caught up yet (push still in flight, or it failed), a plain union-merge would otherwise
-  // treat that stale cloud record as "new" and resurrect something the person just removed.
   const trashedIds = {};
   (merged.trash || []).forEach(t => {
     const arrKey = t.type === 'payrollRun' ? 'payrolls' : TRASH_TYPE_ARRAYS[t.type];
@@ -9759,19 +9779,25 @@ function mergeDB(local, cloud){
     if(Array.isArray(cloudVal)){
       if(!Array.isArray(merged[key])) merged[key] = [];
       if(key === 'users'){
-        const localNames = new Set(merged.users.map(u=>(u.name||'').trim().toLowerCase()));
-        cloudVal.forEach(u=>{ if(!localNames.has((u.name||'').trim().toLowerCase())) merged.users.push(u); });
+        const localMap = new Map(merged.users.map(u=>[(u.name||'').trim().toLowerCase(), u]));
+        cloudVal.forEach(cu=>{
+          const k = (cu.name||'').trim().toLowerCase();
+          const lu = localMap.get(k);
+          if(!lu) merged.users.push(cu);
+          else if((cu._ts||0) > (lu._ts||0)) Object.assign(lu, cu);
+        });
       } else {
-        const localIds = new Set(merged[key].map(r=>r.id));
+        const localMap = new Map(merged[key].map(r=>[r.id, r]));
         const deleted = trashedIds[key] || new Set();
         cloudVal.forEach(rec=>{
-          if(localIds.has(rec.id)) return;
-          if(deleted.has(rec.id)) return; // deliberately deleted locally — don't resurrect it from a stale cloud copy
-          merged[key].push(rec);
+          if(deleted.has(rec.id)) return;
+          const localRec = localMap.get(rec.id);
+          if(!localRec){ merged[key].push(rec); return; }
+          if((rec._ts||0) > (localRec._ts||0)) Object.assign(localRec, rec);
         });
       }
     } else if(cloudVal && typeof cloudVal === 'object'){
-      merged[key] = { ...cloudVal, ...(merged[key]||{}) }; // cloud fills gaps, local settings take priority on conflict
+      merged[key] = { ...cloudVal, ...(merged[key]||{}) };
     }
   });
   return merged;
@@ -9817,6 +9843,13 @@ function checkForNewAlerts(){
   });
   localStorage.setItem('buildsuite_notified_alerts', JSON.stringify(currentLabels));
 }
+function dbFingerprint(){
+  let h = '';
+  Object.keys(DB).forEach(k => {
+    if(Array.isArray(DB[k])) h += k + ':' + DB[k].length + ':' + DB[k].reduce((s,r) => s + (r._ts||0), 0) + ';';
+  });
+  return h;
+}
 function startCloudPolling(){
   if(cloudPollTimer) clearInterval(cloudPollTimer);
   if(!cloud.connected) return;
@@ -9825,6 +9858,7 @@ function startCloudPolling(){
     try{
       const row = await cloudPull();
       if(row && row.data){
+        const before = dbFingerprint();
         const cloudUser = session ? row.data.users.find(u=>u.id===session.id) : null;
         DB = mergeDB(DB, row.data);
         backfillMissingKeys(DB);
@@ -9835,10 +9869,14 @@ function startCloudPolling(){
         }
         localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
         localStorage.setItem('buildsuite_updated_at', new Date().toISOString());
-        // Refresh just the header (notification bell, sync status) so it doesn't interrupt anyone mid-edit.
+        takeSnapshot();
+        const after = dbFingerprint();
+        const dataChanged = before !== after;
         if(document.getElementById('headerBar') && session && session.type!=='Pending') renderHeader();
+        if(dataChanged && session && session.type!=='Pending' && view){
+          render();
+        }
         if(session && session.type==='Pending' && DB.users.find(u=>u.id===session.id)?.type !== 'Pending'){
-          // this account just got approved while they were waiting on the pending screen
           const liveUser = DB.users.find(u=>u.id===session.id);
           session = { id: liveUser.id, name: liveUser.name, type: liveUser.type };
           sessionStorage.setItem('buildsuite_session', JSON.stringify(session));
@@ -9847,7 +9885,7 @@ function startCloudPolling(){
         }
       }
     }catch(e){ /* stay quiet on background poll failures */ }
-  }, 20000);
+  }, 15000);
 }
 async function syncOnBoot(){
   try{
@@ -9863,6 +9901,7 @@ async function syncOnBoot(){
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
     localStorage.setItem('buildsuite_updated_at', new Date().toISOString());
+    takeSnapshot();
     if(session){
       const liveUser = DB.users.find(u=>u.id===session.id);
       if(liveUser && liveUser.type !== session.type){
@@ -9872,7 +9911,7 @@ async function syncOnBoot(){
         else { renderPendingScreen(); }
       } else if(view) { render(); }
     } else if(view) { render(); }
-    cloudPush(); // write the merged, complete picture back so every device converges
+    cloudPush();
   }catch(e){
     cloud.lastError = 'Could not reach the cloud on startup — working from this browser\'s copy.';
     console.error('syncOnBoot failed', e);
@@ -9937,6 +9976,7 @@ async function boot(){
           backfillMissingKeys(DB);
           localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
           localStorage.setItem('buildsuite_updated_at', existing.updated_at || new Date().toISOString());
+          takeSnapshot();
           renderLogin();
           return;
         }
