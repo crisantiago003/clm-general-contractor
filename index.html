@@ -3597,6 +3597,9 @@ function updOrderItemProduct(id, itemId, prodIdRaw){
   saveDB(); go('orders',{editId:id});
 }
 function updOrderItem(id, itemId, field, value){
+  if((field === 'qty' || field === 'price') && (isNaN(value) || value < 0)){
+    toast('Please enter a valid positive number'); return;
+  }
   const o = DB.orders.find(x=>x.id===id);
   const it = o.items.find(i=>i.id===itemId);
   it[field] = value; saveDB(); go('orders',{editId:id});
@@ -3613,6 +3616,9 @@ function addLaborCost(id){
   saveDB(); go('orders',{editId:id});
 }
 function updLabor(id, lId, field, value){
+  if((field === 'hours' || field === 'hourlyCost') && (isNaN(value) || value < 0)){
+    toast('Please enter a valid positive number'); return;
+  }
   const o = DB.orders.find(x=>x.id===id);
   const l = o.laborCosts.find(x=>x.id===lId);
   l[field] = value;
@@ -4082,6 +4088,7 @@ function saveSiteDiary(site){
 }
 async function deleteSiteDiary(id){
   if(!guardDelete()) return;
+  if(!confirm('Move this site diary entry to Trash?')) return;
   const d = DB.siteDiaries.find(x=>x.id===id);
   if(d) moveToTrash('siteDiary', d);
   DB.siteDiaries = DB.siteDiaries.filter(x=>x.id!==id);
@@ -4186,6 +4193,7 @@ function updateDefectStatus(id){
 }
 async function deleteDefect(id){
   if(!guardDelete()) return;
+  if(!confirm('Delete this defect item?')) return;
   DB.defects = DB.defects.filter(x=>x.id!==id);
   const r = await saveDBAndConfirmSync();
   toast(r.synced ? 'Defect item deleted' : `⚠️ Deleted here, but failed to sync — ${r.error||'check your connection'}`);
@@ -4347,6 +4355,7 @@ function addLeadNote(id){
 }
 async function deleteLead(id){
   if(!guardDelete()) return;
+  if(!confirm('Delete this lead?')) return;
   DB.leads = (DB.leads||[]).filter(x=>x.id!==id);
   const r = await saveDBAndConfirmSync();
   toast(r.synced ? 'Lead deleted' : `⚠️ Deleted here, but failed to sync — ${r.error||'check your connection'}`);
@@ -6699,10 +6708,14 @@ function editEmployee(id){
 function saveEmployee(id){
   const name = document.getElementById('f_name').value.trim();
   if(!name){ toast('Please add an employee name before saving'); return; }
+  const rawReg = Number(document.getElementById('f_reg').value);
+  const rawOt = Number(document.getElementById('f_ot').value);
+  if(isNaN(rawReg) || rawReg < 0){ toast('Regular rate must be a valid positive number'); return; }
+  if(isNaN(rawOt) || rawOt < 0){ toast('OT rate must be a valid positive number'); return; }
   const vals = {
     name, type: document.getElementById('f_type').value, payType: document.getElementById('f_paytype').value,
     foremanName: document.getElementById('f_foreman').value,
-    regAmount: Number(document.getElementById('f_reg').value)||0, otRate: Number(document.getElementById('f_ot').value)||0,
+    regAmount: rawReg||0, otRate: rawOt||0,
     hourlyCost: Number(document.getElementById('f_hc').value)||0, phone: document.getElementById('f_phone').value,
     email: document.getElementById('f_email').value, address: document.getElementById('f_addr').value,
     city: document.getElementById('f_city').value, state: document.getElementById('f_state').value, zip: document.getElementById('f_zip').value,
@@ -9046,6 +9059,9 @@ function printPayslip(){
   setTimeout(()=>w.print(), 300);
 }
 function updPayrollStatus(id, status){
+  if(status === 'Paid' && !confirm('Mark this payroll run as Paid? This indicates all employees have been compensated.')){
+    go('payroll',{runId:id}); return;
+  }
   const pr = DB.payrolls.find(p=>p.id===id); pr.status = status; saveDB(); toast('Status updated');
 }
 function updPayrollSite(id, site){
@@ -9171,6 +9187,7 @@ function confirmAddToPayroll(runId, empId){
   saveDB(); closeModal(); toast('Employee added to payroll'); go('payroll',{runId});
 }
 function removeFromPayroll(runId, paidId){
+  if(!confirm('Remove this employee from this payroll run?')) return;
   DB.paidEmployees = DB.paidEmployees.filter(p=>p.id!==paidId);
   saveDB(); toast('Removed from payroll'); go('payroll',{runId});
 }
@@ -9240,9 +9257,11 @@ function editTransaction(id){
 function saveTransaction(id){
   const name = document.getElementById('f_name').value.trim();
   if(!name){ toast('Please add a transaction name before saving'); return; }
+  const rawAmt = Number(document.getElementById('f_amt').value);
+  if(isNaN(rawAmt) || rawAmt < 0){ toast('Please enter a valid positive amount'); return; }
   const jobId = document.getElementById('f_job').value ? Number(document.getElementById('f_job').value) : '';
   const job = jobId ? jobById(jobId) : null;
-  const vals = { name, amount: Number(document.getElementById('f_amt').value)||0, date: document.getElementById('f_date').value,
+  const vals = { name, amount: rawAmt, date: document.getElementById('f_date').value,
     account: document.getElementById('f_acct').value, accountType: document.getElementById('f_type').value,
     jobId, jobName: job?job.name:'', notes: document.getElementById('f_notes').value };
   if(id){ Object.assign(DB.transactions.find(x=>x.id===id), vals); }
