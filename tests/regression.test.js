@@ -28,6 +28,8 @@ async function withApp(fn) {
     session = { id: 999999, name: 'Test Admin', type: 'Admin' };
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('appRoot').style.display = 'block';
+    const loader = document.getElementById('appLoading');
+    if(loader) loader.remove();
   });
   await page.waitForTimeout(200);
 
