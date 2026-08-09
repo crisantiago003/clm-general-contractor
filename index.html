@@ -12,6 +12,8 @@
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="CLM General Contractor & Services, Inc.">
 <meta name="twitter:description" content="A full-service general contractor handling residential, commercial, and institutional construction projects.">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' https://*.supabase.co https://fonts.googleapis.com https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏗️</text></svg>">
 <script>
 (function(){const t=localStorage.getItem('buildsuite_theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.dataset.theme=t;})();
 </script>
@@ -244,10 +246,14 @@ tr.click td{transition:background .1s}
 .toggle button.on{background:var(--accent);color:var(--accent-ink)}
 .searchbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
 .searchbar input,.searchbar select{width:auto;min-width:160px;flex:1}
+td,th,.stat-value,.kpi-val,.money{font-variant-numeric:tabular-nums}
 .empty{padding:40px 20px;text-align:center;color:var(--muted)}
 .empty .big{font-size:32px;margin-bottom:8px}
-.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(12px);background:#0c2a1f;border:1px solid var(--green);color:#aef5da;padding:10px 18px;border-radius:9px;font-size:13px;font-weight:600;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;z-index:100;box-shadow:var(--shadow)}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast-container{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:100;display:flex;flex-direction:column-reverse;gap:8px;pointer-events:none}
+.toast{background:#0c2a1f;border:1px solid var(--green);color:#aef5da;padding:10px 18px;border-radius:9px;font-size:13px;font-weight:600;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;box-shadow:var(--shadow);transform:translateY(12px);white-space:nowrap}
+.toast.show{opacity:1;transform:translateY(0)}
+.offline-banner{position:fixed;top:0;left:0;right:0;background:var(--danger,#d33);color:#fff;text-align:center;padding:6px 12px;font-size:13px;font-weight:600;z-index:200;transform:translateY(-100%);transition:transform .3s ease}
+.offline-banner.visible{transform:translateY(0)}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;animation:fadeIn .15s ease-out}
 .modal{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px;max-width:480px;width:100%;max-height:calc(100vh - 40px);overflow-y:auto;box-shadow:var(--shadow);animation:slideUp .2s ease-out}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
@@ -360,7 +366,8 @@ tr.click td{transition:background .1s}
     <main id="mainArea"></main>
   </div>
 </div>
-<div class="toast" id="toast"></div>
+<div class="offline-banner" id="offlineBanner">⚠ You are offline — changes are saved locally and will sync when you reconnect</div>
+<div class="toast-container" id="toastContainer"></div>
 
 <script id="seed-data" type="application/json">{"customers":[{"id":1,"name":"Sample Residential Project","address":"","city":"Sample City","state":"","zip":"","phone":"","email":"","completedDate":"","projectStatus":"Active","completionPct":0,"activities":[],"activityLog":[],"budget":""},{"id":2,"name":"Sample Commercial Project","address":"","city":"Sample City","state":"","zip":"","phone":"","email":"","completedDate":"","projectStatus":"Active","completionPct":0,"activities":[],"activityLog":[],"budget":""},{"id":3,"name":"Sample Institutional Project","address":"","city":"Sample City","state":"","zip":"","phone":"","email":"","completedDate":"","projectStatus":"Active","completionPct":0,"activities":[],"activityLog":[],"budget":""}],"vendors":[{"id":1,"name":"Sample Hardware Supply","address":"","city":"Sample City","state":"","zip":"","phone":"0900-000-0001","email":"","contactPerson":"Sample Contact","item":"General Hardware","classification":"HARDWARE SUPPLIER","paymentDetails":"","pcabNumber":"","pcabCategory":"","pcabExpiry":"","purchaseNotes":[]},{"id":2,"name":"Sample Electrical Supply","address":"","city":"Sample City","state":"","zip":"","phone":"0900-000-0002","email":"","contactPerson":"Sample Contact","item":"Electrical Supplies","classification":"ELECTRICAL SUPPLIER","paymentDetails":"","pcabNumber":"","pcabCategory":"","pcabExpiry":"","purchaseNotes":[]},{"id":3,"name":"Sample Steel & Metal Corp","address":"","city":"Sample City","state":"","zip":"","phone":"0900-000-0003","email":"","contactPerson":"Sample Contact","item":"Steel & Rebar","classification":"METAL SUPPLIER","paymentDetails":"","pcabNumber":"","pcabCategory":"","pcabExpiry":"","purchaseNotes":[]}],"jobs":[{"id":1,"customerId":1,"name":"Sample Residential Project","address":"","city":"Sample City","state":"","zip":"","contactName":"","phone":"","email":"","isAutoJob":true},{"id":2,"customerId":2,"name":"Sample Commercial Project","address":"","city":"Sample City","state":"","zip":"","contactName":"","phone":"","email":"","isAutoJob":true},{"id":3,"customerId":3,"name":"Sample Institutional Project","address":"","city":"Sample City","state":"","zip":"","contactName":"","phone":"","email":"","isAutoJob":true}],"products":[],"orders":[],"employees":[{"id":1,"name":"Sample Employee One","type":"Laborer","payType":"Daily","regAmount":600,"otRate":93.75,"hourlyCost":75,"phone":"","email":"","address":"","city":"","state":"","zip":"","active":true,"govDeductions":false,"sssNo":"","philhealthNo":"","pagibigNo":"","licenseType":"","licenseNumber":"","licenseExpiry":"","foremanName":"","tin":""},{"id":2,"name":"Sample Employee Two","type":"Foreman","payType":"Daily","regAmount":800,"otRate":125,"hourlyCost":100,"phone":"","email":"","address":"","city":"","state":"","zip":"","active":true,"govDeductions":false,"sssNo":"","philhealthNo":"","pagibigNo":"","licenseType":"","licenseNumber":"","licenseExpiry":"","foremanName":"","tin":""},{"id":3,"name":"Sample Employee Three","type":"Mason","payType":"Daily","regAmount":650,"otRate":101.56,"hourlyCost":81.25,"phone":"","email":"","address":"","city":"","state":"","zip":"","active":true,"govDeductions":false,"sssNo":"","philhealthNo":"","pagibigNo":"","licenseType":"","licenseNumber":"","licenseExpiry":"","foremanName":"","tin":""}],"timesheets":[],"transactions":[],"users":[],"payrolls":[],"paidEmployees":[],"payItems":[],"vehicles":[{"id":1,"name":"Sample Vehicle 1","plate":"","make":"","model":"","type":"Truck","seats":"","assignedDriverId":"","notes":"","active":true,"serialNumber":"","engineType":"","engineNumber":"","currentSite":"Sample Residential Project"},{"id":2,"name":"Sample Excavator","plate":"","make":"","model":"","type":"Heavy Equipment","seats":"","assignedDriverId":"","notes":"","active":true,"serialNumber":"","engineType":"","engineNumber":"","currentSite":"Sample Commercial Project"}],"vehicleExpenses":[],"fuelLogs":[],"meterLogs":[],"vehicleReminders":[],"materials":[{"id":1,"name":"Sample Cement (40kg)","qty":50,"unit":"BAGS","unitPrice":250,"site":"Sample Residential Project","receivedFrom":"Sample Hardware Supply","date":"2026-01-01","reorderPoint":10},{"id":2,"name":"Sample GI Sheet","qty":30,"unit":"PCS","unitPrice":450,"site":"Sample Commercial Project","receivedFrom":"Sample Hardware Supply","date":"2026-01-01","reorderPoint":5}],"equipment":[{"id":1,"name":"Sample Power Drill","brand":"Sample Brand","serial":"","qty":2,"unit":"PCS","status":"Working","site":"Sample Residential Project","receivedFrom":"Sample Hardware Supply","date":"2026-01-01"}],"cashAdvances":[],"purchaseRequests":[],"equipmentReminders":[],"settings":{"salesTaxRate":0.08,"poTaxRate":0.1,"signupCode":"CLM2026","companyName":"CLM General Contractor & Services, Inc.","companyDescription":"A full-service general contractor handling residential, commercial, and institutional construction projects.","companyAddress":"","companyPhone":"","companyEmail":"","companyTIN":"","sheetsWebhookUrl":"","companyShortName":"CLM"},"siteAssignments":[],"announcements":[],"notificationLog":[],"galleryPhotos":[],"trash":[],"testimonials":[],"materialTransfers":[],"siteDiaries":[],"defects":[],"leads":[],"scheduleActivities":[],"costMaterials":[],"laborRates":[],"costEstimates":[]}</script>
 <script>
@@ -512,6 +519,13 @@ async function cloudPush(alreadyRetried){
   }catch(e){
     if(!cloud.lastError) cloud.lastError = 'Sync failed — check your connection or Supabase settings.';
     console.error('cloudPush failed', e);
+    if(!alreadyRetried && navigator.onLine){
+      cloud.syncing = false;
+      cloud._pushing = false;
+      const delay = 2000 + Math.random() * 1000;
+      setTimeout(()=>cloudPush(true), delay);
+      return;
+    }
   }
   cloud.syncing = false;
   cloud._pushing = false;
@@ -939,13 +953,18 @@ function avatarHtml(user, size){
   }
   return initials(user ? user.name : '');
 }
-let toastTimer;
 function toast(msg){
-  const t = document.getElementById('toast');
+  const container = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = 'toast';
   t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(()=>t.classList.remove('show'), 1800);
+  container.appendChild(t);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('show')));
+  setTimeout(()=>{
+    t.classList.remove('show');
+    setTimeout(()=>t.remove(), 300);
+  }, 2200);
+  while(container.children.length > 5) container.firstChild.remove();
 }
 
 /* ---------- password show/hide toggle ---------- */
@@ -2372,6 +2391,9 @@ async function doSignup(){
   if(DB.users.some(u=>(u.username||u.name).toLowerCase()===username.toLowerCase())){ err.textContent = `Username "${username}" is already taken — try a different one`; return; }
   if(DB.users.some(u=>u.name.toLowerCase()===name.toLowerCase())){ err.textContent = 'Someone with that exact name already has an account — try adding your middle name or sign in instead'; return; }
   if(pw.length < 8){ err.textContent = 'Password must be at least 8 characters'; return; }
+  if(!/[A-Z]/.test(pw)){ err.textContent = 'Password must include at least one uppercase letter'; return; }
+  if(!/[0-9]/.test(pw)){ err.textContent = 'Password must include at least one number'; return; }
+  if(!/[^A-Za-z0-9]/.test(pw)){ err.textContent = 'Password must include at least one special character'; return; }
   if(pw !== pw2){ err.textContent = "Passwords don't match"; return; }
   const requiredCode = (DB.settings && DB.settings.signupCode) || '';
   if(requiredCode && code !== requiredCode){ err.textContent = 'Invite code is incorrect — ask your Admin for the current one'; return; }
@@ -2418,11 +2440,18 @@ async function doSignup(){
   toast(`Account created! Your username is "${username}" — waiting for an Admin to approve you`);
   enterApp();
 }
+const _loginAttempts = { count: 0, lockedUntil: 0 };
 async function doLogin(){
   const uInput = document.getElementById('loginUser').value;
   const p = document.getElementById('loginPw').value;
   const btn = document.querySelector('.loginCard button.btn.pri');
   if(btn){ btn.disabled = true; btn.textContent = 'Checking...'; }
+  if(Date.now() < _loginAttempts.lockedUntil){
+    const secs = Math.ceil((_loginAttempts.lockedUntil - Date.now()) / 1000);
+    document.getElementById('loginErr').textContent = `Too many failed attempts. Try again in ${secs} seconds.`;
+    if(btn){ btn.disabled = false; btn.textContent = 'Sign in'; }
+    return;
+  }
 
   let authedThisSession = false;
 
@@ -2462,10 +2491,17 @@ async function doLogin(){
 
   const res = await attemptLogin(uInput, p);
   if(!res.ok){
+    _loginAttempts.count++;
+    if(_loginAttempts.count >= 5){
+      const lockMs = Math.min(30000, Math.pow(2, _loginAttempts.count - 5) * 5000);
+      _loginAttempts.lockedUntil = Date.now() + lockMs;
+    }
     if(btn){ btn.disabled = false; btn.textContent = 'Sign in'; }
     document.getElementById('loginErr').textContent = res.msg;
     return;
   }
+  _loginAttempts.count = 0;
+  _loginAttempts.lockedUntil = 0;
 
   // The password just verified as correct. If we don't already have a real backend session for
   // this person, this is the exact, invisible moment to create one — using the password they
@@ -8434,13 +8470,18 @@ async function changeMyPassword(){
   const currentHash = await hashPassword(current);
   if(String(u.password) !== currentHash){ toast('Current password is incorrect'); return; }
   if(next.length < 8){ toast('New password must be at least 8 characters'); return; }
+  if(!/[A-Z]/.test(next)){ toast('Must include at least one uppercase letter'); return; }
+  if(!/[0-9]/.test(next)){ toast('Must include at least one number'); return; }
+  if(!/[^A-Za-z0-9]/.test(next)){ toast('Must include at least one special character'); return; }
   if(next !== confirm2){ toast("New passwords don't match"); return; }
   u.password = await hashPassword(next);
-  u.tempPlaintext = ''; // they've now set their own password — no plaintext copy needed or kept anywhere
+  u.tempPlaintext = '';
   if(u.authMigrated && cloud.authToken){
-    await supabaseAuthUpdatePassword(next); // keep the real backend account's password in sync so their next login isn't stuck on the old one
+    await supabaseAuthUpdatePassword(next);
   }
-  saveDB(); toast('Password updated'); renderMyProfile();
+  u._pwChangedAt = new Date().toISOString();
+  saveDB(); toast('Password updated');
+  logout(true);
 }
 function uploadProfilePicture(fileList){
   const file = fileList[0];
@@ -10307,7 +10348,14 @@ window.addEventListener('beforeunload', () => {
   }catch(e){}
 });
 document.addEventListener('click', () => { document.querySelectorAll('.nav-group.open').forEach(g => g.classList.remove('open')); });
-document.addEventListener('DOMContentLoaded', boot);
+/* ---------- offline detection ---------- */
+function updateOfflineStatus(){
+  const banner = document.getElementById('offlineBanner');
+  if(banner) banner.classList.toggle('visible', !navigator.onLine);
+}
+window.addEventListener('online', ()=>{ updateOfflineStatus(); toast('Back online — syncing...'); if(cloud.connected) cloudPush(); });
+window.addEventListener('offline', updateOfflineStatus);
+document.addEventListener('DOMContentLoaded', ()=>{ updateOfflineStatus(); boot(); });
 
 </script>
 </body>
