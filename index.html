@@ -422,25 +422,32 @@ function clearAuthSession(){
   localStorage.removeItem('buildsuite_auth_session');
 }
 async function restoreAuthSession(){
-  // Runs on every page load — restores the person's real authenticated session so writes keep
-  // working after a refresh, instead of silently falling back to an unauthenticated state.
   if(!cloud.connected) return;
   let saved;
   try{ saved = JSON.parse(localStorage.getItem('buildsuite_auth_session')||'null'); }catch(e){ saved = null; }
   if(!saved || !saved.refreshToken) return;
-  try{
-    const res = await fetch(`${cloud.url}/auth/v1/token?grant_type=refresh_token`, {
-      method: 'POST',
-      headers: { 'apikey': cloud.key, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: saved.refreshToken }),
-    });
-    const data = await res.json().catch(()=>({}));
-    if(res.ok && data.access_token){
-      saveAuthSession(data.access_token, data.refresh_token || saved.refreshToken);
-    } else {
-      clearAuthSession(); // refresh token expired or revoked — next login will re-establish it
+  const maxRetries = 2;
+  for(let attempt = 0; attempt <= maxRetries; attempt++){
+    try{
+      const res = await fetch(`${cloud.url}/auth/v1/token?grant_type=refresh_token`, {
+        method: 'POST',
+        headers: { 'apikey': cloud.key, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: saved.refreshToken }),
+      });
+      const data = await res.json().catch(()=>({}));
+      if(res.ok && data.access_token){
+        saveAuthSession(data.access_token, data.refresh_token || saved.refreshToken);
+        return;
+      }
+      if(res.status >= 400 && res.status < 500){
+        clearAuthSession();
+        return;
+      }
+      if(attempt < maxRetries) await new Promise(r=>setTimeout(r, 1000*(attempt+1)));
+    }catch(e){
+      if(attempt < maxRetries && navigator.onLine) await new Promise(r=>setTimeout(r, 1000*(attempt+1)));
     }
-  }catch(e){ /* offline or Supabase unreachable — keep whatever we had, next login will fix it */ }
+  }
 }
 async function supabaseAuthSignUp(email, password){
   const res = await fetch(`${cloud.url}/auth/v1/signup`, {
@@ -10070,6 +10077,7 @@ function runMigrationV34(){
 function mergeDB(local, cloud){
   if(!cloud || typeof cloud !== 'object') return local;
   const merged = JSON.parse(JSON.stringify(local));
+  const conflicts = [];
 
   const trashedIds = {};
   (merged.trash || []).forEach(t => {
@@ -10087,14 +10095,20 @@ function mergeDB(local, cloud){
     if(Array.isArray(cloudVal)){
       if(!Array.isArray(merged[key])) merged[key] = [];
       if(key === 'users'){
-        const localMap = new Map(merged.users.map(u=>[(u.name||'').trim().toLowerCase(), u]));
+        const localByName = new Map(merged.users.map(u=>[(u.name||'').trim().toLowerCase(), u]));
+        const localById = new Map(merged.users.filter(u=>u.id!=null).map(u=>[u.id, u]));
         cloudVal.forEach(cu=>{
           if(!cu || typeof cu !== 'object') return;
           const k = (cu.name||'').trim().toLowerCase();
           if(!k) return;
-          const lu = localMap.get(k);
-          if(!lu) merged.users.push(cu);
-          else if((cu._ts||0) > (lu._ts||0)) Object.assign(lu, cu);
+          const lu = localByName.get(k) || (cu.id != null ? localById.get(cu.id) : null);
+          if(!lu){ merged.users.push(cu); return; }
+          if((cu._ts||0) > (lu._ts||0)){
+            if(lu._ts) conflicts.push({ key:'users', id: lu.id||k, winner:'cloud', localTs:lu._ts, cloudTs:cu._ts });
+            Object.assign(lu, cu);
+          } else if(lu._ts && cu._ts && lu._ts !== cu._ts){
+            conflicts.push({ key:'users', id: lu.id||k, winner:'local', localTs:lu._ts, cloudTs:cu._ts });
+          }
         });
       } else {
         const localMap = new Map(merged[key].map(r=>[r.id, r]));
@@ -10104,13 +10118,23 @@ function mergeDB(local, cloud){
           if(deleted.has(rec.id)) return;
           const localRec = localMap.get(rec.id);
           if(!localRec){ merged[key].push(rec); return; }
-          if((rec._ts||0) > (localRec._ts||0)) Object.assign(localRec, rec);
+          if((rec._ts||0) > (localRec._ts||0)){
+            if(localRec._ts) conflicts.push({ key, id:rec.id, winner:'cloud', localTs:localRec._ts, cloudTs:rec._ts });
+            Object.assign(localRec, rec);
+          } else if(localRec._ts && rec._ts && localRec._ts !== rec._ts){
+            conflicts.push({ key, id:rec.id, winner:'local', localTs:localRec._ts, cloudTs:rec._ts });
+          }
         });
       }
     } else if(typeof cloudVal === 'object'){
       merged[key] = { ...cloudVal, ...(merged[key]||{}) };
     }
   });
+  if(conflicts.length){
+    if(!merged.syncLog) merged.syncLog = [];
+    merged.syncLog.push({ ts: new Date().toISOString(), conflicts });
+    while(merged.syncLog.length > 50) merged.syncLog.shift();
+  }
   return merged;
 }
 let cloudPollTimer = null;
@@ -10156,8 +10180,14 @@ function checkForNewAlerts(){
 }
 function dbFingerprint(){
   let h = '';
-  Object.keys(DB).forEach(k => {
-    if(Array.isArray(DB[k])) h += k + ':' + DB[k].length + ':' + DB[k].reduce((s,r) => s + (r._ts||0), 0) + ';';
+  Object.keys(DB).sort().forEach(k => {
+    const v = DB[k];
+    if(Array.isArray(v)){
+      const maxTs = v.reduce((m,r) => Math.max(m, r&&r._ts||0), 0);
+      h += k + ':' + v.length + ':' + v.reduce((s,r) => s + (r&&r._ts||0), 0) + ':' + maxTs + ';';
+    } else if(v && typeof v === 'object'){
+      h += k + ':' + Object.keys(v).sort().join(',') + ':' + JSON.stringify(v).length + ';';
+    }
   });
   return h;
 }
@@ -10196,7 +10226,7 @@ function startCloudPolling(){
         }
       }
     }catch(e){ /* stay quiet on background poll failures */ }
-  }, 15000);
+  }, 30000);
 }
 async function syncOnBoot(){
   try{
