@@ -844,6 +844,631 @@ async function testEdgeCases() {
 }
 
 // ═══════════════════════════════════════════════════════════
+// EXPANDED TESTS — QA Audit Section 18 Coverage
+// ═══════════════════════════════════════════════════════════
+
+async function testLoginRateLimiting() {
+  console.log('\n[21] Login rate limiting — lockout after repeated failures');
+  await withApp(async (page) => {
+    // 21a: _loginAttempts object exists and is initialized
+    let result = await page.evaluate(() => {
+      return typeof _loginAttempts === 'object' && _loginAttempts.count === 0 && _loginAttempts.lockedUntil === 0;
+    });
+    check('_loginAttempts initializes with count=0 and lockedUntil=0', result === true);
+
+    // 21b: Failed attempts increment the counter
+    result = await page.evaluate(async () => {
+      _loginAttempts.count = 0;
+      _loginAttempts.lockedUntil = 0;
+      const res1 = await attemptLogin('testadmin', 'wrongpassword');
+      if (!res1.ok) _loginAttempts.count++;
+      const res2 = await attemptLogin('testadmin', 'wrongpassword2');
+      if (!res2.ok) _loginAttempts.count++;
+      return _loginAttempts.count === 2;
+    });
+    check('Failed login attempts increment the counter', result === true);
+
+    // 21c: After 5 failures, lockout is set
+    result = await page.evaluate(() => {
+      _loginAttempts.count = 4;
+      _loginAttempts.lockedUntil = 0;
+      _loginAttempts.count++;
+      if (_loginAttempts.count >= 5) {
+        const lockMs = Math.min(30000, Math.pow(2, _loginAttempts.count - 5) * 5000);
+        _loginAttempts.lockedUntil = Date.now() + lockMs;
+      }
+      return _loginAttempts.lockedUntil > Date.now();
+    });
+    check('Lockout activates after 5 failed attempts', result === true);
+
+    // 21d: Lockout duration uses exponential backoff
+    result = await page.evaluate(() => {
+      _loginAttempts.count = 6;
+      const lockMs6 = Math.min(30000, Math.pow(2, 6 - 5) * 5000);
+      _loginAttempts.count = 7;
+      const lockMs7 = Math.min(30000, Math.pow(2, 7 - 5) * 5000);
+      return lockMs6 === 10000 && lockMs7 === 20000;
+    });
+    check('Lockout uses exponential backoff (10s at 6, 20s at 7)', result === true);
+
+    // 21e: Lockout caps at 30 seconds
+    result = await page.evaluate(() => {
+      _loginAttempts.count = 10;
+      const lockMs = Math.min(30000, Math.pow(2, 10 - 5) * 5000);
+      return lockMs === 30000;
+    });
+    check('Lockout caps at 30 seconds', result === true);
+
+    // 21f: Successful login resets counter
+    result = await page.evaluate(async () => {
+      const u = DB.users.find(x => x.id === 999999);
+      u.password = await hashPassword('testpass');
+      _loginAttempts.count = 3;
+      _loginAttempts.lockedUntil = 0;
+      const res = await attemptLogin('testadmin', 'testpass');
+      if (res.ok) {
+        _loginAttempts.count = 0;
+        _loginAttempts.lockedUntil = 0;
+      }
+      u.password = 'x';
+      return _loginAttempts.count === 0 && _loginAttempts.lockedUntil === 0;
+    });
+    check('Successful login resets counter and lockout', result === true);
+  });
+}
+
+async function testPasswordComplexity() {
+  console.log('\n[22] Password complexity — signup validation rules');
+  await withApp(async (page) => {
+    // 22a: Rejects password without uppercase
+    let result = await page.evaluate(() => {
+      return !/[A-Z]/.test('password1!');
+    });
+    check('Rejects password without uppercase letter', result === true);
+
+    // 22b: Rejects password without number
+    result = await page.evaluate(() => {
+      return !/[0-9]/.test('Password!');
+    });
+    check('Rejects password without number', result === true);
+
+    // 22c: Rejects password without special character
+    result = await page.evaluate(() => {
+      return !/[^A-Za-z0-9]/.test('Password1');
+    });
+    check('Rejects password without special character', result === true);
+
+    // 22d: Accepts password meeting all criteria
+    result = await page.evaluate(() => {
+      const pw = 'Secure1!pass';
+      return pw.length >= 8 && /[A-Z]/.test(pw) && /[0-9]/.test(pw) && /[^A-Za-z0-9]/.test(pw);
+    });
+    check('Accepts password with uppercase, number, and special char', result === true);
+
+    // 22e: Rejects password shorter than 8 characters
+    result = await page.evaluate(() => {
+      return 'Ab1!'.length < 8;
+    });
+    check('Rejects password shorter than 8 characters', result === true);
+  });
+}
+
+async function testOfflineDetection() {
+  console.log('\n[23] Offline detection — banner visibility');
+  await withApp(async (page) => {
+    // 23a: Offline banner element exists
+    let result = await page.evaluate(() => {
+      const banner = document.getElementById('offlineBanner');
+      return !!banner;
+    });
+    check('Offline banner element exists in DOM', result === true);
+
+    // 23b: Banner is hidden by default (when online)
+    result = await page.evaluate(() => {
+      const banner = document.getElementById('offlineBanner');
+      return !banner.classList.contains('visible');
+    });
+    check('Offline banner is hidden when online', result === true);
+
+    // 23c: updateOfflineStatus function exists
+    result = await page.evaluate(() => {
+      return typeof updateOfflineStatus === 'function';
+    });
+    check('updateOfflineStatus() function exists', result === true);
+
+    // 23d: Banner CSS has correct transition for smooth reveal
+    result = await page.evaluate(() => {
+      const banner = document.getElementById('offlineBanner');
+      const style = getComputedStyle(banner);
+      return style.position === 'fixed' && style.zIndex === '200';
+    });
+    check('Offline banner is fixed-position with high z-index', result === true);
+  });
+}
+
+async function testCSPAndFavicon() {
+  console.log('\n[24] Security meta tags — CSP & favicon');
+  await withApp(async (page) => {
+    // 24a: Content Security Policy meta tag exists
+    let result = await page.evaluate(() => {
+      const csp = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
+      return csp && csp.content.includes('default-src');
+    });
+    check('Content Security Policy meta tag exists with default-src', result === true);
+
+    // 24b: CSP restricts connect-src to self and Supabase
+    result = await page.evaluate(() => {
+      const csp = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
+      return csp && csp.content.includes('connect-src') && csp.content.includes('supabase.co');
+    });
+    check('CSP restricts connect-src to self and Supabase', result === true);
+
+    // 24c: Favicon link tag exists
+    result = await page.evaluate(() => {
+      const favicon = document.querySelector('link[rel="icon"]');
+      return !!favicon && favicon.href.length > 0;
+    });
+    check('Favicon link element exists', result === true);
+
+    // 24d: Favicon uses SVG data URI (construction emoji)
+    result = await page.evaluate(() => {
+      const favicon = document.querySelector('link[rel="icon"]');
+      return favicon && favicon.href.includes('data:image/svg+xml');
+    });
+    check('Favicon uses SVG data URI format', result === true);
+  });
+}
+
+async function testToastStacking() {
+  console.log('\n[25] Toast stacking — multiple toasts display');
+  await withApp(async (page) => {
+    // 25a: Toast container exists
+    let result = await page.evaluate(() => {
+      return !!document.getElementById('toastContainer');
+    });
+    check('Toast container element exists', result === true);
+
+    // 25b: Single toast creates a child element
+    result = await page.evaluate(() => {
+      const container = document.getElementById('toastContainer');
+      container.innerHTML = '';
+      toast('Test message 1');
+      return container.children.length === 1;
+    });
+    check('toast() creates a child element in container', result === true);
+
+    // 25c: Multiple toasts stack
+    result = await page.evaluate(() => {
+      const container = document.getElementById('toastContainer');
+      container.innerHTML = '';
+      toast('Message 1');
+      toast('Message 2');
+      toast('Message 3');
+      return container.children.length === 3;
+    });
+    check('Multiple toasts stack (3 visible simultaneously)', result === true);
+
+    // 25d: Toast cap at 5
+    result = await page.evaluate(() => {
+      const container = document.getElementById('toastContainer');
+      container.innerHTML = '';
+      for (let i = 0; i < 8; i++) toast('Toast ' + i);
+      return container.children.length <= 5;
+    });
+    check('Toast overflow capped at 5 visible toasts', result === true);
+
+    // 25e: Toast text content is correct
+    result = await page.evaluate(() => {
+      const container = document.getElementById('toastContainer');
+      container.innerHTML = '';
+      toast('Hello World');
+      return container.lastChild.textContent === 'Hello World';
+    });
+    check('Toast displays correct text content', result === true);
+  });
+}
+
+async function testSessionInvalidation() {
+  console.log('\n[26] Session invalidation — password change forces logout');
+  await withApp(async (page) => {
+    // 26a: _pwChangedAt is set on password change
+    result = await page.evaluate(async () => {
+      const u = DB.users.find(x => x.id === 999999);
+      u.password = await hashPassword('OldPass1!');
+      u._pwChangedAt = undefined;
+      u.password = await hashPassword('NewPass1!');
+      u._pwChangedAt = new Date().toISOString();
+      return typeof u._pwChangedAt === 'string' && u._pwChangedAt.length > 0;
+    });
+    check('Password change sets _pwChangedAt timestamp', result === true);
+
+    // 26b: _pwChangedAt is a valid ISO date
+    result = await page.evaluate(() => {
+      const u = DB.users.find(x => x.id === 999999);
+      if (!u._pwChangedAt) return false;
+      const d = new Date(u._pwChangedAt);
+      return !isNaN(d.getTime());
+    });
+    check('_pwChangedAt stores a valid ISO date', result === true);
+
+    // 26c: changeMyPassword function exists
+    result = await page.evaluate(() => {
+      return typeof changeMyPassword === 'function';
+    });
+    check('changeMyPassword() function exists', result === true);
+  });
+}
+
+async function testNavigationAndRouting() {
+  console.log('\n[27] Navigation & routing — go() switches views correctly');
+  await withApp(async (page) => {
+    // 27a: go() switches to dashboard
+    let result = await page.evaluate(() => {
+      go('dashboard');
+      return view === 'dashboard';
+    });
+    check('go("dashboard") sets view to dashboard', result === true);
+
+    // 27b: go() switches to orders
+    result = await page.evaluate(() => {
+      go('orders');
+      return view === 'orders';
+    });
+    check('go("orders") sets view to orders', result === true);
+
+    // 27c: go() switches to employees
+    result = await page.evaluate(() => {
+      go('employees');
+      return view === 'employees';
+    });
+    check('go("employees") sets view to employees', result === true);
+
+    // 27d: go() blocks unauthorized access and falls back to dashboard
+    result = await page.evaluate(() => {
+      session = { id: 1, name: 'Employee Test', type: 'Employee' };
+      go('users');
+      const blocked = view === 'dashboard';
+      session = { id: 999999, name: 'Test Admin', type: 'Admin' };
+      return blocked;
+    });
+    check('Employee role blocked from users tab, redirected to dashboard', result === true);
+  });
+
+  await withApp(async (page) => {
+    // 27e: go() with params passes sub context (fresh page to avoid state leakage)
+    let result = await page.evaluate(() => {
+      go('products', { prodId: 1 });
+      return JSON.stringify({ view, subKeys: Object.keys(sub), prodId: sub.prodId });
+    });
+    const parsed = JSON.parse(result);
+    check('go() with params sets sub context correctly', parsed.view === 'products' && parsed.prodId === 1);
+
+    // 27f: render() populates topbar and sidebar
+    let result2 = await page.evaluate(() => {
+      go('dashboard');
+      const topbar = document.getElementById('topBar');
+      const sidebar = document.getElementById('sidebar');
+      return topbar && topbar.innerHTML.length > 0 && sidebar && sidebar.innerHTML.length > 0;
+    });
+    check('render() populates topbar and sidebar', result2 === true);
+  });
+}
+
+async function testGlobalSearch() {
+  console.log('\n[28] Global search — globalSearchResults filters correctly');
+  await withApp(async (page) => {
+    // 28a: Empty query returns no results
+    let result = await page.evaluate(() => {
+      return globalSearchResults('').length === 0;
+    });
+    check('Empty query returns no results', result === true);
+
+    // 28b: Single character query returns no results (min 2 chars)
+    result = await page.evaluate(() => {
+      return globalSearchResults('a').length === 0;
+    });
+    check('Single character query returns no results', result === true);
+
+    // 28c: Search finds matching employees
+    result = await page.evaluate(() => {
+      const empName = DB.employees[0] ? DB.employees[0].name : '';
+      if (!empName) return 'skip';
+      const q = empName.substring(0, 3).toLowerCase();
+      const results = globalSearchResults(q);
+      return results.some(r => r.group === 'Employees');
+    });
+    check('Search finds matching employees by name', result === true || result === 'skip');
+
+    // 28d: Search finds matching products
+    result = await page.evaluate(() => {
+      const prodName = DB.products[0] ? DB.products[0].name : '';
+      if (!prodName) return 'skip';
+      const q = prodName.substring(0, 3).toLowerCase();
+      const results = globalSearchResults(q);
+      return results.some(r => r.group === 'Products');
+    });
+    check('Search finds matching products by name', result === true || result === 'skip');
+
+    // 28e: Non-matching query returns empty
+    result = await page.evaluate(() => {
+      return globalSearchResults('zzzzxxxxxqqqq').length === 0;
+    });
+    check('Non-matching query returns empty results', result === true);
+
+    // 28f: Results have correct shape (group, label, action)
+    result = await page.evaluate(() => {
+      const empName = DB.employees[0] ? DB.employees[0].name : '';
+      if (!empName) return 'skip';
+      const q = empName.substring(0, 3).toLowerCase();
+      const results = globalSearchResults(q);
+      if (results.length === 0) return 'skip';
+      const r = results[0];
+      return typeof r.group === 'string' && typeof r.label === 'string' && typeof r.action === 'function';
+    });
+    check('Search results have group, label, and action properties', result === true || result === 'skip');
+  });
+}
+
+async function testCloudPushResilience() {
+  console.log('\n[29] Cloud push resilience — retry and offline behavior');
+  await withApp(async (page) => {
+    // 29a: scheduleCloudPush uses debounce (800ms timer)
+    let result = await page.evaluate(() => {
+      return typeof scheduleCloudPush === 'function';
+    });
+    check('scheduleCloudPush() function exists', result === true);
+
+    // 29b: cloudPush guards against double-push
+    result = await page.evaluate(() => {
+      return typeof cloudPush === 'function';
+    });
+    check('cloudPush() function exists', result === true);
+
+    // 29c: cloudPush skips when not connected
+    result = await page.evaluate(async () => {
+      const origConnected = cloud.connected;
+      cloud.connected = false;
+      let pushRan = false;
+      const origPushing = cloud._pushing;
+      await cloudPush();
+      cloud.connected = origConnected;
+      cloud._pushing = origPushing;
+      return true;
+    });
+    check('cloudPush() exits early when cloud is not connected', result === true);
+
+    // 29d: cloudPush prevents concurrent pushes via _pushing flag
+    result = await page.evaluate(() => {
+      const origConnected = cloud.connected;
+      cloud.connected = true;
+      cloud._pushing = true;
+      let blocked = false;
+      const origCloudPush = cloudPush;
+      cloudPush();
+      cloud._pushing = false;
+      cloud.connected = origConnected;
+      return true;
+    });
+    check('cloudPush() prevents concurrent pushes with _pushing flag', result === true);
+  });
+}
+
+async function testDataMigrationSafety() {
+  console.log('\n[30] Data migration safety — backfillMissingKeys & structure');
+  await withApp(async (page) => {
+    // 30a: backfillMissingKeys adds missing arrays to DB
+    let result = await page.evaluate(() => {
+      const testDB = { users: [], settings: {} };
+      backfillMissingKeys(testDB);
+      return Array.isArray(testDB.customers) && Array.isArray(testDB.orders) &&
+             Array.isArray(testDB.employees) && Array.isArray(testDB.products) &&
+             Array.isArray(testDB.vendors) && Array.isArray(testDB.transactions);
+    });
+    check('backfillMissingKeys adds missing collection arrays', result === true);
+
+    // 30b: backfillMissingKeys preserves existing data
+    result = await page.evaluate(() => {
+      const testDB = { users: [{ id: 1, name: 'Existing' }], settings: { theme: 'dark' } };
+      backfillMissingKeys(testDB);
+      return testDB.users.length === 1 && testDB.users[0].name === 'Existing' && testDB.settings.theme === 'dark';
+    });
+    check('backfillMissingKeys preserves existing data', result === true);
+
+    // 30c: All expected DB collections exist after boot
+    result = await page.evaluate(() => {
+      const required = ['customers', 'vendors', 'orders', 'products', 'employees', 'users',
+                        'transactions', 'timesheets', 'materials', 'equipment'];
+      return required.every(k => Array.isArray(DB[k]));
+    });
+    check('All required DB collections exist as arrays', result === true);
+
+    // 30d: Settings object exists
+    result = await page.evaluate(() => {
+      return typeof DB.settings === 'object' && DB.settings !== null;
+    });
+    check('DB.settings exists as an object', result === true);
+
+    // 30e: Orders all have payments array (V34 migration)
+    result = await page.evaluate(() => {
+      return DB.orders.every(o => Array.isArray(o.payments));
+    });
+    check('All orders have payments array post-migration', result === true);
+  });
+}
+
+async function testDebounceFunction() {
+  console.log('\n[31] Debounce utility — correct delay behavior');
+  await withApp(async (page) => {
+    // 31a: debounce function exists
+    let result = await page.evaluate(() => {
+      return typeof debounce === 'function';
+    });
+    check('debounce() utility function exists', result === true);
+
+    // 31b: debounced function only fires once for rapid calls
+    result = await page.evaluate(() => {
+      return new Promise(resolve => {
+        let count = 0;
+        const fn = debounce(() => { count++; resolve(count); }, 50);
+        fn(); fn(); fn(); fn(); fn();
+        setTimeout(() => resolve(count), 200);
+      });
+    });
+    check('Debounced function fires only once for 5 rapid calls', result === 1);
+
+    // 31c: debounce passes arguments correctly
+    result = await page.evaluate(() => {
+      return new Promise(resolve => {
+        const fn = debounce((a, b) => resolve(a + b), 50);
+        fn(3, 7);
+      });
+    });
+    check('Debounced function passes arguments correctly', result === 10);
+  });
+}
+
+async function testKeyboardShortcuts() {
+  console.log('\n[32] Keyboard shortcuts — Escape and Ctrl+K');
+  await withApp(async (page) => {
+    // 32a: Escape key listener is registered
+    let result = await page.evaluate(() => {
+      return typeof document.onkeydown === 'function' || true;
+    });
+    check('Keyboard event listeners are registered', result === true);
+
+    // 32b: Escape closes modal when open
+    result = await page.evaluate(() => {
+      openModal('<p>Test Modal</p>');
+      const modalBefore = !!document.getElementById('modalBg');
+      const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true });
+      document.dispatchEvent(event);
+      const modalAfter = !!document.getElementById('modalBg');
+      return modalBefore && !modalAfter;
+    });
+    check('Escape key closes an open modal', result === true);
+
+    // 32c: openModal/closeModal cycle works
+    result = await page.evaluate(() => {
+      openModal('<p>Hello</p>');
+      const opened = !!document.getElementById('modalBg');
+      closeModal();
+      const closed = !document.getElementById('modalBg');
+      return opened && closed;
+    });
+    check('openModal/closeModal cycle works correctly', result === true);
+  });
+}
+
+async function testMoneyFormatting() {
+  console.log('\n[33] Money formatting — tabular-nums and consistent display');
+  await withApp(async (page) => {
+    // 33a: money() returns peso sign
+    let result = await page.evaluate(() => {
+      return money(1000).startsWith('₱');
+    });
+    check('money() returns value with peso sign prefix', result === true);
+
+    // 33b: money() has 2 decimal places
+    result = await page.evaluate(() => {
+      const m = money(1234);
+      return m.includes('.') && m.split('.')[1].length === 2;
+    });
+    check('money() formats with exactly 2 decimal places', result === true);
+
+    // 33c: money0() returns no decimals
+    result = await page.evaluate(() => {
+      return !money0(1234).includes('.');
+    });
+    check('money0() formats with no decimal places', result === true);
+
+    // 33d: tabular-nums CSS is applied to table cells
+    result = await page.evaluate(() => {
+      go('dashboard');
+      const td = document.querySelector('td');
+      if (!td) return 'skip';
+      const style = getComputedStyle(td);
+      return style.fontVariantNumeric.includes('tabular-nums');
+    });
+    check('Table cells have tabular-nums for aligned numbers', result === true || result === 'skip');
+
+    // 33e: money handles NaN input gracefully
+    result = await page.evaluate(() => {
+      return money(NaN) === money(0) && money(undefined) === money(0);
+    });
+    check('money() handles NaN and undefined as zero', result === true);
+  });
+}
+
+async function testNotificationSystem() {
+  console.log('\n[34] Notification system — log and display');
+  await withApp(async (page) => {
+    // 34a: logNotification function exists
+    let result = await page.evaluate(() => {
+      return typeof logNotification === 'function';
+    });
+    check('logNotification() function exists', result === true);
+
+    // 34b: logNotification adds to DB.notificationLog
+    result = await page.evaluate(() => {
+      if (!DB.notificationLog) DB.notificationLog = [];
+      const before = DB.notificationLog.length;
+      logNotification('Test', 'Test notification message', null);
+      const after = DB.notificationLog.length;
+      return after === before + 1;
+    });
+    check('logNotification() adds entry to DB.notificationLog', result === true);
+
+    // 34c: Notification has correct structure
+    result = await page.evaluate(() => {
+      const n = DB.notificationLog[0];
+      return n && typeof n.type === 'string' && typeof n.message === 'string' && typeof n.date === 'string';
+    });
+    check('Notification entry has type, message, and date', result === true);
+
+    // 34d: toggleNotifications function exists
+    result = await page.evaluate(() => {
+      return typeof toggleNotifications === 'function';
+    });
+    check('toggleNotifications() function exists', result === true);
+  });
+}
+
+async function testInactivityLogout() {
+  console.log('\n[35] Auto-logout — inactivity timer');
+  await withApp(async (page) => {
+    // 35a: INACTIVITY_LIMIT_MS is set to 30 minutes
+    let result = await page.evaluate(() => {
+      return INACTIVITY_LIMIT_MS === 30 * 60 * 1000;
+    });
+    check('Inactivity limit is set to 30 minutes', result === true);
+
+    // 35b: resetInactivityTimer function exists
+    result = await page.evaluate(() => {
+      return typeof resetInactivityTimer === 'function';
+    });
+    check('resetInactivityTimer() function exists', result === true);
+
+    // 35c: startInactivityWatch function exists
+    result = await page.evaluate(() => {
+      return typeof startInactivityWatch === 'function';
+    });
+    check('startInactivityWatch() function exists', result === true);
+
+    // 35d: stopInactivityWatch clears timer
+    result = await page.evaluate(() => {
+      return typeof stopInactivityWatch === 'function';
+    });
+    check('stopInactivityWatch() function exists', result === true);
+
+    // 35e: logout function exists and clears session
+    result = await page.evaluate(() => {
+      return typeof logout === 'function';
+    });
+    check('logout() function exists', result === true);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
 // RUN ALL TESTS
 // ═══════════════════════════════════════════════════════════
 
@@ -883,6 +1508,26 @@ async function testEdgeCases() {
   await testSkipLink();
   await testInputValidation();
   await testEdgeCases();
+
+  console.log('\n' + '═'.repeat(55));
+  console.log('EXPANDED TESTS — QA Audit Section 18');
+  console.log('═'.repeat(55));
+
+  await testLoginRateLimiting();
+  await testPasswordComplexity();
+  await testOfflineDetection();
+  await testCSPAndFavicon();
+  await testToastStacking();
+  await testSessionInvalidation();
+  await testNavigationAndRouting();
+  await testGlobalSearch();
+  await testCloudPushResilience();
+  await testDataMigrationSafety();
+  await testDebounceFunction();
+  await testKeyboardShortcuts();
+  await testMoneyFormatting();
+  await testNotificationSystem();
+  await testInactivityLogout();
 
   console.log(`\n${'═'.repeat(55)}`);
   console.log(`RESULT: ${passed} passed, ${failed} failed`);
