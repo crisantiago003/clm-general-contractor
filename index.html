@@ -27,14 +27,14 @@
 :root{
   --bg:#14181d; --panel:#1b2128; --panel2:#212a33; --line:#2c3540; --text:#e7ebef; --muted:#8b96a3;
   --accent:#f2a93b; --accent-ink:#1c1204; --accent2:#3fb6c9; --green:#38b775; --danger:#e0524f;
-  --chip:#232b34; --input:#171d24; --r:10px; --shadow:0 8px 24px rgba(0,0,0,.35);
+  --chip:#232b34; --input:#171d24; --surface:#1e252d; --warn:#e8a630; --r:10px; --shadow:0 8px 24px rgba(0,0,0,.35);
   --font: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   --mono: ui-monospace,"SF Mono",Menlo,Consolas,monospace;
 }
 [data-theme="light"]{
   --bg:#f2efe7; --panel:#ffffff; --panel2:#f7f4ec; --line:#e0d9c8; --text:#221f1a; --muted:#6c6455;
   --accent:#c97a1f; --accent-ink:#fff8ee; --accent2:#0f7f92; --green:#1e8a52; --danger:#c1403c;
-  --chip:#efe8d9; --input:#fffdf9; --shadow:0 8px 24px rgba(60,50,20,.12);
+  --chip:#efe8d9; --input:#fffdf9; --surface:#f7f4ec; --warn:#b06e15; --shadow:0 8px 24px rgba(60,50,20,.12);
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
@@ -135,7 +135,8 @@ main{max-width:1280px;margin:0 auto;padding:22px 18px 60px;width:100%}
 .bar-pair .bar{height:9px;border-radius:3px;background:var(--chip);overflow:hidden}
 .bar-pair .bar > div{height:100%}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:16px}
-.panel h3{font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:14px}
+.panel h3{font-size:14px;letter-spacing:.01em;color:var(--text);margin-bottom:14px}
+.panel h3.section-label{font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
 .panel .ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .panel .ph h3{margin:0}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -218,7 +219,7 @@ tr.click td{transition:background .1s}
 .jobcard:hover{border-color:var(--accent2)}
 .itemsedit input,.itemsedit select{padding:7px 8px;font-size:12.8px}
 .itemsedit td{padding:6px}
-@media print{header,.noprint,.toast,.modal-bg,.searchbar,.btnrow,.pillnav{display:none!important}body{background:#fff;color:#000;font-size:12px}main{max-width:none;padding:0}.panel,.kpi,.kpi-hero,.kpi-sec{border:1px solid #ccc;box-shadow:none;break-inside:avoid}table{font-size:11px}th{background:#f0f0f0!important;color:#000!important}.progress>div{print-color-adjust:exact;-webkit-print-color-adjust:exact}.badge{border:1px solid #999;print-color-adjust:exact;-webkit-print-color-adjust:exact}@page{margin:1.5cm}}
+@media print{.sidebar,.sidebar-overlay,.sidebar-toggle,.topbar,.noprint,.toast,.modal-bg,.searchbar,.btnrow,.pillnav,.hamburger{display:none!important}.app-main{margin-left:0!important}body{background:#fff;color:#000;font-size:12px}main{max-width:none;padding:0}.panel,.kpi,.kpi-hero,.kpi-sec{border:1px solid #ccc;box-shadow:none;break-inside:avoid}table{font-size:11px}th{background:#f0f0f0!important;color:#000!important}.progress>div{print-color-adjust:exact;-webkit-print-color-adjust:exact}.badge{border:1px solid #999;print-color-adjust:exact;-webkit-print-color-adjust:exact}canvas{max-width:100%!important}@page{margin:1.5cm}}
 
 /* ===== Public Landing Page ===== */
 .landing{min-height:100vh;background:var(--bg)}
@@ -304,7 +305,7 @@ tr.click td{transition:background .1s}
 </div>
 <div class="toast" id="toast"></div>
 
-<script id="seed-data" type="application/json">{"customers":[{"id":1,"name":"Sample Residential Project","address":"","city":"Sample City","state":"","zip":"","phone":"","email":"","completedDate":"","projectStatus":"Active","completionPct":0,"activities":[],"activityLog":[],"budget":""},{"id":2,"name":"Sample Commercial Project","address":"","city":"Sample City","state":"","zip":"","phone":"","email":"","completedDate":"","projectStatus":"Active","completionPct":0,"activities":[],"activityLog":[],"budget":""},{"id":3,"name":"Sample Institutional Project","address":"","city":"Sample City","state":"","zip":"","phone":"","email":"","completedDate":"","projectStatus":"Active","completionPct":0,"activities":[],"activityLog":[],"budget":""}],"vendors":[{"id":1,"name":"Sample Hardware Supply","address":"","city":"Sample City","state":"","zip":"","phone":"0900-000-0001","email":"","contactPerson":"Sample Contact","item":"General Hardware","classification":"HARDWARE SUPPLIER","paymentDetails":"","pcabNumber":"","pcabCategory":"","pcabExpiry":"","purchaseNotes":[]},{"id":2,"name":"Sample Electrical Supply","address":"","city":"Sample City","state":"","zip":"","phone":"0900-000-0002","email":"","contactPerson":"Sample Contact","item":"Electrical Supplies","classification":"ELECTRICAL SUPPLIER","paymentDetails":"","pcabNumber":"","pcabCategory":"","pcabExpiry":"","purchaseNotes":[]},{"id":3,"name":"Sample Steel & Metal Corp","address":"","city":"Sample City","state":"","zip":"","phone":"0900-000-0003","email":"","contactPerson":"Sample Contact","item":"Steel & Rebar","classification":"METAL SUPPLIER","paymentDetails":"","pcabNumber":"","pcabCategory":"","pcabExpiry":"","purchaseNotes":[]}],"jobs":[{"id":1,"customerId":1,"name":"Sample Residential Project","address":"","city":"Sample City","state":"","zip":"","contactName":"","phone":"","email":"","isAutoJob":true},{"id":2,"customerId":2,"name":"Sample Commercial Project","address":"","city":"Sample City","state":"","zip":"","contactName":"","phone":"","email":"","isAutoJob":true},{"id":3,"customerId":3,"name":"Sample Institutional Project","address":"","city":"Sample City","state":"","zip":"","contactName":"","phone":"","email":"","isAutoJob":true}],"products":[],"orders":[],"employees":[{"id":1,"name":"Sample Employee One","type":"Laborer","payType":"Daily","regAmount":600,"otRate":93.75,"hourlyCost":75,"phone":"","email":"","address":"","city":"","state":"","zip":"","active":true,"govDeductions":false,"sssNo":"","philhealthNo":"","pagibigNo":"","licenseType":"","licenseNumber":"","licenseExpiry":"","foremanName":"","tin":""},{"id":2,"name":"Sample Employee Two","type":"Foreman","payType":"Daily","regAmount":800,"otRate":125,"hourlyCost":100,"phone":"","email":"","address":"","city":"","state":"","zip":"","active":true,"govDeductions":false,"sssNo":"","philhealthNo":"","pagibigNo":"","licenseType":"","licenseNumber":"","licenseExpiry":"","foremanName":"","tin":""},{"id":3,"name":"Sample Employee Three","type":"Mason","payType":"Daily","regAmount":650,"otRate":101.56,"hourlyCost":81.25,"phone":"","email":"","address":"","city":"","state":"","zip":"","active":true,"govDeductions":false,"sssNo":"","philhealthNo":"","pagibigNo":"","licenseType":"","licenseNumber":"","licenseExpiry":"","foremanName":"","tin":""}],"timesheets":[],"transactions":[],"users":[],"payrolls":[],"paidEmployees":[],"payItems":[],"vehicles":[{"id":1,"name":"Sample Vehicle 1","plate":"","make":"","model":"","type":"Truck","seats":"","assignedDriverId":"","notes":"","active":true,"serialNumber":"","engineType":"","engineNumber":"","currentSite":"Sample Residential Project"},{"id":2,"name":"Sample Excavator","plate":"","make":"","model":"","type":"Heavy Equipment","seats":"","assignedDriverId":"","notes":"","active":true,"serialNumber":"","engineType":"","engineNumber":"","currentSite":"Sample Commercial Project"}],"vehicleExpenses":[],"fuelLogs":[],"meterLogs":[],"vehicleReminders":[],"materials":[{"id":1,"name":"Sample Cement (40kg)","qty":50,"unit":"BAGS","unitPrice":250,"site":"Sample Residential Project","receivedFrom":"Sample Hardware Supply","date":"2026-01-01","reorderPoint":10},{"id":2,"name":"Sample GI Sheet","qty":30,"unit":"PCS","unitPrice":450,"site":"Sample Commercial Project","receivedFrom":"Sample Hardware Supply","date":"2026-01-01","reorderPoint":5}],"equipment":[{"id":1,"name":"Sample Power Drill","brand":"Sample Brand","serial":"","qty":2,"unit":"PCS","status":"Working","site":"Sample Residential Project","receivedFrom":"Sample Hardware Supply","date":"2026-01-01"}],"cashAdvances":[],"purchaseRequests":[],"equipmentReminders":[],"settings":{"salesTaxRate":0.08,"poTaxRate":0.1,"signupCode":"CLM2026","companyName":"CLM General Contractor & Services, Inc.","companyDescription":"A full-service general contractor handling residential, commercial, and institutional construction projects.","companyAddress":"","companyPhone":"","companyEmail":"","companyTIN":"","sheetsWebhookUrl":"","companyShortName":"CLM"},"siteAssignments":[],"announcements":[],"notificationLog":[],"galleryPhotos":[],"trash":[],"testimonials":[],"materialTransfers":[],"siteDiaries":[],"defects":[],"leads":[],"rfis":[],"submittals":[],"changeOrders":[],"incidents":[],"inspections":[],"punchItems":[],"dailyLogs":[],"scheduleActivities":[],"costMaterials":[],"laborRates":[],"costEstimates":[]}</script>
+<script id="seed-data" type="application/json">{"customers":[{"id":1,"name":"Sample Residential Project","address":"","city":"Sample City","state":"","zip":"","phone":"","email":"","completedDate":"","projectStatus":"Active","completionPct":0,"activities":[],"activityLog":[],"budget":""},{"id":2,"name":"Sample Commercial Project","address":"","city":"Sample City","state":"","zip":"","phone":"","email":"","completedDate":"","projectStatus":"Active","completionPct":0,"activities":[],"activityLog":[],"budget":""},{"id":3,"name":"Sample Institutional Project","address":"","city":"Sample City","state":"","zip":"","phone":"","email":"","completedDate":"","projectStatus":"Active","completionPct":0,"activities":[],"activityLog":[],"budget":""}],"vendors":[{"id":1,"name":"Sample Hardware Supply","address":"","city":"Sample City","state":"","zip":"","phone":"0900-000-0001","email":"","contactPerson":"Sample Contact","item":"General Hardware","classification":"HARDWARE SUPPLIER","paymentDetails":"","pcabNumber":"","pcabCategory":"","pcabExpiry":"","purchaseNotes":[]},{"id":2,"name":"Sample Electrical Supply","address":"","city":"Sample City","state":"","zip":"","phone":"0900-000-0002","email":"","contactPerson":"Sample Contact","item":"Electrical Supplies","classification":"ELECTRICAL SUPPLIER","paymentDetails":"","pcabNumber":"","pcabCategory":"","pcabExpiry":"","purchaseNotes":[]},{"id":3,"name":"Sample Steel & Metal Corp","address":"","city":"Sample City","state":"","zip":"","phone":"0900-000-0003","email":"","contactPerson":"Sample Contact","item":"Steel & Rebar","classification":"METAL SUPPLIER","paymentDetails":"","pcabNumber":"","pcabCategory":"","pcabExpiry":"","purchaseNotes":[]}],"jobs":[{"id":1,"customerId":1,"name":"Sample Residential Project","address":"","city":"Sample City","state":"","zip":"","contactName":"","phone":"","email":"","isAutoJob":true},{"id":2,"customerId":2,"name":"Sample Commercial Project","address":"","city":"Sample City","state":"","zip":"","contactName":"","phone":"","email":"","isAutoJob":true},{"id":3,"customerId":3,"name":"Sample Institutional Project","address":"","city":"Sample City","state":"","zip":"","contactName":"","phone":"","email":"","isAutoJob":true}],"products":[],"orders":[],"employees":[{"id":1,"name":"Sample Employee One","type":"Laborer","payType":"Daily","regAmount":600,"otRate":93.75,"hourlyCost":75,"phone":"","email":"","address":"","city":"","state":"","zip":"","active":true,"govDeductions":false,"sssNo":"","philhealthNo":"","pagibigNo":"","licenseType":"","licenseNumber":"","licenseExpiry":"","foremanName":"","tin":""},{"id":2,"name":"Sample Employee Two","type":"Foreman","payType":"Daily","regAmount":800,"otRate":125,"hourlyCost":100,"phone":"","email":"","address":"","city":"","state":"","zip":"","active":true,"govDeductions":false,"sssNo":"","philhealthNo":"","pagibigNo":"","licenseType":"","licenseNumber":"","licenseExpiry":"","foremanName":"","tin":""},{"id":3,"name":"Sample Employee Three","type":"Mason","payType":"Daily","regAmount":650,"otRate":101.56,"hourlyCost":81.25,"phone":"","email":"","address":"","city":"","state":"","zip":"","active":true,"govDeductions":false,"sssNo":"","philhealthNo":"","pagibigNo":"","licenseType":"","licenseNumber":"","licenseExpiry":"","foremanName":"","tin":""}],"timesheets":[],"transactions":[],"users":[],"payrolls":[],"paidEmployees":[],"payItems":[],"vehicles":[{"id":1,"name":"Sample Vehicle 1","plate":"","make":"","model":"","type":"Truck","seats":"","assignedDriverId":"","notes":"","active":true,"serialNumber":"","engineType":"","engineNumber":"","currentSite":"Sample Residential Project"},{"id":2,"name":"Sample Excavator","plate":"","make":"","model":"","type":"Heavy Equipment","seats":"","assignedDriverId":"","notes":"","active":true,"serialNumber":"","engineType":"","engineNumber":"","currentSite":"Sample Commercial Project"}],"vehicleExpenses":[],"fuelLogs":[],"meterLogs":[],"vehicleReminders":[],"materials":[{"id":1,"name":"Sample Cement (40kg)","qty":50,"unit":"BAGS","unitPrice":250,"site":"Sample Residential Project","receivedFrom":"Sample Hardware Supply","date":"2026-01-01","reorderPoint":10},{"id":2,"name":"Sample GI Sheet","qty":30,"unit":"PCS","unitPrice":450,"site":"Sample Commercial Project","receivedFrom":"Sample Hardware Supply","date":"2026-01-01","reorderPoint":5}],"equipment":[{"id":1,"name":"Sample Power Drill","brand":"Sample Brand","serial":"","qty":2,"unit":"PCS","status":"Working","site":"Sample Residential Project","receivedFrom":"Sample Hardware Supply","date":"2026-01-01"}],"cashAdvances":[],"purchaseRequests":[],"equipmentReminders":[],"settings":{"salesTaxRate":0.08,"poTaxRate":0.1,"signupCode":"CLM2026","companyName":"CLM General Contractor & Services, Inc.","companyDescription":"A full-service general contractor handling residential, commercial, and institutional construction projects.","companyAddress":"","companyPhone":"","companyEmail":"","companyTIN":"","sheetsWebhookUrl":"","companyShortName":"CLM"},"siteAssignments":[],"announcements":[],"notificationLog":[],"galleryPhotos":[],"trash":[],"testimonials":[],"materialTransfers":[],"siteDiaries":[],"defects":[],"leads":[],"scheduleActivities":[],"costMaterials":[],"laborRates":[],"costEstimates":[]}</script>
 <script>
 /* ============================================================
    CLM General Contractor & Services, Inc. — Construction Management System
@@ -1034,8 +1035,8 @@ function logout(skipConfirm){
 /* ---------- role-based permissions ---------- */
 // Admin: everything. Manager: everything except managing Users. Sales: limited to sales-facing tabs, no deletes.
 // Clerk: same tab access as Manager but cannot delete records.
-const SALES_TABS = ['dashboard','orders','products','leads','customers','vendors','rfis','submittals','changeOrders','punchList','dailyLog','calculator','costEstimator','schedule'];
-const EMPLOYEE_TABS = ['dashboard','customers','safety','dailyLog','calculator'];
+const SALES_TABS = ['dashboard','orders','products','leads','customers','vendors','calculator','costEstimator','schedule'];
+const EMPLOYEE_TABS = ['dashboard','customers','calculator'];
 function roleCanAccessTab(tabKey){
   if(!session) return false;
   if(tabKey==='myProfile') return session.type!=='Pending'; // everyone with real access can manage their own profile
@@ -1112,8 +1113,7 @@ function guardDelete(){
 /* ---------- router ---------- */
 const NAV_ICONS = {
   dashboard:'📊', orders:'📋', products:'📦', leads:'🎯', customers:'🏗️',
-  rfis:'📝', submittals:'📤', changeOrders:'🔄', punchList:'✅', dailyLog:'📅',
-  safety:'🦺', vendors:'🏪', inventory:'📦', employees:'👷', fleet:'🚛',
+  vendors:'🏪', inventory:'📦', employees:'👷', fleet:'🚛',
   payroll:'💰', transactions:'💳', users:'👥',
   calculator:'🧮', costEstimator:'💵', schedule:'📐'
 };
@@ -1122,14 +1122,6 @@ const NAV = [
   { key:'products', label:'Products' },
   { key:'leads', label:'Leads' },
   { key:'customers', label:'Projects' },
-  { key:'documents', label:'Documents', children:[
-    { key:'rfis', label:'RFIs' },
-    { key:'submittals', label:'Submittals' },
-    { key:'changeOrders', label:'Change Orders' },
-    { key:'punchList', label:'Punch List' },
-    { key:'dailyLog', label:'Daily Log' },
-  ]},
-  { key:'safety', label:'Safety' },
   { key:'vendors', label:'Suppliers' },
   { key:'inventory', label:'Inventory' },
   { key:'team', label:'Team', children:[
@@ -1235,12 +1227,6 @@ function render(){
     products: renderProducts,
     customers: renderCustomers,
     leads: renderLeads,
-    rfis: renderRFIs,
-    submittals: renderSubmittals,
-    changeOrders: renderChangeOrders,
-    punchList: renderPunchList,
-    dailyLog: renderDailyLog,
-    safety: renderSafety,
     vendors: renderVendors,
     employees: renderEmployees,
     fleet: renderFleet,
@@ -1352,29 +1338,6 @@ function globalSearchResults(q){
     });
   }
   if(roleCanAccessTab('rfis')){
-    (DB.rfis||[]).filter(r=>r.subject.toLowerCase().includes(q) || (r.rfiNumber||'').toLowerCase().includes(q)).slice(0,6).forEach(r=>{
-      results.push({ group:'RFIs', label:`${r.rfiNumber||''}: ${r.subject}`, sub:r.status, action:()=>{ go('rfis'); openRFI(r.id); } });
-    });
-  }
-  if(roleCanAccessTab('submittals')){
-    (DB.submittals||[]).filter(s=>s.title.toLowerCase().includes(q) || (s.submittalNumber||'').toLowerCase().includes(q)).slice(0,6).forEach(s=>{
-      results.push({ group:'Submittals', label:`${s.submittalNumber||''}: ${s.title}`, sub:s.status, action:()=>{ go('submittals'); openSubmittal(s.id); } });
-    });
-  }
-  if(roleCanAccessTab('changeOrders')){
-    (DB.changeOrders||[]).filter(co=>co.title.toLowerCase().includes(q) || (co.coNumber||'').toLowerCase().includes(q)).slice(0,6).forEach(co=>{
-      results.push({ group:'Change Orders', label:`${co.coNumber||''}: ${co.title}`, sub:money(co.amount), action:()=>{ go('changeOrders'); openChangeOrder(co.id); } });
-    });
-  }
-  if(roleCanAccessTab('safety')){
-    (DB.incidents||[]).filter(i=>i.title.toLowerCase().includes(q)).slice(0,6).forEach(i=>{
-      results.push({ group:'Incidents', label:i.title, sub:i.severity, action:()=>{ go('safety',{stab:'incidents'}); openIncident(i.id); } });
-    });
-  }
-  if(roleCanAccessTab('punchList')){
-    (DB.punchItems||[]).filter(p=>p.description.toLowerCase().includes(q) || (p.project||'').toLowerCase().includes(q)).slice(0,6).forEach(p=>{
-      results.push({ group:'Punch List', label:p.description, sub:p.status, action:()=>{ go('punchList'); editPunchItem(p.id); } });
-    });
   }
   return results;
 }
@@ -1472,7 +1435,7 @@ function renderHelp(){
   document.getElementById('mainArea').innerHTML = `
     <div class="crumb">Help</div>
     <div class="panel">
-      <h3 style="text-transform:none;font-size:19px;margin-bottom:6px">👋 Getting Started with BuildSuite</h3>
+      <h3 style="font-size:19px;margin-bottom:6px">👋 Getting Started with BuildSuite</h3>
       <p class="mut" style="font-size:13px;margin-bottom:20px">A quick reference for what you can do here, based on your role (${esc(session.type)}${isSiteLead && session.type==='Employee' ? ' — Site Lead access' : ''}). Click any section to expand it.</p>
       <div class="faq-list" style="max-width:none">
         <details class="faq-item" open><summary>What is BuildSuite?</summary><p>One system for the whole operation — projects, payroll, materials, suppliers, and your team, instead of scattered spreadsheets. Everything you do here saves automatically and syncs across devices if cloud sync is connected (check the dot next to "Cloud synced" in the header).</p></details>
@@ -1523,7 +1486,7 @@ function renderTrash(){
   document.getElementById('mainArea').innerHTML = `
     <div class="crumb">Trash</div>
     <div class="panel">
-      <div class="ph"><h3 style="text-transform:none;font-size:18px;color:var(--text)">🗑️ Trash</h3></div>
+      <div class="ph"><h3 style="font-size:18px">🗑️ Trash</h3></div>
       <div class="mut" style="font-size:12.5px;margin-bottom:10px">Deleted items stay here for 30 days before being permanently removed. Only an Admin can restore or permanently delete.</div>
       <div class="pillnav">
         <button class="${sub.trashType==='ALL'?'on':''}" onclick="sub.trashType='ALL';renderTrash()">All</button>
@@ -1601,10 +1564,6 @@ function getAlerts(){
     });
   }
   accountsReceivable().filter(r=>r.daysOutstanding>30).forEach(r=>{ alerts.push({ type:'Overdue Invoice', label:`#${r.order.id} ${partyName(r.order)} — ${r.daysOutstanding}d overdue`, action:()=>go('orders',{editId:r.order.id}) }); });
-  (DB.rfis||[]).filter(r=>r.status==='Open' && r.dueDate && r.dueDate < todayISO()).forEach(r=>{ alerts.push({ type:'RFI Overdue', label:`RFI ${r.rfiNumber||''}: "${r.subject}" past due`, action:()=>{ go('rfis'); openRFI(r.id); } }); });
-  (DB.submittals||[]).filter(s=>!['Approved','Approved as Noted','Rejected'].includes(s.status) && s.requiredDate && s.requiredDate < todayISO()).forEach(s=>{ alerts.push({ type:'Submittal Overdue', label:`Submittal ${s.submittalNumber||''}: "${s.title}" past required date`, action:()=>{ go('submittals'); openSubmittal(s.id); } }); });
-  (DB.incidents||[]).filter(i=>!i.closed).forEach(i=>{ alerts.push({ type:'Open Incident', label:`${i.severity}: "${i.title}" — still open`, action:()=>{ go('safety',{stab:'incidents'}); openIncident(i.id); } }); });
-  (DB.inspections||[]).filter(i=>i.status==='Failed'||i.status==='Requires Follow-Up').forEach(i=>{ alerts.push({ type:'Inspection', label:`"${i.title}" — ${i.status.toLowerCase()}`, action:()=>{ go('safety',{stab:'inspections'}); openInspection(i.id); } }); });
   return alerts;
 }
 function toggleNotifications(){
@@ -1613,7 +1572,7 @@ function toggleNotifications(){
   const alerts = getAlerts();
   const panel = document.createElement('div');
   panel.id = 'notifPanel';
-  panel.style.cssText = 'position:fixed;top:60px;right:16px;width:360px;max-height:70vh;overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);z-index:60;padding:14px';
+  panel.style.cssText = 'position:fixed;top:60px;right:16px;width:360px;max-height:70vh;overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);z-index:45;padding:14px';
   panel.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <b style="font-size:14px">Notifications</b><button class="x" onclick="document.getElementById('notifPanel').remove()">✕</button>
@@ -1656,7 +1615,7 @@ function openSettings(){
   openModal(`
     <h3>⚙️ Settings</h3>
     <div class="field" style="border-top:1px solid var(--line);padding-top:14px">
-      <label class="fl">Company Profile <span class="mut" style="text-transform:none;font-weight:400">(shown to employees on their home screen)</span></label>
+      <label class="fl">Company Profile <span class="mut" style="font-weight:400">(shown to employees on their home screen)</span></label>
       <input id="cpName" value="${esc(DB.settings.companyName)}" placeholder="Company Name" style="margin-bottom:8px">
       <input id="cpShortName" value="${esc(DB.settings.companyShortName)}" placeholder="Short mark for the logo (e.g. CLM) — leave blank to auto-generate from the name above" style="margin-bottom:8px">
       <textarea id="cpDesc" rows="2" placeholder="Short description" style="margin-bottom:8px">${esc(DB.settings.companyDescription)}</textarea>
@@ -1669,32 +1628,32 @@ function openSettings(){
       <button class="btn ghost sm" onclick="saveCompanyProfile()">Save Company Profile</button>
     </div>
     <div class="field" style="border-top:1px solid var(--line);padding-top:14px">
-      <label class="fl">Announcements <span class="mut" style="text-transform:none;font-weight:400">(shown to employees on their home screen)</span></label>
+      <label class="fl">Announcements <span class="mut" style="font-weight:400">(shown to employees on their home screen)</span></label>
       <button class="btn ghost sm" onclick="closeModal();openManageAnnouncements()">📣 Manage Announcements (${DB.announcements.length})</button>
     </div>
     <div class="field" style="border-top:1px solid var(--line);padding-top:14px">
-      <label class="fl">Landing Page Gallery <span class="mut" style="text-transform:none;font-weight:400">(shown to potential clients on your public homepage)</span></label>
+      <label class="fl">Landing Page Gallery <span class="mut" style="font-weight:400">(shown to potential clients on your public homepage)</span></label>
       <button class="btn ghost sm" onclick="closeModal();openManageGallery()">🖼️ Manage Gallery Photos (${DB.galleryPhotos.length})</button>
     </div>
     <div class="field" style="border-top:1px solid var(--line);padding-top:14px">
-      <label class="fl">Client Testimonials <span class="mut" style="text-transform:none;font-weight:400">(shown to potential clients on your public homepage)</span></label>
+      <label class="fl">Client Testimonials <span class="mut" style="font-weight:400">(shown to potential clients on your public homepage)</span></label>
       <button class="btn ghost sm" onclick="closeModal();openManageTestimonials()">⭐ Manage Testimonials (${DB.testimonials.length})</button>
     </div>
     <div class="field" style="border-top:1px solid var(--line);padding-top:14px">
-      <label class="fl">Browser Notifications <span class="mut" style="text-transform:none;font-weight:400">(low stock, overdue reminders, pending accounts)</span></label>
+      <label class="fl">Browser Notifications <span class="mut" style="font-weight:400">(low stock, overdue reminders, pending accounts)</span></label>
       <div class="mut" style="font-size:12px;margin-bottom:8px">Pops up a real notification on this device when something needs attention — but only while this app is open in a tab (even in the background). It won't reach you if the tab or browser is fully closed.</div>
       ${browserNotificationsEnabled() ? `<button class="btn ghost sm" onclick="disableBrowserNotifications()">🔕 Turn Off</button>` : `<button class="btn ghost sm" onclick="enableBrowserNotifications()">🔔 Turn On</button>`}
     </div>
     <div class="field" style="border-top:1px solid var(--line);padding-top:14px">
-      <label class="fl">Trash <span class="mut" style="text-transform:none;font-weight:400">(deleted items, kept for 30 days)</span></label>
+      <label class="fl">Trash <span class="mut" style="font-weight:400">(deleted items, kept for 30 days)</span></label>
       <button class="btn ghost sm" onclick="closeModal();go('trash')">🗑️ Open Trash ${DB.trash.length?`(${DB.trash.length})`:''}</button>
     </div>
     <div class="field" style="border-top:1px solid var(--line);padding-top:14px">
-      <label class="fl">Reselling This System <span class="mut" style="text-transform:none;font-weight:400">(wipe this copy for a new client)</span></label>
+      <label class="fl">Reselling This System <span class="mut" style="font-weight:400">(wipe this copy for a new client)</span></label>
       <button class="btn del sm" onclick="closeModal();openPrepareForResale()">📦 Prepare for New Client</button>
     </div>
     <div class="field" style="border-top:1px solid var(--line);padding-top:14px">
-      <label class="fl">Google Sheets Mirror <span class="mut" style="text-transform:none;font-weight:400">(one-way — pushes a live view-only copy out, doesn't read anything back in)</span></label>
+      <label class="fl">Google Sheets Mirror <span class="mut" style="font-weight:400">(one-way — pushes a live view-only copy out, doesn't read anything back in)</span></label>
       <div class="mut" style="font-size:12px;margin-bottom:8px">Good for handing your boss or accountant a familiar spreadsheet view of live numbers. Editing the Sheet itself does nothing back in BuildSuite — this is one-way on purpose.</div>
       <input id="sheetsUrl" value="${esc(DB.settings.sheetsWebhookUrl)}" placeholder="Paste your Apps Script Web App URL here" style="margin-bottom:8px">
       <div class="btnrow" style="margin-top:0">
@@ -2269,7 +2228,7 @@ function renderLogin(){
         <div class="field"><label class="fl" for="suMiddleName">Middle Name</label><input id="suMiddleName" placeholder="(optional)" autocomplete="additional-name"></div>
         <div class="field"><label class="fl" for="suLastName">Last Name</label><input id="suLastName" placeholder="Dela Cruz" autocomplete="family-name"></div>
       </div>
-      <div class="field"><label class="fl">Username <span class="mut" style="text-transform:none;font-weight:400">(this is what you'll type to log in)</span></label><input id="suUsername" placeholder="e.g. jdelacruz" autocomplete="username"></div>
+      <div class="field"><label class="fl">Username <span class="mut" style="font-weight:400">(this is what you'll type to log in)</span></label><input id="suUsername" placeholder="e.g. jdelacruz" autocomplete="username"></div>
       <div class="field"><label class="fl" for="suPosition">Position</label><select id="suPosition">${empTypeOptions('')}</select></div>
       <div class="grid2">
         ${pwField('suPw','Password','At least 4 characters','new-password')}
@@ -2578,7 +2537,7 @@ function renderNotificationLog(){
     <div class="crumb">Notification Log</div>
     <div class="panel">
       <div class="ph">
-        <h3 style="text-transform:none;font-size:18px;color:var(--text)">Notification Log ${unreadCount?`<span class="badge b-danger">${unreadCount} unread</span>`:''}</h3>
+        <h3 style="font-size:18px">Notification Log ${unreadCount?`<span class="badge b-danger">${unreadCount} unread</span>`:''}</h3>
         <button class="btn ghost sm" onclick="markAllLogRead()">Mark All Read</button>
       </div>
       <div class="pillnav">${types.map(t=>`<button class="${sub.logType===t?'on':''}" onclick="sub.logType='${t}';renderNotificationLog()">${t}</button>`).join('')}</div>
@@ -2897,10 +2856,10 @@ function renderDashboard(){
         <div style="overflow-x:auto;margin-bottom:20px">
           <div style="position:relative;min-width:700px">
             <div style="display:flex;border-bottom:1px solid var(--line);padding:0 0 4px 180px;margin-bottom:2px;position:relative">
-              ${monthLabels.map(m=>`<span class="mut" style="position:absolute;left:calc(180px + ${m.pct}%*(100% - 180px)/100);font-size:10px;font-weight:700;text-transform:uppercase">${m.label}</span>`).join('')}
+              ${monthLabels.map(m=>`<span class="mut" style="position:absolute;left:calc(180px + (100% - 180px) * ${m.pct} / 100);font-size:10px;font-weight:700;text-transform:uppercase">${m.label}</span>`).join('')}
               &nbsp;
             </div>
-            ${todayPct>0&&todayPct<100?`<div style="position:absolute;left:calc(180px + ${todayPct.toFixed(2)}%*(100% - 180px)/100);top:20px;bottom:0;width:2px;background:var(--danger);opacity:.5;z-index:2"><span style="position:absolute;top:-14px;left:-12px;font-size:9px;font-weight:800;color:var(--danger)">TODAY</span></div>`:''}
+            ${todayPct>0&&todayPct<100?`<div style="position:absolute;left:calc(180px + (100% - 180px) * ${todayPct.toFixed(2)} / 100);top:20px;bottom:0;width:2px;background:var(--danger);opacity:.5;z-index:2"><span style="position:absolute;top:-14px;left:-12px;font-size:9px;font-weight:800;color:var(--danger)">TODAY</span></div>`:''}
             ${rows.map((a,i)=>{
               const ps = a.plannedStart ? scheduleDaysBetween(minD, new Date(a.plannedStart))/spanDays*100 : 0;
               const pw = a.plannedStart&&a.plannedEnd ? Math.max(1, scheduleDaysBetween(new Date(a.plannedStart), new Date(a.plannedEnd))/spanDays*100) : 0;
@@ -3031,7 +2990,7 @@ function renderProjectReport(projectId, from, to){
     <div class="panel">
       <div class="ph">
         <div>
-          <h3 style="text-transform:none;font-size:18px;color:var(--text);margin:0 0 4px">${esc(r.cust.name)}</h3>
+          <h3 style="font-size:18px;margin:0 0 4px">${esc(r.cust.name)}</h3>
           <span class="mut" style="font-size:12.5px">${from||to ? `${from?fmtDate(from):'Start'} – ${to?fmtDate(to):'Today'}` : 'All time'}</span>
         </div>
         <div class="btnrow" style="margin:0">
@@ -3169,7 +3128,7 @@ function renderOrders(){
     <div class="crumb">Orders${foremanOnly?` — ${esc(foremanSite())}`:''}</div>
     <div class="panel">
       <div class="ph">
-        <h3 style="text-transform:none;font-size:18px;color:var(--text)">Orders</h3>
+        <h3 style="font-size:18px">Orders</h3>
         ${canCreateForSite(foremanOnly?foremanSite():null) || canEdit() ? `<button class="btn pri" onclick="newOrder(sub.type==='ALL'?'INVOICE':sub.type)">+ New Order</button>` : ''}
       </div>
       <div class="pillnav">${types.map(([k,l])=>`<button class="${sub.type===k?'on':''}" onclick="sub.type='${k}';renderOrders()">${l}</button>`).join('')}</div>
@@ -3452,7 +3411,7 @@ function renderProducts(){
   document.getElementById('mainArea').innerHTML = `
     <div class="crumb">Products</div>
     <div class="panel">
-      <div class="ph"><h3 style="text-transform:none;font-size:18px;color:var(--text)">Products & Inventory</h3><div class="btnrow" style="margin:0"><button class="btn ghost" onclick="openBulkImport('products')">Bulk Import</button><button class="btn pri" onclick="editProduct(null)">+ New Product</button></div></div>
+      <div class="ph"><h3 style="font-size:18px">Products & Inventory</h3><div class="btnrow" style="margin:0"><button class="btn ghost" onclick="openBulkImport('products')">Bulk Import</button><button class="btn pri" onclick="editProduct(null)">+ New Product</button></div></div>
       <div class="searchbar"><input id="searchProducts" placeholder="Search products..." value="${esc(sub.search)}" oninput="searchInput(this,()=>{sub.search=this.value;renderProducts();})"></div>
       <div class="twrap"><table>
         <tr><th>Product</th><th>Description</th><th class="right">Purchase Price</th><th class="right">Sales Price</th><th class="right">In Stock</th><th class="right">Value on Hand</th><th></th></tr>
@@ -3636,7 +3595,7 @@ function renderCustomers(){
   document.getElementById('mainArea').innerHTML = `
     <div class="crumb">Projects</div>
     <div class="panel">
-      <div class="ph"><h3 style="text-transform:none;font-size:18px;color:var(--text)">Projects / Customers</h3>${canEdit()?'<button class="btn pri" onclick="editCustomer(null)">+ New Project</button>':''}</div>
+      <div class="ph"><h3 style="font-size:18px">Projects / Customers</h3>${canEdit()?'<button class="btn pri" onclick="editCustomer(null)">+ New Project</button>':''}</div>
       <div class="searchbar"><input id="searchProjects" placeholder="Search projects..." value="${esc(sub.search)}" oninput="searchInput(this,()=>{sub.search=this.value;renderCustomers();})"></div>
       <div class="twrap"><table>
         <tr><th>Project / Customer</th><th>Status</th><th>City / State</th><th>Phone</th><th class="right">Jobs</th><th></th></tr>
@@ -3659,7 +3618,7 @@ function openAddActivity(custId){
     <h3>Add Project Activity</h3>
     <p style="font-size:13px;color:var(--muted)">Break the project into phases matching your actual Project Program — Foundation, Framing, Roofing, etc. — so progress can be logged against real work, not a guess.</p>
     <div class="field"><label class="fl" for="act_name">Activity Name</label><input id="act_name" placeholder="e.g. Foundation"></div>
-    <div class="field"><label class="fl">Cost / Budget Amount <span class="mut" style="text-transform:none;font-weight:400">(determines weight)</span></label><input id="act_cost" type="number" value="0" min="0" step="0.01"></div>
+    <div class="field"><label class="fl">Cost / Budget Amount <span class="mut" style="font-weight:400">(determines weight)</span></label><input id="act_cost" type="number" value="0" min="0" step="0.01"></div>
     <div class="grid2">
       <div class="field"><label class="fl">Planned Start</label><input id="act_pstart" type="date"></div>
       <div class="field"><label class="fl">Planned End</label><input id="act_pend" type="date"></div>
@@ -4014,7 +3973,7 @@ function renderLeads(){
   rows = [...rows].sort((a,b)=>(b.createdDate||'').localeCompare(a.createdDate||''));
   document.getElementById('mainArea').innerHTML = `
     <div class="panel">
-      <div class="ph"><h3 style="text-transform:none;font-size:18px;color:var(--text)">Leads</h3><button class="btn pri" onclick="openNewLead()">+ Add Lead</button></div>
+      <div class="ph"><h3 style="font-size:18px">Leads</h3><button class="btn pri" onclick="openNewLead()">+ Add Lead</button></div>
       <div class="mut" style="font-size:12px;margin-bottom:10px">Every inquiry from your website's contact form lands here automatically, alongside anything you add by hand — phone calls, walk-ins, referrals.</div>
       <div class="searchbar">
         <input id="leadSearchInput" placeholder="Search name, email, message..." value="${esc(sub.leadSearch)}" oninput="sub.leadSearch=this.value;renderLeads()">
@@ -4664,843 +4623,6 @@ function pcabStatus(v){
   if(days <= 30) return { label:'Expiring Soon', cls:'b-Pending' };
   return { label:'Valid', cls:'b-Paid' };
 }
-/* ── RFI (Request for Information) Module ── */
-const RFI_STATUSES = ['Draft','Open','Answered','Closed'];
-const RFI_PRIORITIES = ['Low','Medium','High','Critical'];
-function renderRFIs(){
-  if(!DB.rfis) DB.rfis = [];
-  const q = (sub.q||'').toLowerCase();
-  const statusFilter = sub.statusFilter || '';
-  let list = DB.rfis.filter(r => {
-    if(statusFilter && r.status !== statusFilter) return false;
-    if(q && !r.subject.toLowerCase().includes(q) && !(r.rfiNumber||'').toLowerCase().includes(q)) return false;
-    return true;
-  });
-  list.sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
-  const main = document.getElementById('mainArea');
-  main.innerHTML = `
-    <div class="toolbar">
-      <h2>RFIs</h2>
-      <div class="spacer"></div>
-      <select onchange="sub.statusFilter=this.value;renderRFIs()" style="margin-right:8px">
-        <option value="">All Statuses</option>
-        ${RFI_STATUSES.map(s=>`<option ${statusFilter===s?'selected':''}>${s}</option>`).join('')}
-      </select>
-      ${searchInput('rfiSearch', v=>{ sub.q=v; renderRFIs(); })}
-      ${canEdit()?`<button class="btn pri" onclick="openRFI()">+ New RFI</button>`:''}
-    </div>
-    ${list.length ? `<table class="dtable"><thead><tr><th>RFI #</th><th>Subject</th><th>Project</th><th>Priority</th><th>Status</th><th>Assigned To</th><th>Due Date</th><th>Created</th></tr></thead><tbody>
-      ${list.map(r => {
-        const proj = customerById(r.projectId);
-        const overdue = r.dueDate && r.status !== 'Closed' && r.status !== 'Answered' && r.dueDate < todayISO();
-        return `<tr style="cursor:pointer" onclick="openRFI('${r.id}')">
-          <td class="mono">${esc(r.rfiNumber||'—')}</td>
-          <td><b>${esc(r.subject)}</b></td>
-          <td>${proj?esc(proj.name):'—'}</td>
-          <td><span class="badge b-${r.priority==='Critical'?'OVERDUE':r.priority==='High'?'WO':r.priority==='Medium'?'PO':'Paid'}">${r.priority}</span></td>
-          <td><span class="badge b-${r.status==='Open'?'Active':r.status==='Answered'?'Paid':r.status==='Closed'?'Completed':'Draft'}">${r.status}</span></td>
-          <td>${esc(r.assignedTo||'—')}</td>
-          <td>${overdue?'<span style="color:var(--danger)">':''} ${r.dueDate?fmtDate(r.dueDate):'—'} ${overdue?'(Overdue)</span>':''}</td>
-          <td>${fmtDate(r.createdAt)}</td>
-        </tr>`;
-      }).join('')}
-    </tbody></table>` : '<div class="empty">No RFIs yet. RFIs let you formally ask and track questions between project stakeholders — architects, engineers, subcontractors, and owners.</div>'}
-  `;
-}
-function openRFI(id){
-  const r = id ? (DB.rfis||[]).find(x=>x.id===id) : null;
-  const projects = DB.customers.filter(c=>c.projectStatus==='Active');
-  openModal(`
-    <h3>${r?'Edit':'New'} RFI</h3>
-    <div class="field"><label>RFI Number</label><input id="f_rfiNum" value="${esc(r?r.rfiNumber:'RFI-'+(DB.rfis.length+1).toString().padStart(3,'0'))}" placeholder="RFI-001"></div>
-    <div class="field"><label>Subject *</label><input id="f_rfiSubject" value="${esc(r?r.subject:'')}" placeholder="What needs clarification?"></div>
-    <div class="field"><label>Project</label><select id="f_rfiProject">
-      <option value="">— Select Project —</option>
-      ${projects.map(p=>`<option value="${p.id}" ${r&&r.projectId==p.id?'selected':''}>${esc(p.name)}</option>`).join('')}
-    </select></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div class="field"><label>Priority</label><select id="f_rfiPriority">${RFI_PRIORITIES.map(p=>`<option ${r&&r.priority===p?'selected':''}>${p}</option>`).join('')}</select></div>
-      <div class="field"><label>Status</label><select id="f_rfiStatus">${RFI_STATUSES.map(s=>`<option ${r&&r.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div class="field"><label>Assigned To</label><input id="f_rfiAssigned" value="${esc(r?r.assignedTo:'')}" placeholder="Person or company"></div>
-      <div class="field"><label>Due Date</label><input type="date" id="f_rfiDue" value="${r?r.dueDate||'':''}"></div>
-    </div>
-    <div class="field"><label>Question / Description</label><textarea id="f_rfiQuestion" rows="4" placeholder="Describe what you need clarified...">${esc(r?r.question:'')}</textarea></div>
-    <div class="field"><label>Answer / Response</label><textarea id="f_rfiAnswer" rows="3" placeholder="Response from the assigned party...">${esc(r?r.answer:'')}</textarea></div>
-    <div class="field"><label>Cost Impact</label><input id="f_rfiCost" type="number" value="${r?r.costImpact||'':''}" placeholder="0.00"></div>
-    <div class="field"><label>Schedule Impact (days)</label><input id="f_rfiSchedule" type="number" value="${r?r.scheduleImpact||'':''}" placeholder="0"></div>
-    <div class="btnrow">
-      <button class="btn pri" onclick="saveRFI('${id||''}')">${r?'Save Changes':'Create RFI'}</button>
-      ${r && canDelete() ? `<button class="btn danger" onclick="deleteRFI('${id}')">Delete</button>` : ''}
-    </div>
-  `);
-}
-function saveRFI(id){
-  const subject = document.getElementById('f_rfiSubject').value.trim();
-  if(!subject){ toast('Subject is required'); return; }
-  const vals = {
-    rfiNumber: document.getElementById('f_rfiNum').value.trim(),
-    subject,
-    projectId: document.getElementById('f_rfiProject').value || null,
-    priority: document.getElementById('f_rfiPriority').value,
-    status: document.getElementById('f_rfiStatus').value,
-    assignedTo: document.getElementById('f_rfiAssigned').value.trim(),
-    dueDate: document.getElementById('f_rfiDue').value || '',
-    question: document.getElementById('f_rfiQuestion').value.trim(),
-    answer: document.getElementById('f_rfiAnswer').value.trim(),
-    costImpact: Number(document.getElementById('f_rfiCost').value)||0,
-    scheduleImpact: Number(document.getElementById('f_rfiSchedule').value)||0,
-  };
-  if(id){
-    const r = DB.rfis.find(x=>x.id===id);
-    if(r){ Object.assign(r, vals); r.updatedAt = new Date().toISOString(); }
-  } else {
-    DB.rfis.push({ id: uid(), ...vals, createdAt: new Date().toISOString(), createdBy: session.name });
-    logNotification('New RFI', `RFI "${vals.rfiNumber}: ${subject}" created`, 'rfis');
-  }
-  saveDB(); closeModal(); toast('RFI saved'); renderRFIs();
-}
-async function deleteRFI(id){
-  if(!guardDelete()) return;
-  if(!confirm('Delete this RFI?')) return;
-  const r = DB.rfis.find(x=>x.id===id);
-  if(r) moveToTrash('rfi', r);
-  DB.rfis = DB.rfis.filter(x=>x.id!==id);
-  const res = await saveDBAndConfirmSync();
-  toast(res.synced ? 'RFI moved to Trash' : `⚠️ Deleted here, but failed to sync — ${res.error||'check your connection'}`);
-  closeModal(); renderRFIs();
-}
-
-/* ── Submittals Module ── */
-const SUBMITTAL_STATUSES = ['Draft','Submitted','Under Review','Approved','Approved as Noted','Rejected','Resubmit'];
-const SUBMITTAL_TYPES = ['Shop Drawing','Product Data','Sample','Mock-Up','Certification','Test Report','Design Data','O&M Manual','Warranty','Other'];
-function renderSubmittals(){
-  if(!DB.submittals) DB.submittals = [];
-  const q = (sub.q||'').toLowerCase();
-  const statusFilter = sub.statusFilter || '';
-  let list = DB.submittals.filter(s => {
-    if(statusFilter && s.status !== statusFilter) return false;
-    if(q && !s.title.toLowerCase().includes(q) && !(s.submittalNumber||'').toLowerCase().includes(q)) return false;
-    return true;
-  });
-  list.sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
-  const main = document.getElementById('mainArea');
-  main.innerHTML = `
-    <div class="toolbar">
-      <h2>Submittals</h2>
-      <div class="spacer"></div>
-      <select onchange="sub.statusFilter=this.value;renderSubmittals()" style="margin-right:8px">
-        <option value="">All Statuses</option>
-        ${SUBMITTAL_STATUSES.map(s=>`<option ${statusFilter===s?'selected':''}>${s}</option>`).join('')}
-      </select>
-      ${searchInput('subSearch', v=>{ sub.q=v; renderSubmittals(); })}
-      ${canEdit()?`<button class="btn pri" onclick="openSubmittal()">+ New Submittal</button>`:''}
-    </div>
-    ${list.length ? `<table class="dtable"><thead><tr><th>Sub #</th><th>Title</th><th>Type</th><th>Project</th><th>Spec Section</th><th>Status</th><th>Submitted</th><th>Required Date</th></tr></thead><tbody>
-      ${list.map(s => {
-        const proj = customerById(s.projectId);
-        const overdue = s.requiredDate && !['Approved','Approved as Noted','Rejected'].includes(s.status) && s.requiredDate < todayISO();
-        return `<tr style="cursor:pointer" onclick="openSubmittal('${s.id}')">
-          <td class="mono">${esc(s.submittalNumber||'—')}</td>
-          <td><b>${esc(s.title)}</b></td>
-          <td>${esc(s.type||'—')}</td>
-          <td>${proj?esc(proj.name):'—'}</td>
-          <td>${esc(s.specSection||'—')}</td>
-          <td><span class="badge b-${s.status==='Approved'?'Paid':s.status==='Rejected'?'OVERDUE':s.status==='Under Review'?'Active':'Draft'}">${s.status}</span></td>
-          <td>${fmtDate(s.createdAt)}</td>
-          <td>${overdue?'<span style="color:var(--danger)">':''}${s.requiredDate?fmtDate(s.requiredDate):'—'}${overdue?' (Overdue)</span>':''}</td>
-        </tr>`;
-      }).join('')}
-    </tbody></table>` : '<div class="empty">No submittals yet. Track shop drawings, product data, samples, and other required submittals for your projects.</div>'}
-  `;
-}
-function openSubmittal(id){
-  const s = id ? (DB.submittals||[]).find(x=>x.id===id) : null;
-  const projects = DB.customers.filter(c=>c.projectStatus==='Active');
-  openModal(`
-    <h3>${s?'Edit':'New'} Submittal</h3>
-    <div class="field"><label>Submittal Number</label><input id="f_subNum" value="${esc(s?s.submittalNumber:'SUB-'+(DB.submittals.length+1).toString().padStart(3,'0'))}" placeholder="SUB-001"></div>
-    <div class="field"><label>Title *</label><input id="f_subTitle" value="${esc(s?s.title:'')}" placeholder="Submittal title"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div class="field"><label>Type</label><select id="f_subType">${SUBMITTAL_TYPES.map(t=>`<option ${s&&s.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
-      <div class="field"><label>Status</label><select id="f_subStatus">${SUBMITTAL_STATUSES.map(st=>`<option ${s&&s.status===st?'selected':''}>${st}</option>`).join('')}</select></div>
-    </div>
-    <div class="field"><label>Project</label><select id="f_subProject">
-      <option value="">— Select Project —</option>
-      ${projects.map(p=>`<option value="${p.id}" ${s&&s.projectId==p.id?'selected':''}>${esc(p.name)}</option>`).join('')}
-    </select></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div class="field"><label>Spec Section</label><input id="f_subSpec" value="${esc(s?s.specSection:'')}" placeholder="e.g. 03 30 00"></div>
-      <div class="field"><label>Required Date</label><input type="date" id="f_subRequired" value="${s?s.requiredDate||'':''}"></div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div class="field"><label>Submitted By</label><input id="f_subBy" value="${esc(s?s.submittedBy:session.name)}" placeholder="Subcontractor / vendor"></div>
-      <div class="field"><label>Reviewer</label><input id="f_subReviewer" value="${esc(s?s.reviewer:'')}" placeholder="Architect / engineer"></div>
-    </div>
-    <div class="field"><label>Description</label><textarea id="f_subDesc" rows="3" placeholder="Describe the submittal...">${esc(s?s.description:'')}</textarea></div>
-    <div class="field"><label>Review Notes</label><textarea id="f_subNotes" rows="3" placeholder="Reviewer comments...">${esc(s?s.reviewNotes:'')}</textarea></div>
-    <div class="btnrow">
-      <button class="btn pri" onclick="saveSubmittal('${id||''}')">${s?'Save Changes':'Create Submittal'}</button>
-      ${s && canDelete() ? `<button class="btn danger" onclick="deleteSubmittal('${id}')">Delete</button>` : ''}
-    </div>
-  `);
-}
-function saveSubmittal(id){
-  const title = document.getElementById('f_subTitle').value.trim();
-  if(!title){ toast('Title is required'); return; }
-  const vals = {
-    submittalNumber: document.getElementById('f_subNum').value.trim(),
-    title,
-    type: document.getElementById('f_subType').value,
-    status: document.getElementById('f_subStatus').value,
-    projectId: document.getElementById('f_subProject').value || null,
-    specSection: document.getElementById('f_subSpec').value.trim(),
-    requiredDate: document.getElementById('f_subRequired').value || '',
-    submittedBy: document.getElementById('f_subBy').value.trim(),
-    reviewer: document.getElementById('f_subReviewer').value.trim(),
-    description: document.getElementById('f_subDesc').value.trim(),
-    reviewNotes: document.getElementById('f_subNotes').value.trim(),
-  };
-  if(id){
-    const s = DB.submittals.find(x=>x.id===id);
-    if(s){ Object.assign(s, vals); s.updatedAt = new Date().toISOString(); }
-  } else {
-    DB.submittals.push({ id: uid(), ...vals, createdAt: new Date().toISOString(), createdBy: session.name });
-    logNotification('New Submittal', `Submittal "${vals.submittalNumber}: ${title}" created`, 'submittals');
-  }
-  saveDB(); closeModal(); toast('Submittal saved'); renderSubmittals();
-}
-async function deleteSubmittal(id){
-  if(!guardDelete()) return;
-  if(!confirm('Delete this submittal?')) return;
-  const s = DB.submittals.find(x=>x.id===id);
-  if(s) moveToTrash('submittal', s);
-  DB.submittals = DB.submittals.filter(x=>x.id!==id);
-  const res = await saveDBAndConfirmSync();
-  toast(res.synced ? 'Submittal moved to Trash' : `⚠️ Deleted here, but failed to sync — ${res.error||'check your connection'}`);
-  closeModal(); renderSubmittals();
-}
-
-/* ── Change Orders Module ── */
-const CO_STATUSES = ['Draft','Pending Approval','Approved','Rejected','Void'];
-const CO_TYPES = ['Owner Change Order','Commitment Change Order','Internal Change Order'];
-const CO_REASONS = ['Owner Request','Design Error','Unforeseen Condition','Value Engineering','Regulatory Change','Scope Change','Other'];
-function renderChangeOrders(){
-  if(!DB.changeOrders) DB.changeOrders = [];
-  const q = (sub.q||'').toLowerCase();
-  const statusFilter = sub.statusFilter || '';
-  let list = DB.changeOrders.filter(co => {
-    if(statusFilter && co.status !== statusFilter) return false;
-    if(q && !co.title.toLowerCase().includes(q) && !(co.coNumber||'').toLowerCase().includes(q)) return false;
-    return true;
-  });
-  list.sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
-  const totalApproved = list.filter(co=>co.status==='Approved').reduce((s,co)=>s+(Number(co.amount)||0),0);
-  const totalPending = list.filter(co=>co.status==='Pending Approval').reduce((s,co)=>s+(Number(co.amount)||0),0);
-  const main = document.getElementById('mainArea');
-  main.innerHTML = `
-    <div class="toolbar">
-      <h2>Change Orders</h2>
-      <div class="spacer"></div>
-      <select onchange="sub.statusFilter=this.value;renderChangeOrders()" style="margin-right:8px">
-        <option value="">All Statuses</option>
-        ${CO_STATUSES.map(s=>`<option ${statusFilter===s?'selected':''}>${s}</option>`).join('')}
-      </select>
-      ${searchInput('coSearch', v=>{ sub.q=v; renderChangeOrders(); })}
-      ${canEdit()?`<button class="btn pri" onclick="openChangeOrder()">+ New Change Order</button>`:''}
-    </div>
-    <div style="display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap">
-      <div class="panel" style="flex:1;min-width:200px;text-align:center;padding:16px"><div class="mut">Total Approved</div><div style="font-size:24px;font-weight:700;color:var(--accent)">${money(totalApproved)}</div></div>
-      <div class="panel" style="flex:1;min-width:200px;text-align:center;padding:16px"><div class="mut">Pending Approval</div><div style="font-size:24px;font-weight:700;color:var(--warn)">${money(totalPending)}</div></div>
-      <div class="panel" style="flex:1;min-width:200px;text-align:center;padding:16px"><div class="mut">Total COs</div><div style="font-size:24px;font-weight:700">${list.length}</div></div>
-    </div>
-    ${list.length ? `<table class="dtable"><thead><tr><th>CO #</th><th>Title</th><th>Type</th><th>Project</th><th>Amount</th><th>Status</th><th>Reason</th><th>Created</th></tr></thead><tbody>
-      ${list.map(co => {
-        const proj = customerById(co.projectId);
-        return `<tr style="cursor:pointer" onclick="openChangeOrder('${co.id}')">
-          <td class="mono">${esc(co.coNumber||'—')}</td>
-          <td><b>${esc(co.title)}</b></td>
-          <td>${esc(co.type||'—')}</td>
-          <td>${proj?esc(proj.name):'—'}</td>
-          <td style="text-align:right;font-weight:600;color:${(Number(co.amount)||0)>=0?'var(--accent)':'var(--danger)'}">${money(co.amount)}</td>
-          <td><span class="badge b-${co.status==='Approved'?'Paid':co.status==='Rejected'?'OVERDUE':co.status==='Pending Approval'?'Active':'Draft'}">${co.status}</span></td>
-          <td>${esc(co.reason||'—')}</td>
-          <td>${fmtDate(co.createdAt)}</td>
-        </tr>`;
-      }).join('')}
-    </tbody></table>` : '<div class="empty">No change orders yet. Track contract modifications, cost adjustments, and scope changes for your projects.</div>'}
-  `;
-}
-function openChangeOrder(id){
-  const co = id ? (DB.changeOrders||[]).find(x=>x.id===id) : null;
-  const projects = DB.customers.filter(c=>c.projectStatus==='Active');
-  openModal(`
-    <h3>${co?'Edit':'New'} Change Order</h3>
-    <div class="field"><label>CO Number</label><input id="f_coNum" value="${esc(co?co.coNumber:'CO-'+(DB.changeOrders.length+1).toString().padStart(3,'0'))}" placeholder="CO-001"></div>
-    <div class="field"><label>Title *</label><input id="f_coTitle" value="${esc(co?co.title:'')}" placeholder="Change order title"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div class="field"><label>Type</label><select id="f_coType">${CO_TYPES.map(t=>`<option ${co&&co.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
-      <div class="field"><label>Status</label><select id="f_coStatus">${CO_STATUSES.map(s=>`<option ${co&&co.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
-    </div>
-    <div class="field"><label>Project</label><select id="f_coProject">
-      <option value="">— Select Project —</option>
-      ${projects.map(p=>`<option value="${p.id}" ${co&&co.projectId==p.id?'selected':''}>${esc(p.name)}</option>`).join('')}
-    </select></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div class="field"><label>Amount (₱)</label><input type="number" id="f_coAmount" value="${co?co.amount||'':''}" placeholder="0.00" step="0.01"></div>
-      <div class="field"><label>Schedule Impact (days)</label><input type="number" id="f_coDays" value="${co?co.scheduleImpact||'':''}" placeholder="0"></div>
-    </div>
-    <div class="field"><label>Reason</label><select id="f_coReason">${CO_REASONS.map(r=>`<option ${co&&co.reason===r?'selected':''}>${r}</option>`).join('')}</select></div>
-    <div class="field"><label>Description</label><textarea id="f_coDesc" rows="4" placeholder="Describe the change and its justification...">${esc(co?co.description:'')}</textarea></div>
-    <div class="field"><label>Requested By</label><input id="f_coRequestedBy" value="${esc(co?co.requestedBy:'')}" placeholder="Owner, architect, etc."></div>
-    <div class="btnrow">
-      <button class="btn pri" onclick="saveChangeOrder('${id||''}')">${co?'Save Changes':'Create Change Order'}</button>
-      ${co && canDelete() ? `<button class="btn danger" onclick="deleteChangeOrder('${id}')">Delete</button>` : ''}
-    </div>
-  `);
-}
-function saveChangeOrder(id){
-  const title = document.getElementById('f_coTitle').value.trim();
-  if(!title){ toast('Title is required'); return; }
-  const vals = {
-    coNumber: document.getElementById('f_coNum').value.trim(),
-    title,
-    type: document.getElementById('f_coType').value,
-    status: document.getElementById('f_coStatus').value,
-    projectId: document.getElementById('f_coProject').value || null,
-    amount: Number(document.getElementById('f_coAmount').value)||0,
-    scheduleImpact: Number(document.getElementById('f_coDays').value)||0,
-    reason: document.getElementById('f_coReason').value,
-    description: document.getElementById('f_coDesc').value.trim(),
-    requestedBy: document.getElementById('f_coRequestedBy').value.trim(),
-  };
-  if(id){
-    const co = DB.changeOrders.find(x=>x.id===id);
-    if(co){ Object.assign(co, vals); co.updatedAt = new Date().toISOString(); }
-  } else {
-    DB.changeOrders.push({ id: uid(), ...vals, createdAt: new Date().toISOString(), createdBy: session.name });
-    logNotification('New CO', `Change Order "${vals.coNumber}: ${title}" — ${money(vals.amount)}`, 'changeOrders');
-  }
-  saveDB(); closeModal(); toast('Change order saved'); renderChangeOrders();
-}
-async function deleteChangeOrder(id){
-  if(!guardDelete()) return;
-  if(!confirm('Delete this change order?')) return;
-  const co = DB.changeOrders.find(x=>x.id===id);
-  if(co) moveToTrash('changeOrder', co);
-  DB.changeOrders = DB.changeOrders.filter(x=>x.id!==id);
-  const res = await saveDBAndConfirmSync();
-  toast(res.synced ? 'Change order moved to Trash' : `⚠️ Deleted here, but failed to sync — ${res.error||'check your connection'}`);
-  closeModal(); renderChangeOrders();
-}
-
-/* ── Safety Module (Incidents + Inspections) ── */
-const INCIDENT_SEVERITIES = ['Near Miss','First Aid','Medical Treatment','Lost Time','Fatality'];
-const INCIDENT_TYPES = ['Slip/Trip/Fall','Struck By','Caught In/Between','Electrical','Heat/Cold Stress','Chemical Exposure','Equipment Malfunction','Vehicle Accident','Other'];
-const INSPECTION_STATUSES = ['Scheduled','In Progress','Passed','Failed','Requires Follow-Up'];
-const INSPECTION_TYPES = ['Pre-Construction','Daily Safety','Weekly Site','Equipment','Fire Safety','Electrical','Scaffolding','Excavation','PPE Compliance','Environmental','Final/Closeout','Custom'];
-function renderSafety(){
-  if(!DB.incidents) DB.incidents = [];
-  if(!DB.inspections) DB.inspections = [];
-  const tab = sub.stab || 'incidents';
-  const main = document.getElementById('mainArea');
-  main.innerHTML = `
-    <div class="toolbar">
-      <h2>Safety</h2>
-      <div class="spacer"></div>
-      <div style="display:flex;gap:4px;margin-right:12px">
-        <button class="btn ${tab==='incidents'?'pri':''}" onclick="sub.stab='incidents';renderSafety()">Incidents</button>
-        <button class="btn ${tab==='inspections'?'pri':''}" onclick="sub.stab='inspections';renderSafety()">Inspections</button>
-        <button class="btn ${tab==='stats'?'pri':''}" onclick="sub.stab='stats';renderSafety()">Statistics</button>
-      </div>
-    </div>
-    <div id="safetyContent"></div>
-  `;
-  if(tab === 'incidents') renderIncidents();
-  else if(tab === 'inspections') renderInspections();
-  else renderSafetyStats();
-}
-function renderIncidents(){
-  const q = (sub.q||'').toLowerCase();
-  let list = DB.incidents.filter(i => {
-    if(q && !i.title.toLowerCase().includes(q) && !(i.incidentNumber||'').toLowerCase().includes(q)) return false;
-    return true;
-  });
-  list.sort((a,b) => (b.date||'').localeCompare(a.date||''));
-  document.getElementById('safetyContent').innerHTML = `
-    <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
-      ${searchInput('incSearch', v=>{ sub.q=v; renderIncidents(); })}
-      ${canEdit()?`<button class="btn pri" onclick="openIncident()">+ Report Incident</button>`:''}
-    </div>
-    <div style="display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap">
-      <div class="panel" style="flex:1;min-width:150px;text-align:center;padding:12px"><div class="mut">Total Incidents</div><div style="font-size:22px;font-weight:700">${DB.incidents.length}</div></div>
-      <div class="panel" style="flex:1;min-width:150px;text-align:center;padding:12px"><div class="mut">This Month</div><div style="font-size:22px;font-weight:700;color:var(--warn)">${DB.incidents.filter(i=>i.date&&i.date.slice(0,7)===todayISO().slice(0,7)).length}</div></div>
-      <div class="panel" style="flex:1;min-width:150px;text-align:center;padding:12px"><div class="mut">Open</div><div style="font-size:22px;font-weight:700;color:var(--danger)">${DB.incidents.filter(i=>!i.closed).length}</div></div>
-      <div class="panel" style="flex:1;min-width:150px;text-align:center;padding:12px"><div class="mut">Days Since Last</div><div style="font-size:22px;font-weight:700;color:var(--accent)">${DB.incidents.length ? Math.floor((Date.now()-new Date(list[0]?.date||todayISO()).getTime())/(24*60*60*1000)) : '∞'}</div></div>
-    </div>
-    ${list.length ? `<table class="dtable"><thead><tr><th>#</th><th>Title</th><th>Date</th><th>Project</th><th>Severity</th><th>Type</th><th>Status</th></tr></thead><tbody>
-      ${list.map(i => {
-        const proj = customerById(i.projectId);
-        return `<tr style="cursor:pointer" onclick="openIncident('${i.id}')">
-          <td class="mono">${esc(i.incidentNumber||'—')}</td>
-          <td><b>${esc(i.title)}</b></td>
-          <td>${fmtDate(i.date)}</td>
-          <td>${proj?esc(proj.name):'—'}</td>
-          <td><span class="badge b-${i.severity==='Fatality'||i.severity==='Lost Time'?'OVERDUE':i.severity==='Medical Treatment'?'WO':i.severity==='First Aid'?'PO':'Paid'}">${i.severity}</span></td>
-          <td>${esc(i.type||'—')}</td>
-          <td><span class="badge b-${i.closed?'Completed':'Active'}">${i.closed?'Closed':'Open'}</span></td>
-        </tr>`;
-      }).join('')}
-    </tbody></table>` : '<div class="empty">No incidents reported. Use this section to log workplace injuries, near misses, and safety events per DOLE and OSHA standards.</div>'}
-  `;
-}
-function openIncident(id){
-  const i = id ? (DB.incidents||[]).find(x=>x.id===id) : null;
-  const projects = DB.customers.filter(c=>c.projectStatus==='Active');
-  openModal(`
-    <h3>${i?'Edit':'Report'} Incident</h3>
-    <div class="field"><label>Incident Number</label><input id="f_incNum" value="${esc(i?i.incidentNumber:'INC-'+(DB.incidents.length+1).toString().padStart(3,'0'))}" placeholder="INC-001"></div>
-    <div class="field"><label>Title *</label><input id="f_incTitle" value="${esc(i?i.title:'')}" placeholder="Brief description of incident"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div class="field"><label>Date *</label><input type="date" id="f_incDate" value="${i?i.date:todayISO()}"></div>
-      <div class="field"><label>Time</label><input type="time" id="f_incTime" value="${i?i.time||'':''}"></div>
-    </div>
-    <div class="field"><label>Project / Site</label><select id="f_incProject">
-      <option value="">— Select Project —</option>
-      ${projects.map(p=>`<option value="${p.id}" ${i&&i.projectId==p.id?'selected':''}>${esc(p.name)}</option>`).join('')}
-    </select></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div class="field"><label>Severity</label><select id="f_incSeverity">${INCIDENT_SEVERITIES.map(s=>`<option ${i&&i.severity===s?'selected':''}>${s}</option>`).join('')}</select></div>
-      <div class="field"><label>Type</label><select id="f_incType">${INCIDENT_TYPES.map(t=>`<option ${i&&i.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
-    </div>
-    <div class="field"><label>Injured Person(s)</label><input id="f_incPerson" value="${esc(i?i.injuredPersons:'')}" placeholder="Name(s) of involved persons"></div>
-    <div class="field"><label>Description</label><textarea id="f_incDesc" rows="4" placeholder="Detailed description of what happened...">${esc(i?i.description:'')}</textarea></div>
-    <div class="field"><label>Root Cause</label><textarea id="f_incCause" rows="2" placeholder="What caused the incident?">${esc(i?i.rootCause:'')}</textarea></div>
-    <div class="field"><label>Corrective Actions</label><textarea id="f_incActions" rows="3" placeholder="What actions were taken or will be taken?">${esc(i?i.correctiveActions:'')}</textarea></div>
-    <div class="field"><label>Witnesses</label><input id="f_incWitness" value="${esc(i?i.witnesses:'')}" placeholder="Names of witnesses"></div>
-    <div class="field"><label><input type="checkbox" id="f_incClosed" ${i&&i.closed?'checked':''}> Mark as Closed</label></div>
-    <div class="btnrow">
-      <button class="btn pri" onclick="saveIncident('${id||''}')">${i?'Save Changes':'Report Incident'}</button>
-      ${i && canDelete() ? `<button class="btn danger" onclick="deleteIncident('${id}')">Delete</button>` : ''}
-    </div>
-  `);
-}
-function saveIncident(id){
-  const title = document.getElementById('f_incTitle').value.trim();
-  const date = document.getElementById('f_incDate').value;
-  if(!title||!date){ toast('Title and date are required'); return; }
-  const vals = {
-    incidentNumber: document.getElementById('f_incNum').value.trim(),
-    title, date,
-    time: document.getElementById('f_incTime').value || '',
-    projectId: document.getElementById('f_incProject').value || null,
-    severity: document.getElementById('f_incSeverity').value,
-    type: document.getElementById('f_incType').value,
-    injuredPersons: document.getElementById('f_incPerson').value.trim(),
-    description: document.getElementById('f_incDesc').value.trim(),
-    rootCause: document.getElementById('f_incCause').value.trim(),
-    correctiveActions: document.getElementById('f_incActions').value.trim(),
-    witnesses: document.getElementById('f_incWitness').value.trim(),
-    closed: document.getElementById('f_incClosed').checked,
-  };
-  if(id){
-    const inc = DB.incidents.find(x=>x.id===id);
-    if(inc){ Object.assign(inc, vals); inc.updatedAt = new Date().toISOString(); }
-  } else {
-    DB.incidents.push({ id: uid(), ...vals, createdAt: new Date().toISOString(), reportedBy: session.name });
-    logNotification('Safety Incident', `${vals.severity}: "${title}" reported at ${customerById(vals.projectId)?.name||'unknown site'}`, 'safety', {stab:'incidents'});
-  }
-  saveDB(); closeModal(); toast('Incident saved'); renderSafety();
-}
-async function deleteIncident(id){
-  if(!guardDelete()) return;
-  if(!confirm('Delete this incident report?')) return;
-  const inc = DB.incidents.find(x=>x.id===id);
-  if(inc) moveToTrash('incident', inc);
-  DB.incidents = DB.incidents.filter(x=>x.id!==id);
-  const res = await saveDBAndConfirmSync();
-  toast(res.synced ? 'Incident moved to Trash' : `⚠️ Deleted here, but failed to sync — ${res.error||'check your connection'}`);
-  closeModal(); renderSafety();
-}
-function renderInspections(){
-  const q = (sub.q||'').toLowerCase();
-  let list = DB.inspections.filter(i => {
-    if(q && !i.title.toLowerCase().includes(q)) return false;
-    return true;
-  });
-  list.sort((a,b) => (b.date||'').localeCompare(a.date||''));
-  document.getElementById('safetyContent').innerHTML = `
-    <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
-      ${searchInput('inspSearch', v=>{ sub.q=v; renderInspections(); })}
-      ${canEdit()?`<button class="btn pri" onclick="openInspection()">+ New Inspection</button>`:''}
-    </div>
-    ${list.length ? `<table class="dtable"><thead><tr><th>Title</th><th>Type</th><th>Date</th><th>Project</th><th>Inspector</th><th>Result</th><th>Items</th></tr></thead><tbody>
-      ${list.map(i => {
-        const proj = customerById(i.projectId);
-        const totalItems = (i.checklist||[]).length;
-        const passedItems = (i.checklist||[]).filter(c=>c.status==='Pass').length;
-        return `<tr style="cursor:pointer" onclick="openInspection('${i.id}')">
-          <td><b>${esc(i.title)}</b></td>
-          <td>${esc(i.type||'—')}</td>
-          <td>${fmtDate(i.date)}</td>
-          <td>${proj?esc(proj.name):'—'}</td>
-          <td>${esc(i.inspector||'—')}</td>
-          <td><span class="badge b-${i.status==='Passed'?'Paid':i.status==='Failed'?'OVERDUE':i.status==='Requires Follow-Up'?'WO':'Active'}">${i.status}</span></td>
-          <td>${totalItems?`${passedItems}/${totalItems}`:'—'}</td>
-        </tr>`;
-      }).join('')}
-    </tbody></table>` : '<div class="empty">No inspections yet. Create inspection checklists to ensure quality and safety compliance on your job sites.</div>'}
-  `;
-}
-function openInspection(id){
-  const i = id ? (DB.inspections||[]).find(x=>x.id===id) : null;
-  const projects = DB.customers.filter(c=>c.projectStatus==='Active');
-  const checklist = i ? (i.checklist||[]) : [];
-  window.__inspChecklist = checklist.length ? JSON.parse(JSON.stringify(checklist)) : [{ item:'', status:'Pass', notes:'' }];
-  openModal(`
-    <h3>${i?'Edit':'New'} Inspection</h3>
-    <div class="field"><label>Title *</label><input id="f_inspTitle" value="${esc(i?i.title:'')}" placeholder="Inspection title"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div class="field"><label>Type</label><select id="f_inspType">${INSPECTION_TYPES.map(t=>`<option ${i&&i.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
-      <div class="field"><label>Date</label><input type="date" id="f_inspDate" value="${i?i.date:todayISO()}"></div>
-    </div>
-    <div class="field"><label>Project</label><select id="f_inspProject">
-      <option value="">— Select Project —</option>
-      ${projects.map(p=>`<option value="${p.id}" ${i&&i.projectId==p.id?'selected':''}>${esc(p.name)}</option>`).join('')}
-    </select></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div class="field"><label>Inspector</label><input id="f_inspInspector" value="${esc(i?i.inspector:session.name)}" placeholder="Inspector name"></div>
-      <div class="field"><label>Status</label><select id="f_inspStatus">${INSPECTION_STATUSES.map(s=>`<option ${i&&i.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
-    </div>
-    <h4 style="margin:16px 0 8px">Checklist Items</h4>
-    <div id="inspChecklistArea"></div>
-    <button class="btn" onclick="addInspChecklistItem()" style="margin-bottom:12px">+ Add Item</button>
-    <div class="field"><label>Overall Notes</label><textarea id="f_inspNotes" rows="3" placeholder="General observations...">${esc(i?i.notes:'')}</textarea></div>
-    <div class="btnrow">
-      <button class="btn pri" onclick="saveInspection('${id||''}')">${i?'Save Changes':'Create Inspection'}</button>
-      ${i && canDelete() ? `<button class="btn danger" onclick="deleteInspection('${id}')">Delete</button>` : ''}
-    </div>
-  `);
-  renderInspChecklist();
-}
-function renderInspChecklist(){
-  const area = document.getElementById('inspChecklistArea');
-  if(!area) return;
-  area.innerHTML = window.__inspChecklist.map((c,idx) => `
-    <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;padding:8px;background:var(--surface);border-radius:6px">
-      <input style="flex:2" value="${esc(c.item)}" placeholder="Check item description" onchange="window.__inspChecklist[${idx}].item=this.value">
-      <select style="flex:0 0 90px" onchange="window.__inspChecklist[${idx}].status=this.value">
-        <option ${c.status==='Pass'?'selected':''}>Pass</option>
-        <option ${c.status==='Fail'?'selected':''}>Fail</option>
-        <option ${c.status==='N/A'?'selected':''}>N/A</option>
-      </select>
-      <input style="flex:1" value="${esc(c.notes||'')}" placeholder="Notes" onchange="window.__inspChecklist[${idx}].notes=this.value">
-      <button class="btn danger" onclick="window.__inspChecklist.splice(${idx},1);renderInspChecklist()" style="padding:4px 8px">✕</button>
-    </div>
-  `).join('');
-}
-function addInspChecklistItem(){
-  window.__inspChecklist.push({ item:'', status:'Pass', notes:'' });
-  renderInspChecklist();
-}
-function saveInspection(id){
-  const title = document.getElementById('f_inspTitle').value.trim();
-  if(!title){ toast('Title is required'); return; }
-  const checklist = (window.__inspChecklist||[]).filter(c=>c.item.trim());
-  const vals = {
-    title,
-    type: document.getElementById('f_inspType').value,
-    date: document.getElementById('f_inspDate').value,
-    projectId: document.getElementById('f_inspProject').value || null,
-    inspector: document.getElementById('f_inspInspector').value.trim(),
-    status: document.getElementById('f_inspStatus').value,
-    checklist,
-    notes: document.getElementById('f_inspNotes').value.trim(),
-  };
-  if(id){
-    const i = DB.inspections.find(x=>x.id===id);
-    if(i){ Object.assign(i, vals); i.updatedAt = new Date().toISOString(); }
-  } else {
-    DB.inspections.push({ id: uid(), ...vals, createdAt: new Date().toISOString(), createdBy: session.name });
-    logNotification('New Inspection', `${vals.type} inspection at ${customerById(vals.projectId)?.name||'site'} — ${vals.status}`, 'safety', {stab:'inspections'});
-  }
-  saveDB(); closeModal(); toast('Inspection saved'); renderSafety();
-}
-async function deleteInspection(id){
-  if(!guardDelete()) return;
-  if(!confirm('Delete this inspection?')) return;
-  const insp = DB.inspections.find(x=>x.id===id);
-  if(insp) moveToTrash('inspection', insp);
-  DB.inspections = DB.inspections.filter(x=>x.id!==id);
-  const res = await saveDBAndConfirmSync();
-  toast(res.synced ? 'Inspection moved to Trash' : `⚠️ Deleted here, but failed to sync — ${res.error||'check your connection'}`);
-  closeModal(); renderSafety();
-}
-function renderSafetyStats(){
-  const byMonth = {};
-  DB.incidents.forEach(i => {
-    if(!i.date) return;
-    const m = i.date.slice(0,7);
-    byMonth[m] = (byMonth[m]||0) + 1;
-  });
-  const bySeverity = {};
-  DB.incidents.forEach(i => { bySeverity[i.severity] = (bySeverity[i.severity]||0) + 1; });
-  const byType = {};
-  DB.incidents.forEach(i => { byType[i.type] = (byType[i.type]||0) + 1; });
-  const byProject = {};
-  DB.incidents.forEach(i => {
-    const pName = customerById(i.projectId)?.name || 'Unassigned';
-    byProject[pName] = (byProject[pName]||0) + 1;
-  });
-  const months = Object.keys(byMonth).sort().slice(-12);
-  const maxMonth = Math.max(1, ...months.map(m=>byMonth[m]));
-  document.getElementById('safetyContent').innerHTML = `
-    <div style="display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap">
-      <div class="panel" style="flex:1;min-width:200px;padding:16px">
-        <h4>Incidents by Severity</h4>
-        ${Object.entries(bySeverity).sort((a,b)=>b[1]-a[1]).map(([s,c])=>`
-          <div style="display:flex;justify-content:space-between;padding:4px 0"><span>${esc(s)}</span><b>${c}</b></div>
-        `).join('')||'<div class="mut">No data</div>'}
-      </div>
-      <div class="panel" style="flex:1;min-width:200px;padding:16px">
-        <h4>Incidents by Type</h4>
-        ${Object.entries(byType).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([t,c])=>`
-          <div style="display:flex;justify-content:space-between;padding:4px 0"><span>${esc(t)}</span><b>${c}</b></div>
-        `).join('')||'<div class="mut">No data</div>'}
-      </div>
-      <div class="panel" style="flex:1;min-width:200px;padding:16px">
-        <h4>Incidents by Project</h4>
-        ${Object.entries(byProject).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([p,c])=>`
-          <div style="display:flex;justify-content:space-between;padding:4px 0"><span>${esc(p)}</span><b>${c}</b></div>
-        `).join('')||'<div class="mut">No data</div>'}
-      </div>
-    </div>
-    <div class="panel" style="padding:16px">
-      <h4>Monthly Trend</h4>
-      ${months.length ? `<div style="display:flex;align-items:flex-end;gap:4px;height:120px;margin-top:8px">
-        ${months.map(m => `<div style="flex:1;display:flex;flex-direction:column;align-items:center">
-          <div style="width:100%;background:var(--danger);border-radius:4px 4px 0 0;height:${(byMonth[m]/maxMonth)*100}px;min-height:2px" title="${byMonth[m]} incidents"></div>
-          <div class="mut" style="font-size:10px;margin-top:4px">${m.slice(5)}</div>
-        </div>`).join('')}
-      </div>` : '<div class="mut">No incident data to chart</div>'}
-    </div>
-    <div class="panel" style="padding:16px;margin-top:16px">
-      <h4>Inspection Summary</h4>
-      <div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:8px">
-        <div><span class="mut">Total:</span> <b>${DB.inspections.length}</b></div>
-        <div><span class="mut">Passed:</span> <b style="color:var(--accent)">${DB.inspections.filter(i=>i.status==='Passed').length}</b></div>
-        <div><span class="mut">Failed:</span> <b style="color:var(--danger)">${DB.inspections.filter(i=>i.status==='Failed').length}</b></div>
-        <div><span class="mut">Follow-Up:</span> <b style="color:var(--warn)">${DB.inspections.filter(i=>i.status==='Requires Follow-Up').length}</b></div>
-      </div>
-    </div>
-  `;
-}
-
-/* ============================================================ PUNCH LIST ============================================================ */
-const PUNCH_STATUSES = ['Open','In Progress','Ready for Review','Closed'];
-const PUNCH_PRIORITIES = ['Critical','High','Medium','Low'];
-const PUNCH_CATEGORIES = ['Structural','Electrical','Plumbing','HVAC','Finishing','Painting','Flooring','Roofing','Landscaping','Other'];
-function renderPunchList(){
-  sub.punchProject = sub.punchProject || 'ALL';
-  sub.punchStatus = sub.punchStatus || 'ALL';
-  if(!DB.punchItems) DB.punchItems = [];
-  let rows = [...DB.punchItems];
-  if(sub.punchProject !== 'ALL') rows = rows.filter(p=>p.project===sub.punchProject);
-  if(sub.punchStatus !== 'ALL') rows = rows.filter(p=>p.status===sub.punchStatus);
-  rows.sort((a,b)=>(PUNCH_PRIORITIES.indexOf(a.priority)-PUNCH_PRIORITIES.indexOf(b.priority)) || (b.date||'').localeCompare(a.date||''));
-  const open = DB.punchItems.filter(p=>p.status!=='Closed').length;
-  const closed = DB.punchItems.filter(p=>p.status==='Closed').length;
-  document.getElementById('mainArea').innerHTML = `
-    <div class="crumb">Documents ▸ Punch List</div>
-    <div class="cards">
-      <div class="kpi"><div class="l">Total Items</div><div class="v">${DB.punchItems.length}</div></div>
-      <div class="kpi"><div class="l">Open</div><div class="v ${open?'danger':'green'}">${open}</div></div>
-      <div class="kpi"><div class="l">Closed</div><div class="v green">${closed}</div></div>
-      <div class="kpi"><div class="l">Completion</div><div class="v">${DB.punchItems.length?Math.round(closed/DB.punchItems.length*100):0}%</div></div>
-    </div>
-    <div class="panel">
-      <div class="ph"><h3>Punch List</h3>${canEdit()?`<button class="btn pri" onclick="editPunchItem(null)">+ Add Item</button>`:''}</div>
-      <div class="searchbar">
-        <select onchange="sub.punchProject=this.value;renderPunchList()">
-          <option value="ALL">All Projects</option>
-          ${DB.customers.map(c=>`<option ${sub.punchProject===c.name?'selected':''}>${esc(c.name)}</option>`).join('')}
-        </select>
-        <select onchange="sub.punchStatus=this.value;renderPunchList()">
-          <option value="ALL">All Statuses</option>
-          ${PUNCH_STATUSES.map(s=>`<option ${sub.punchStatus===s?'selected':''}>${s}</option>`).join('')}
-        </select>
-      </div>
-      <div class="twrap"><table>
-        <tr><th>#</th><th>Description</th><th>Project</th><th>Location</th><th>Category</th><th>Priority</th><th>Assigned To</th><th>Status</th><th>Date</th><th></th></tr>
-        ${rows.map(p=>`
-          <tr class="click" onclick="editPunchItem(${p.id})">
-            <td class="mono">${p.id}</td>
-            <td><b>${esc(p.description)}</b></td>
-            <td class="mut">${esc(p.project)}</td>
-            <td class="mut">${esc(p.location)||'—'}</td>
-            <td class="mut">${esc(p.category)||'—'}</td>
-            <td><span class="badge b-${p.priority==='Critical'?'danger':p.priority==='High'?'Pending':p.priority==='Medium'?'status':'Paid'}">${esc(p.priority)}</span></td>
-            <td class="mut">${esc(p.assignedTo)||'—'}</td>
-            <td><span class="badge b-status b-${esc(p.status)}">${esc(p.status)}</span></td>
-            <td class="mut">${fmtDate(p.date)}</td>
-            <td>${canEdit()?`<button class="x" onclick="event.stopPropagation();deletePunchItem(${p.id})">✕</button>`:''}</td>
-          </tr>`).join('') || `<tr><td colspan="10" class="empty">No punch list items yet — add one to start tracking closeout work</td></tr>`}
-      </table></div>
-    </div>
-  `;
-}
-function editPunchItem(id){
-  if(!canEdit()) return;
-  const p = id ? DB.punchItems.find(x=>x.id===id) : {id:null,description:'',project:'',location:'',category:'Other',priority:'Medium',assignedTo:'',status:'Open',date:todayISO(),dueDate:'',notes:'',closedDate:''};
-  openModal(`
-    <h3>${id?'Edit':'Add'} Punch List Item</h3>
-    <div class="field"><label class="fl" for="f_desc">Description *</label><input id="f_desc" value="${esc(p.description)}" placeholder="e.g. Touch-up paint on 2nd floor hallway"></div>
-    <div class="grid2">
-      <div class="field"><label class="fl" for="f_project">Project</label><select id="f_project">${siteSelectOptions(p.project)}</select></div>
-      <div class="field"><label class="fl" for="f_loc">Location / Area</label><input id="f_loc" value="${esc(p.location)}" placeholder="e.g. Room 204, 2nd Floor"></div>
-    </div>
-    ${siteDatalist()}
-    <div class="grid3">
-      <div class="field"><label class="fl" for="f_cat">Category</label><select id="f_cat">${PUNCH_CATEGORIES.map(c=>`<option ${p.category===c?'selected':''}>${c}</option>`).join('')}</select></div>
-      <div class="field"><label class="fl" for="f_pri">Priority</label><select id="f_pri">${PUNCH_PRIORITIES.map(pr=>`<option ${p.priority===pr?'selected':''}>${pr}</option>`).join('')}</select></div>
-      <div class="field"><label class="fl" for="f_status">Status</label><select id="f_status">${PUNCH_STATUSES.map(s=>`<option ${p.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
-    </div>
-    <div class="grid2">
-      <div class="field"><label class="fl" for="f_assign">Assigned To</label><input id="f_assign" value="${esc(p.assignedTo)}" placeholder="Name or trade"></div>
-      <div class="field"><label class="fl" for="f_due">Due Date</label><input id="f_due" type="date" value="${esc(p.dueDate)}"></div>
-    </div>
-    <div class="field"><label class="fl" for="f_notes">Notes</label><textarea id="f_notes" rows="2">${esc(p.notes)}</textarea></div>
-    <div class="btnrow">
-      <button class="btn save" onclick="savePunchItem(${id})">Save</button>
-      ${id?`<button class="btn del" onclick="deletePunchItem(${id})">Delete</button>`:''}
-      <button class="btn ghost" onclick="closeModal()">Cancel</button>
-    </div>
-  `);
-}
-function savePunchItem(id){
-  const description = document.getElementById('f_desc').value.trim();
-  if(!description){ toast('Please enter a description'); return; }
-  const vals = {
-    description, project: document.getElementById('f_project').value, location: document.getElementById('f_loc').value.trim(),
-    category: document.getElementById('f_cat').value, priority: document.getElementById('f_pri').value,
-    status: document.getElementById('f_status').value, assignedTo: document.getElementById('f_assign').value.trim(),
-    dueDate: document.getElementById('f_due').value, notes: document.getElementById('f_notes').value.trim(),
-    date: todayISO(),
-  };
-  if(vals.status === 'Closed') vals.closedDate = vals.closedDate || todayISO();
-  if(id){
-    const existing = DB.punchItems.find(x=>x.id===id);
-    if(existing.status !== 'Closed' && vals.status === 'Closed') vals.closedDate = todayISO();
-    Object.assign(existing, vals);
-  } else {
-    DB.punchItems.push({ id: nextId(DB.punchItems), ...vals });
-  }
-  saveDB(); closeModal(); toast('Punch list item saved'); renderPunchList();
-}
-function deletePunchItem(id){
-  if(!guardDelete()) return;
-  if(!confirm('Delete this punch list item?')) return;
-  DB.punchItems = DB.punchItems.filter(x=>x.id!==id);
-  saveDB(); closeModal(); toast('Item deleted'); renderPunchList();
-}
-
-/* ============================================================ DAILY LOG ============================================================ */
-const WEATHER_OPTIONS = ['Clear','Sunny','Partly Cloudy','Cloudy','Light Rain','Heavy Rain','Thunderstorm','Windy','Hot','Cold'];
-function renderDailyLog(){
-  sub.logProject = sub.logProject || 'ALL';
-  if(!DB.dailyLogs) DB.dailyLogs = [];
-  let rows = [...DB.dailyLogs];
-  if(sub.logProject !== 'ALL') rows = rows.filter(l=>l.project===sub.logProject);
-  rows.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-  document.getElementById('mainArea').innerHTML = `
-    <div class="crumb">Documents ▸ Daily Log</div>
-    <div class="cards">
-      <div class="kpi"><div class="l">Total Entries</div><div class="v">${DB.dailyLogs.length}</div></div>
-      <div class="kpi"><div class="l">This Week</div><div class="v">${DB.dailyLogs.filter(l=>{const d=new Date(l.date);const now=new Date();const diff=(now-d)/(1000*60*60*24);return diff>=0&&diff<7;}).length}</div></div>
-      <div class="kpi"><div class="l">Projects Logged</div><div class="v">${new Set(DB.dailyLogs.map(l=>l.project)).size}</div></div>
-    </div>
-    <div class="panel">
-      <div class="ph"><h3>Daily Construction Log</h3><button class="btn pri" onclick="editDailyLog(null)">+ New Entry</button></div>
-      <div class="searchbar">
-        <select onchange="sub.logProject=this.value;renderDailyLog()">
-          <option value="ALL">All Projects</option>
-          ${DB.customers.map(c=>`<option ${sub.logProject===c.name?'selected':''}>${esc(c.name)}</option>`).join('')}
-        </select>
-      </div>
-      <div class="twrap"><table>
-        <tr><th>Date</th><th>Project</th><th>Weather</th><th>Crew Size</th><th>Work Performed</th><th>Issues / Delays</th><th>By</th><th></th></tr>
-        ${rows.map(l=>`
-          <tr class="click" onclick="editDailyLog(${l.id})">
-            <td class="mono"><b>${fmtDate(l.date)}</b></td>
-            <td>${esc(l.project)}</td>
-            <td class="mut">${esc(l.weather)||'—'}</td>
-            <td class="num">${l.crewSize||'—'}</td>
-            <td class="mut" style="max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.workPerformed)||'—'}</td>
-            <td class="mut" style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.delays)||'—'}</td>
-            <td class="mut">${esc(l.createdBy)||'—'}</td>
-            <td>${canEdit()?`<button class="x" onclick="event.stopPropagation();deleteDailyLog(${l.id})">✕</button>`:''}</td>
-          </tr>`).join('') || `<tr><td colspan="8" class="empty">No daily log entries yet — start documenting site activity</td></tr>`}
-      </table></div>
-    </div>
-  `;
-}
-function editDailyLog(id){
-  const l = id ? DB.dailyLogs.find(x=>x.id===id) : {id:null,date:todayISO(),project:'',weather:'Clear',tempHigh:'',tempLow:'',crewSize:'',workPerformed:'',materialsUsed:'',equipmentUsed:'',visitors:'',delays:'',safetyNotes:'',createdBy:session.name,photos:''};
-  openModal(`
-    <h3>${id?'Edit':'New'} Daily Log Entry</h3>
-    <div class="grid2">
-      <div class="field"><label class="fl" for="f_date">Date *</label><input id="f_date" type="date" value="${esc(l.date)}"></div>
-      <div class="field"><label class="fl" for="f_project">Project *</label><select id="f_project">${siteSelectOptions(l.project)}</select></div>
-    </div>
-    ${siteDatalist()}
-    <div class="grid3">
-      <div class="field"><label class="fl" for="f_weather">Weather</label><select id="f_weather">${WEATHER_OPTIONS.map(w=>`<option ${l.weather===w?'selected':''}>${w}</option>`).join('')}</select></div>
-      <div class="field"><label class="fl" for="f_temphi">Temp High (°C)</label><input id="f_temphi" type="number" value="${l.tempHigh}" placeholder="e.g. 34"></div>
-      <div class="field"><label class="fl" for="f_templo">Temp Low (°C)</label><input id="f_templo" type="number" value="${l.tempLow}" placeholder="e.g. 26"></div>
-    </div>
-    <div class="field"><label class="fl" for="f_crew">Crew Size (workers on site)</label><input id="f_crew" type="number" value="${l.crewSize}" placeholder="e.g. 12"></div>
-    <div class="field"><label class="fl" for="f_work">Work Performed *</label><textarea id="f_work" rows="3" placeholder="Describe work completed today — concrete pouring, framing, rebar installation, etc.">${esc(l.workPerformed)}</textarea></div>
-    <div class="field"><label class="fl" for="f_materials">Materials Used</label><textarea id="f_materials" rows="2" placeholder="e.g. 50 bags cement, 20 pcs rebar #16">${esc(l.materialsUsed)}</textarea></div>
-    <div class="field"><label class="fl" for="f_equipment">Equipment Used</label><input id="f_equipment" value="${esc(l.equipmentUsed)}" placeholder="e.g. Backhoe, concrete mixer, vibrator"></div>
-    <div class="field"><label class="fl" for="f_visitors">Site Visitors</label><input id="f_visitors" value="${esc(l.visitors)}" placeholder="e.g. Architect, DPWH inspector"></div>
-    <div class="field"><label class="fl" for="f_delays">Issues / Delays</label><textarea id="f_delays" rows="2" placeholder="Weather delays, material shortages, equipment breakdowns, etc.">${esc(l.delays)}</textarea></div>
-    <div class="field"><label class="fl" for="f_safety">Safety Notes</label><input id="f_safety" value="${esc(l.safetyNotes)}" placeholder="PPE compliance, near misses, toolbox talk topic"></div>
-    <div class="btnrow">
-      <button class="btn save" onclick="saveDailyLog(${id})">Save</button>
-      ${id?`<button class="btn del" onclick="deleteDailyLog(${id})">Delete</button>`:''}
-      <button class="btn ghost" onclick="closeModal()">Cancel</button>
-    </div>
-  `);
-}
-function saveDailyLog(id){
-  const date = document.getElementById('f_date').value;
-  const project = document.getElementById('f_project').value.trim();
-  const workPerformed = document.getElementById('f_work').value.trim();
-  if(!date || !project){ toast('Please enter a date and project'); return; }
-  if(!workPerformed){ toast('Please describe the work performed today'); return; }
-  const vals = {
-    date, project, weather: document.getElementById('f_weather').value,
-    tempHigh: document.getElementById('f_temphi').value, tempLow: document.getElementById('f_templo').value,
-    crewSize: document.getElementById('f_crew').value, workPerformed,
-    materialsUsed: document.getElementById('f_materials').value.trim(),
-    equipmentUsed: document.getElementById('f_equipment').value.trim(),
-    visitors: document.getElementById('f_visitors').value.trim(),
-    delays: document.getElementById('f_delays').value.trim(),
-    safetyNotes: document.getElementById('f_safety').value.trim(),
-    createdBy: session.name,
-  };
-  if(id){ Object.assign(DB.dailyLogs.find(x=>x.id===id), vals); }
-  else { DB.dailyLogs.push({ id: nextId(DB.dailyLogs), ...vals }); }
-  saveDB(); closeModal(); toast('Daily log saved'); renderDailyLog();
-}
-function deleteDailyLog(id){
-  if(!guardDelete()) return;
-  if(!confirm('Delete this daily log entry?')) return;
-  DB.dailyLogs = DB.dailyLogs.filter(x=>x.id!==id);
-  saveDB(); closeModal(); toast('Entry deleted'); renderDailyLog();
-}
-
 function renderCalculator(){
   window._calcTab = window._calcTab || 'concrete';
   const CALC_TABS = [
@@ -6292,7 +5414,7 @@ function renderSchedule(){
 
     <div class="panel">
       <div class="ph">
-        <h3 style="text-transform:none;font-size:18px;color:var(--text)">Project Activity List</h3>
+        <h3 style="font-size:18px">Project Activity List</h3>
         <div class="btnrow" style="margin:0">
           <button class="btn pri" onclick="editScheduleActivity(null)">+ New Activity</button>
         </div>
@@ -6668,7 +5790,7 @@ function renderCostEstimator(){
   document.getElementById('mainArea').innerHTML = `
     <div class="crumb">Cost Estimator</div>
     <div class="panel">
-      <div class="ph"><h3 style="text-transform:none;font-size:18px;color:var(--text)">Cost Estimator</h3></div>
+      <div class="ph"><h3 style="font-size:18px">Cost Estimator</h3></div>
       <div class="pillnav">
         <button class="${tab==='materials'?'on':''}" onclick="switchCostTab('materials')">Material Price Database</button>
         <button class="${tab==='labor'?'on':''}" onclick="switchCostTab('labor')">Labor Rate Calculator</button>
@@ -6990,7 +6112,7 @@ function renderVendors(){
   document.getElementById('mainArea').innerHTML = `
     <div class="crumb">Suppliers</div>
     <div class="panel">
-      <div class="ph"><h3 style="text-transform:none;font-size:18px;color:var(--text)">Suppliers</h3><div class="btnrow" style="margin:0"><button class="btn ghost" onclick="openBulkImport('vendors')">Bulk Import</button><button class="btn pri" onclick="editVendor(null)">+ New Supplier</button></div></div>
+      <div class="ph"><h3 style="font-size:18px">Suppliers</h3><div class="btnrow" style="margin:0"><button class="btn ghost" onclick="openBulkImport('vendors')">Bulk Import</button><button class="btn pri" onclick="editVendor(null)">+ New Supplier</button></div></div>
       <div class="searchbar">
         <input id="searchVendors" placeholder="Search by name, item, or contact person..." value="${esc(sub.search)}" oninput="searchInput(this,()=>{sub.search=this.value;renderVendors();})">
         <select onchange="sub.vendClass=this.value;renderVendors()" style="width:auto">
@@ -7133,7 +6255,7 @@ function editVendor(id){
       const notes = [...(v.purchaseNotes||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
       return `
     <div class="field" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
-      <label class="fl">Purchase History (${bought.length}) <span class="mut" style="text-transform:none;font-weight:400">— items received from this supplier, based on Materials and Equipment records</span></label>
+      <label class="fl">Purchase History (${bought.length}) <span class="mut" style="font-weight:400">— items received from this supplier, based on Materials and Equipment records</span></label>
       ${bought.length ? `
         <div class="twrap" style="max-height:200px;overflow-y:auto"><table>
           <tr><th>Item</th><th>Type</th><th class="right">Qty</th><th>Date</th><th>Site</th></tr>
@@ -7142,7 +6264,7 @@ function editVendor(id){
       ` : `<div class="mut" style="font-size:12px;margin-top:4px">No purchases recorded from this supplier yet — this fills in automatically whenever a Material or Equipment record lists them as "Received From."</div>`}
     </div>
     <div class="field" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
-      <label class="fl">Manual Purchase Log <span class="mut" style="text-transform:none;font-weight:400">— quick notes on what you bought, for when you don't have the exact receipt yet</span></label>
+      <label class="fl">Manual Purchase Log <span class="mut" style="font-weight:400">— quick notes on what you bought, for when you don't have the exact receipt yet</span></label>
       <div class="grid2" style="margin-bottom:6px">
         <input id="pn_date" type="date" value="${todayISO()}" placeholder="Date">
         <select id="pn_site"><option value="">— Project Site (optional) —</option>${DB.customers.map(c=>`<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('')}</select>
@@ -7258,7 +6380,7 @@ function renderEmployees(){
   document.getElementById('mainArea').innerHTML = `
     <div class="crumb">Employees</div>
     <div class="panel">
-      <div class="ph"><h3 style="text-transform:none;font-size:18px;color:var(--text)">Employees</h3><div class="btnrow" style="margin:0"><button class="btn ghost" onclick="openBulkImport('employees')">Bulk Import</button><button class="btn ghost" onclick="exportEmployeesCSV()">Export CSV</button>${session.type==='Admin'?`<button class="btn ghost" onclick="generateAccountsModal()">🔑 Generate Accounts</button>`:''}<button class="btn pri" onclick="editEmployee(null)">+ New Employee</button></div></div>
+      <div class="ph"><h3 style="font-size:18px">Employees</h3><div class="btnrow" style="margin:0"><button class="btn ghost" onclick="openBulkImport('employees')">Bulk Import</button><button class="btn ghost" onclick="exportEmployeesCSV()">Export CSV</button>${session.type==='Admin'?`<button class="btn ghost" onclick="generateAccountsModal()">🔑 Generate Accounts</button>`:''}<button class="btn pri" onclick="editEmployee(null)">+ New Employee</button></div></div>
       <div class="searchbar">
         <input id="searchEmployees" placeholder="Search employees..." value="${esc(sub.search)}" oninput="searchInput(this,()=>{sub.search=this.value;renderEmployees();})">
         <select onchange="sub.empGroup=this.value;renderEmployees()">
@@ -7316,7 +6438,7 @@ function editEmployee(id){
     </div>
     <div class="field"><label style="display:flex;align-items:center;gap:8px;font-size:13.5px"><input type="checkbox" id="f_active" ${e.active?'checked':''}> Active employee</label></div>
     <div class="field" style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px">
-      <label class="fl">License / Certification <span class="mut" style="text-transform:none;font-weight:400">(TESDA, PRC, driver's license, COSH, etc.)</span></label>
+      <label class="fl">License / Certification <span class="mut" style="font-weight:400">(TESDA, PRC, driver's license, COSH, etc.)</span></label>
     </div>
     <div class="grid3">
       <div class="field"><label class="fl" for="f_lictype">Type</label><select id="f_lictype">${LICENSE_TYPES.map(t=>`<option ${e.licenseType===t?'selected':''}>${t||'— none —'}</option>`).join('')}</select></div>
@@ -7407,7 +6529,7 @@ function renderEmployeeDetail(id){
     <div class="panel">
       <div class="ph">
         <div style="display:flex;align-items:center;gap:12px"><div class="avatar" style="width:44px;height:44px;font-size:16px">${initials(e.name)}</div>
-          <div><h3 style="text-transform:none;font-size:17px;color:var(--text);margin:0">${esc(e.name)}</h3><span class="mut" style="font-size:12.5px">${esc(e.type)} · ${esc(e.payType)}${cur&&cur.site?` · currently at <b>${esc(cur.site)}</b>`:''}${outstanding>0?` · <span style="color:var(--danger)">${money(outstanding)} owed</span>`:''}</span></div>
+          <div><h3 style="font-size:17px;margin:0">${esc(e.name)}</h3><span class="mut" style="font-size:12.5px">${esc(e.type)} · ${esc(e.payType)}${cur&&cur.site?` · currently at <b>${esc(cur.site)}</b>`:''}${outstanding>0?` · <span style="color:var(--danger)">${money(outstanding)} owed</span>`:''}</span></div>
         </div>
         <div class="btnrow" style="margin:0">
           ${session.type==='Admin' ? (employeeHasAccount(id) ? `<span class="badge b-Paid">Has Login Account</span>` : `<button class="btn ghost sm" onclick="generateAccountForEmployee(${id}, 'Employee').then(u=>{if(u){saveDB(); showGeneratedCredentials([u]);}})">🔑 Generate Account</button>`) : ''}
@@ -7680,7 +6802,7 @@ function renderFleet(){
 function renderVehicleListInner(){
   const rows = [...DB.vehicles].sort((a,b)=>a.name.localeCompare(b.name));
   return `
-    <div class="ph"><h3 style="text-transform:none;font-size:18px;color:var(--text)">Vehicles</h3><button class="btn pri" onclick="editVehicle(null)">+ New Vehicle</button></div>
+    <div class="ph"><h3 style="font-size:18px">Vehicles</h3><button class="btn pri" onclick="editVehicle(null)">+ New Vehicle</button></div>
     <div class="twrap"><table>
       <tr><th>Vehicle</th><th>Plate #</th><th>Type</th><th>Driver</th><th class="right">Odometer</th><th class="right">Total Cost</th><th>Maintenance</th><th></th></tr>
       ${rows.map(v=>{
@@ -7709,7 +6831,7 @@ function renderMaintenanceListInner(){
       return (order[a.info.label]??9) - (order[b.info.label]??9) || (a.nextDate||'').localeCompare(b.nextDate||'');
     });
   return `
-    <div class="ph"><h3 style="text-transform:none;font-size:18px;color:var(--text)">Maintenance Schedule</h3></div>
+    <div class="ph"><h3 style="font-size:18px">Maintenance Schedule</h3></div>
     <div class="twrap"><table>
       <tr><th>Vehicle</th><th>Reminder</th><th>Frequency</th><th>Last Done</th><th>Next Due</th><th>Status</th></tr>
       ${rows.map(r=>`
@@ -7811,7 +6933,7 @@ function renderVehicleDetail(id){
     <div class="crumb"><a onclick="go('fleet')" style="color:var(--muted);text-decoration:none">Fleet</a> &nbsp;/&nbsp; <b>${esc(v.name)}</b></div>
     <div class="panel">
       <div class="ph">
-        <div><h3 style="text-transform:none;font-size:18px;color:var(--text);margin:0 0 4px">${esc(v.name)} ${!v.active?'<span class="badge b-status">Inactive</span>':''}</h3>
+        <div><h3 style="font-size:18px;margin:0 0 4px">${esc(v.name)} ${!v.active?'<span class="badge b-status">Inactive</span>':''}</h3>
           <span class="mut" style="font-size:12.5px">${esc(v.make)} ${esc(v.model)} ${v.plate?'· Plate '+esc(v.plate):''}</span>
         </div>
         <button class="btn ghost sm" onclick="editVehicle(${id})">Edit</button>
@@ -8138,7 +7260,7 @@ function renderMaterialsInner(){
     });
     const list = Object.values(grouped).sort((a,b)=>a.name.localeCompare(b.name));
     return `
-      <div class="ph"><h3 style="text-transform:none;font-size:18px;color:var(--text)">Materials</h3><div class="btnrow" style="margin:0"><button class="btn ghost" onclick="openBulkImport('materials')">Bulk Import</button><button class="btn pri" onclick="editMaterial(null)">+ Add Material</button></div></div>
+      <div class="ph"><h3 style="font-size:18px">Materials</h3><div class="btnrow" style="margin:0"><button class="btn ghost" onclick="openBulkImport('materials')">Bulk Import</button><button class="btn pri" onclick="editMaterial(null)">+ Add Material</button></div></div>
       ${materialsToolbar()}
       <div class="twrap"><table>
         <tr><th>Material</th><th>Sites</th><th class="right">Total Qty</th><th class="right">Reorder Point</th><th class="right">Est. Value</th><th>Status</th></tr>
@@ -8159,7 +7281,7 @@ function renderMaterialsInner(){
 
   const sorted = [...rows].sort((a,b)=>(b.date||'').localeCompare(a.date||'') || a.name.localeCompare(b.name));
   return `
-    <div class="ph"><h3 style="text-transform:none;font-size:18px;color:var(--text)">Materials</h3><div class="btnrow" style="margin:0"><button class="btn ghost" onclick="openBulkImport('materials')">Bulk Import</button><button class="btn pri" onclick="editMaterial(null)">+ Add Material</button></div></div>
+    <div class="ph"><h3 style="font-size:18px">Materials</h3><div class="btnrow" style="margin:0"><button class="btn ghost" onclick="openBulkImport('materials')">Bulk Import</button><button class="btn pri" onclick="editMaterial(null)">+ Add Material</button></div></div>
     ${materialsToolbar()}
     <div class="twrap"><table>
       <tr><th>Material</th><th>Site</th><th class="right">Qty</th><th>Received From</th><th>Date</th><th class="right">Value</th><th></th></tr>
@@ -8242,7 +7364,7 @@ function saveMaterialTransfer(id){
 function renderTransfersInner(){
   const list = [...(DB.materialTransfers||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   return `
-    <div class="ph"><h3 style="text-transform:none;font-size:18px;color:var(--text)">Stock Transfers</h3></div>
+    <div class="ph"><h3 style="font-size:18px">Stock Transfers</h3></div>
     <div class="mut" style="font-size:12.5px;margin-bottom:10px">Every time materials or equipment move from one site to another — including deliveries from HQ — it's logged here.</div>
     <div class="twrap"><table>
       <tr><th>Type</th><th>Item</th><th class="right">Qty</th><th>From</th><th>To</th><th>Date</th><th>By</th><th>Note</th></tr>
@@ -8275,7 +7397,7 @@ function editMaterial(id){
       <div class="field"><label class="fl" for="f_date">Date</label><input id="f_date" type="date" value="${esc(m.date)}"></div>
     </div>
     <div class="field"><label class="fl" for="f_from">Received From</label><input id="f_from" value="${esc(m.receivedFrom)}"></div>
-    <div class="field"><label class="fl">Reorder Point <span class="mut" style="text-transform:none;font-weight:400">(optional — alerts when total stock of this material falls below it)</span></label><input id="f_reorder" type="number" step="1" value="${m.reorderPoint}"></div>
+    <div class="field"><label class="fl">Reorder Point <span class="mut" style="font-weight:400">(optional — alerts when total stock of this material falls below it)</span></label><input id="f_reorder" type="number" step="1" value="${m.reorderPoint}"></div>
     ${siteDatalist()}
     <div class="btnrow">
       <button class="btn save" onclick="saveMaterial(${id})">Save</button>
@@ -8370,7 +7492,7 @@ function renderEquipmentInner(){
     });
     const list = Object.values(groups).sort((a,b)=>b.entries.length-a.entries.length || a.name.localeCompare(b.name));
     return `
-      <div class="ph"><h3 style="text-transform:none;font-size:18px;color:var(--text)">Tools & Equipment Monitoring</h3><button class="btn pri" onclick="editEquipment(null)">+ Add Equipment</button></div>
+      <div class="ph"><h3 style="font-size:18px">Tools & Equipment Monitoring</h3><button class="btn pri" onclick="editEquipment(null)">+ Add Equipment</button></div>
       ${toolbar}
       <div class="mut" style="font-size:12px;margin-bottom:10px">Grouped by tool name — click a tool to see everywhere it's been logged, in order, with sites, dates, and status.</div>
       <div class="twrap"><table>
@@ -8393,7 +7515,7 @@ function renderEquipmentInner(){
 
   const sorted = [...rows].sort((a,b)=>(b.date||'').localeCompare(a.date||'') || a.name.localeCompare(b.name));
   return `
-    <div class="ph"><h3 style="text-transform:none;font-size:18px;color:var(--text)">Tools & Equipment Monitoring</h3><button class="btn pri" onclick="editEquipment(null)">+ Add Equipment</button></div>
+    <div class="ph"><h3 style="font-size:18px">Tools & Equipment Monitoring</h3><button class="btn pri" onclick="editEquipment(null)">+ Add Equipment</button></div>
     ${toolbar}
     <div class="twrap"><table>
       <tr><th>Equipment</th><th>Brand</th><th>Serial #</th><th>Site</th><th class="right">Qty</th><th>Status</th><th>Date</th><th></th></tr>
@@ -8630,7 +7752,7 @@ function renderPurchaseRequestsInner(){
   let rows = [...DB.purchaseRequests].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   if(foremanOnly){ rows = rows.filter(r=>(r.site||'').trim().toLowerCase()===foremanSite().trim().toLowerCase()); }
   return `
-    <div class="ph"><h3 style="text-transform:none;font-size:18px;color:var(--text)">Purchase Requests</h3>${canEdit()||foremanOnly?`<button class="btn pri" onclick="editPurchaseRequest(null)">+ New Request</button>`:''}</div>
+    <div class="ph"><h3 style="font-size:18px">Purchase Requests</h3>${canEdit()||foremanOnly?`<button class="btn pri" onclick="editPurchaseRequest(null)">+ New Request</button>`:''}</div>
     <div class="mut" style="font-size:12px;margin-bottom:10px">Sites request materials or equipment from HQ; HQ approves and fulfills.</div>
     <div class="twrap"><table>
       <tr><th>Site</th><th>Requested By</th><th>Date</th><th>Items</th><th>Status</th><th></th></tr>
@@ -8785,7 +7907,7 @@ function render13thMonthReport(year){
     <div class="crumb"><a onclick="go('payroll')" style="color:var(--muted);text-decoration:none">Payroll</a> &nbsp;/&nbsp; <b>13th Month Pay Report</b></div>
     <div class="panel">
       <div class="ph">
-        <h3 style="text-transform:none;font-size:18px;color:var(--text)">13th Month Pay — ${year}</h3>
+        <h3 style="font-size:18px">13th Month Pay — ${year}</h3>
         <select onchange="sub.year13=this.value;renderPayroll()" style="width:auto">
           ${years.map(y=>`<option value="${y}" ${String(year)===y?'selected':''}>${y}</option>`).join('')}
         </select>
@@ -8926,14 +8048,14 @@ function renderMyProfile(){
             📷<input type="file" accept="image/*" style="display:none" onchange="uploadProfilePicture(this.files)">
           </label>
         </div>
-        <div><h3 style="margin:0;text-transform:none;font-size:17px;color:var(--text)">${esc(u.name)}</h3><span class="mut" style="font-size:12.5px">${esc(u.position)||'No position set'} · Access level: ${esc(u.type)}</span>
+        <div><h3 style="margin:0;font-size:17px">${esc(u.name)}</h3><span class="mut" style="font-size:12.5px">${esc(u.position)||'No position set'} · Access level: ${esc(u.type)}</span>
         ${u.profilePicture?`<div><button class="btn ghost sm" style="margin-top:6px" onclick="removeProfilePicture()">Remove Photo</button></div>`:''}
         </div>
       </div></div>
       <div class="grid2">
-        <div class="field"><label class="fl">Position <span class="mut" style="text-transform:none;font-weight:400">(set by your Admin)</span></label><input value="${esc(u.position)||'Not yet set'}" disabled></div>
-        <div class="field"><label class="fl">Current Project Site <span class="mut" style="text-transform:none;font-weight:400">(set by your Admin)</span></label><input value="${esc(u.currentSite)||'Not yet assigned'}" disabled></div>
-        ${payrollSite && payrollSite.site ? `<div class="field"><label class="fl">According to Payroll <span class="mut" style="text-transform:none;font-weight:400">(last paid ${fmtDate(payrollSite.date)})</span></label><input value="${esc(payrollSite.site)}" disabled></div>` : ''}
+        <div class="field"><label class="fl">Position <span class="mut" style="font-weight:400">(set by your Admin)</span></label><input value="${esc(u.position)||'Not yet set'}" disabled></div>
+        <div class="field"><label class="fl">Current Project Site <span class="mut" style="font-weight:400">(set by your Admin)</span></label><input value="${esc(u.currentSite)||'Not yet assigned'}" disabled></div>
+        ${payrollSite && payrollSite.site ? `<div class="field"><label class="fl">According to Payroll <span class="mut" style="font-weight:400">(last paid ${fmtDate(payrollSite.date)})</span></label><input value="${esc(payrollSite.site)}" disabled></div>` : ''}
         <div class="field"><label class="fl" for="pf_email">Personal Email</label><input id="pf_email" type="email" value="${esc(u.email)}"></div>
         <div class="field"><label class="fl" for="pf_phone">Phone Number</label><input id="pf_phone" value="${esc(u.phone)}"></div>
         <div class="field" style="grid-column:1/-1"><label class="fl" for="pf_address">Address</label><input id="pf_address" value="${esc(u.address)}"></div>
@@ -9103,7 +8225,7 @@ function renderPayroll(){
   document.getElementById('mainArea').innerHTML = `
     <div class="crumb">Payroll</div>
     <div class="panel">
-      <div class="ph"><h3 style="text-transform:none;font-size:18px;color:var(--text)">Payroll Runs</h3><div class="btnrow" style="margin:0"><button class="btn ghost" onclick="go('payroll',{show13th:true})">🎁 13th Month Report</button><button class="btn ghost" onclick="exportAllPayrollCSV()">Export All CSV</button><button class="btn pri" onclick="newPayrollRun()">+ New Payroll Run</button></div></div>
+      <div class="ph"><h3 style="font-size:18px">Payroll Runs</h3><div class="btnrow" style="margin:0"><button class="btn ghost" onclick="go('payroll',{show13th:true})">🎁 13th Month Report</button><button class="btn ghost" onclick="exportAllPayrollCSV()">Export All CSV</button><button class="btn pri" onclick="newPayrollRun()">+ New Payroll Run</button></div></div>
       <div class="searchbar">
         <select onchange="sub.paySite=this.value;renderPayroll()">
           <option value="ALL" ${sub.paySite==='ALL'?'selected':''}>All Project Sites</option>
@@ -9407,7 +8529,7 @@ function renderPayrollRun(runId){
     <div class="panel">
       <div class="ph">
         <div>
-          <h3 style="text-transform:none;font-size:18px;color:var(--text);margin:0 0 4px">Payroll — ${fmtDate(pr.payDate)}</h3>
+          <h3 style="font-size:18px;margin:0 0 4px">Payroll — ${fmtDate(pr.payDate)}</h3>
           <span class="mut" style="font-size:12.5px">Period ${fmtDate(pr.fromDate)} – ${fmtDate(pr.toDate)}</span>
         </div>
         <div class="btnrow" style="margin:0">
@@ -9840,7 +8962,7 @@ function renderTransactions(){
       <div class="kpi"><div class="l">Net</div><div class="v ${income-expense>=0?'green':'danger'}">${money0(income-expense)}</div></div>
     </div>
     <div class="panel">
-      <div class="ph"><h3 style="text-transform:none;font-size:18px;color:var(--text)">Transactions</h3><button class="btn pri" onclick="editTransaction(null)">+ New Transaction</button></div>
+      <div class="ph"><h3 style="font-size:18px">Transactions</h3><button class="btn pri" onclick="editTransaction(null)">+ New Transaction</button></div>
       <div class="pillnav">${['ALL',...ACCOUNT_TYPES].map(t=>`<button class="${sub.typeFilter===t?'on':''}" onclick="sub.typeFilter='${t}';renderTransactions()">${t==='ALL'?'All':t}</button>`).join('')}</div>
       <div class="searchbar"><input id="searchTransactions" placeholder="Search transactions..." value="${esc(sub.search)}" oninput="searchInput(this,()=>{sub.search=this.value;renderTransactions();})"></div>
       <div class="twrap"><table>
@@ -9920,7 +9042,7 @@ function renderUsers(){
       const pct = total ? Math.round((migrated/total)*100) : 0;
       return `
     <div class="panel">
-      <div class="ph"><h3 style="text-transform:none;font-size:16px">🔒 Backend Security Status</h3><span class="mono" style="font-size:12.5px">${migrated} / ${total} accounts</span></div>
+      <div class="ph"><h3 style="font-size:16px">🔒 Backend Security Status</h3><span class="mono" style="font-size:12.5px">${migrated} / ${total} accounts</span></div>
       <div class="progress"><div style="width:${pct}%;background:${pct>=100?'var(--green)':'var(--accent2)'}"></div></div>
       <div class="mut" style="font-size:12px;margin-top:8px">${pct>=100 ? 'Everyone has moved to real backend authentication — the shared key alone can no longer write your data.' : `${total-migrated} account${total-migrated===1?'':'s'} will move over automatically the next time they log in normally — nothing for them to do.`}</div>
     </div>`;
@@ -9932,7 +9054,7 @@ function renderUsers(){
       if(!duplicates.length) return '';
       return `
     <div class="panel" style="border-color:var(--danger)">
-      <div class="ph"><h3 style="text-transform:none;font-size:16px;color:var(--danger)">⚠️ Duplicate Accounts Detected</h3></div>
+      <div class="ph"><h3 style="font-size:16px;color:var(--danger)">⚠️ Duplicate Accounts Detected</h3></div>
       <div class="mut" style="font-size:12px;margin-bottom:10px">These likely happened when two devices each created an account for the same person before syncing with each other. Keep whichever one they're actually using, and delete the other — it's safe, the deleted one goes to Trash first.</div>
       ${duplicates.map(list=>`
         <div style="padding:8px 0;border-top:1px solid var(--line)">
@@ -9947,7 +9069,7 @@ function renderUsers(){
     ${readyToHandOut.length ? `
     <div class="panel" style="border-color:var(--green)">
       <div class="ph">
-        <h3 style="text-transform:none;font-size:16px;color:var(--green)">🔑 Ready to Hand Out (${readyToHandOut.length})</h3>
+        <h3 style="font-size:16px;color:var(--green)">🔑 Ready to Hand Out (${readyToHandOut.length})</h3>
         <button class="btn ghost sm" onclick="copyCredentialsList(${JSON.stringify(readyToHandOut.map(u=>({name:u.name,username:u.username,password:u.tempPlaintext}))).replace(/"/g,'&quot;')})">📋 Copy All</button>
       </div>
       <div class="mut" style="font-size:12.5px;margin-bottom:10px">Generated accounts, saved here until you hand them out in person. Mark each one once delivered.</div>
@@ -9965,7 +9087,7 @@ function renderUsers(){
     </div>` : ''}
     ${pending.length ? `
     <div class="panel" style="border-color:var(--accent)">
-      <div class="ph"><h3 style="text-transform:none;font-size:16px;color:var(--accent)">⏳ Waiting for Approval (${pending.length})</h3></div>
+      <div class="ph"><h3 style="font-size:16px;color:var(--accent)">⏳ Waiting for Approval (${pending.length})</h3></div>
       <div class="mut" style="font-size:12.5px;margin-bottom:10px">These accounts have no access yet. Review their details and assign a role to let them in — they're automatically added to Employees too.</div>
       <div class="twrap"><table>
         <tr><th>Name</th><th>Username</th><th>Position</th><th>Details</th><th>Assign Role</th><th></th></tr>
@@ -9986,7 +9108,7 @@ function renderUsers(){
     </div>` : ''}
     ${needsReview.length ? `
     <div class="panel" style="border-color:var(--accent2)">
-      <div class="ph"><h3 style="text-transform:none;font-size:16px;color:var(--accent2)">🔍 Needs Review (${needsReview.length})</h3></div>
+      <div class="ph"><h3 style="font-size:16px;color:var(--accent2)">🔍 Needs Review (${needsReview.length})</h3></div>
       <div class="mut" style="font-size:12.5px;margin-bottom:10px">Accounts already given access that are still worth a second look.</div>
       <div class="twrap"><table>
         <tr><th>Name</th><th>Position</th><th>Details</th><th></th></tr>
@@ -10000,7 +9122,7 @@ function renderUsers(){
       </table></div>
     </div>` : ''}
     <div class="panel">
-      <div class="ph"><h3 style="text-transform:none;font-size:18px;color:var(--text)">Users</h3><button class="btn pri" onclick="editUser(null)">+ New User</button></div>
+      <div class="ph"><h3 style="font-size:18px">Users</h3><button class="btn pri" onclick="editUser(null)">+ New User</button></div>
       <div class="twrap"><table>
         <tr><th>Name</th><th>Username</th><th>Type</th><th>Project Site</th><th></th></tr>
         ${active.map(u=>`
@@ -10075,15 +9197,15 @@ function dismissReview(id){
   u.reviewed = true;
   saveDB(); toast('Marked as reviewed'); renderUsers();
 }
-const CUSTOM_TAB_LIST = [['dashboard','Dashboard'],['orders','Orders'],['products','Products'],['leads','Leads'],['customers','Projects'],['rfis','RFIs'],['submittals','Submittals'],['changeOrders','Change Orders'],['punchList','Punch List'],['dailyLog','Daily Log'],['safety','Safety'],['vendors','Suppliers'],['employees','Employees'],['fleet','Fleet'],['inventory','Inventory'],['payroll','Payroll'],['transactions','Transactions']];
+const CUSTOM_TAB_LIST = [['dashboard','Dashboard'],['orders','Orders'],['products','Products'],['leads','Leads'],['customers','Projects'],['vendors','Suppliers'],['employees','Employees'],['fleet','Fleet'],['inventory','Inventory'],['payroll','Payroll'],['transactions','Transactions'],['calculator','Calculator'],['costEstimator','Cost Estimator'],['schedule','Schedule']];
 function editUser(id){
   if(session.type !== 'Admin'){ toast('Only an Admin can edit user accounts.'); return; }
   const u = id ? DB.users.find(x=>x.id===id) : {id:null,name:'',username:'',password:'',type:'Clerk',position:'',canRequestForSite:false,customTabs:[]};
   openModal(`
     <h3>${id?'Edit':'New'} User</h3>
     <div class="field"><label class="fl" for="f_name">Full Name *</label><input id="f_name" value="${esc(u.name)}"></div>
-    <div class="field"><label class="fl">Username * <span class="mut" style="text-transform:none;font-weight:400">(what they type to log in)</span></label><input id="f_username" value="${esc(u.username)||esc(u.name)}"></div>
-    <div class="field"><label class="fl">${id?'Set New Password':'Password *'} <span class="mut" style="text-transform:none;font-weight:400">${id?'(leave blank to keep their current password)':''}</span></label><input id="f_pw" placeholder="${id?'Leave blank to keep unchanged':''}"></div>
+    <div class="field"><label class="fl">Username * <span class="mut" style="font-weight:400">(what they type to log in)</span></label><input id="f_username" value="${esc(u.username)||esc(u.name)}"></div>
+    <div class="field"><label class="fl">${id?'Set New Password':'Password *'} <span class="mut" style="font-weight:400">${id?'(leave blank to keep their current password)':''}</span></label><input id="f_pw" placeholder="${id?'Leave blank to keep unchanged':''}"></div>
     <div class="field"><label class="fl" for="f_position">Position</label><select id="f_position">${empTypeOptions(u.position)}</select></div>
     ${id ? `
     <div class="field"><label class="fl">Profile Photo</label>
