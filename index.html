@@ -1521,9 +1521,6 @@ function renderHelp(){
         ` : ''}
         ${isOffice ? `
         <details class="faq-item"><summary>Projects, Orders & Suppliers</summary><p><b>Projects</b> holds every job site — click into one for its budget, progress, and expense breakdown. <b>Orders</b> covers invoices, purchases, and work orders. <b>Suppliers</b> keeps contact info and a running purchase history per vendor — including a manual log for jotting down a purchase before you have the exact receipt.</p></details>
-        <details class="faq-item"><summary>RFIs & Submittals</summary><p><b>RFIs</b> (Requests for Information) let you formally ask and track questions between stakeholders — architects, engineers, subcontractors. Each RFI has a number, priority, due date, and tracks cost/schedule impact. <b>Submittals</b> track shop drawings, product data, samples, and other documents that need review and approval before work proceeds.</p></details>
-        <details class="faq-item"><summary>Change Orders</summary><p>Track contract modifications and scope changes with <b>Change Orders</b>. Each CO tracks the amount, reason, schedule impact, and approval status. The dashboard shows running totals of approved and pending change order values.</p></details>
-        <details class="faq-item"><summary>Safety — Incidents & Inspections</summary><p>The <b>Safety</b> tab has two sub-sections: <b>Incidents</b> for reporting workplace injuries, near misses, and safety events (with severity, root cause, and corrective actions), and <b>Inspections</b> for creating and tracking safety checklists on your job sites. The Statistics view shows trends and breakdowns to help identify patterns.</p></details>
         <details class="faq-item"><summary>Bulk Import — paste instead of typing</summary><p>Adding a lot of records at once (materials, employees, suppliers)? Look for a "Bulk Import" button — copy cells straight from Excel or Google Sheets and paste them in, instead of typing each one by hand.</p></details>
         ` : ''}
         ${isAdmin ? `
@@ -1532,17 +1529,16 @@ function renderHelp(){
         <details class="faq-item"><summary>Keeping an eye on things</summary><p>The <b>Notification Log</b> (bell icon, or Settings) keeps a permanent record of deletions, price changes, new accounts, and progress updates — who did what, and when. Worth checking periodically, especially as your team grows.</p></details>
         ` : ''}
         ${isOffice ? `
-        <details class="faq-item"><summary>Punch List — tracking closeout items</summary><p>Under <b>Documents → Punch List</b>, you can track all items that need fixing before a project is handed over. Each item has a priority, category, assignee, and status. Use this to systematically close out projects — filter by project and status to see what's left.</p></details>
         <details class="faq-item"><summary>Daily Log — documenting site activity</summary><p><b>Documents → Daily Log</b> is your daily construction journal. Record weather conditions, crew size, work performed, materials used, equipment on site, visitors, and any delays or issues. This creates a defensible project record for disputes, claims, and progress verification.</p></details>
         ` : ''}
         <details class="faq-item"><summary>Construction Best Practices</summary>
           <p style="margin-bottom:8px"><b>1. Pre-Construction Planning:</b> Review all drawings, specs, and permits before breaking ground. Hold a pre-construction meeting with all stakeholders. Create a detailed schedule with milestones.</p>
           <p style="margin-bottom:8px"><b>2. Budget Control:</b> Track costs against budget in real-time using Orders and Transactions. Review change orders promptly — scope creep is the biggest budget killer.</p>
           <p style="margin-bottom:8px"><b>3. Daily Documentation:</b> Log site conditions, work performed, and issues daily. Photos are evidence. Use the Daily Log consistently — if it's not documented, it didn't happen.</p>
-          <p style="margin-bottom:8px"><b>4. Safety First:</b> Conduct daily toolbox talks. Report all incidents, including near misses. Ensure PPE compliance. Use the Safety module for inspections.</p>
+          <p style="margin-bottom:8px"><b>4. Safety First:</b> Conduct daily toolbox talks. Report all incidents, including near misses. Ensure PPE compliance on every job site.</p>
           <p style="margin-bottom:8px"><b>5. Material Management:</b> Order materials early — lead times can delay projects. Track inventory across sites. Set reorder points for critical materials.</p>
-          <p style="margin-bottom:8px"><b>6. Communication:</b> Use RFIs for formal questions. Track submittals for approvals. Keep all stakeholders informed of schedule changes.</p>
-          <p><b>7. Quality Control:</b> Inspect work before covering it up. Use the Punch List to track deficiencies. Don't accept "good enough" — rework costs more later.</p>
+          <p style="margin-bottom:8px"><b>6. Communication:</b> Keep formal records of all questions and decisions between stakeholders. Keep all parties informed of schedule changes.</p>
+          <p><b>7. Quality Control:</b> Inspect work before covering it up. Track deficiencies and follow up until they're resolved. Don't accept "good enough" — rework costs more later.</p>
         </details>
         <details class="faq-item"><summary>Something feels off, or a number looks wrong?</summary><p>Real people update this system every day, and honest mistakes happen. If something looks incorrect, it's always safe to ask whoever manages BuildSuite for your company rather than guessing — nothing here is permanent (see Trash, above, if you're an Admin) and it's always fixable.</p></details>
       </div>
@@ -3309,7 +3305,7 @@ function renderOrders(){
 }
 
 function newOrder(type){
-  const order = { id: nextId(DB.orders), type, partyId:'', partyName:'', jobId:'', jobName:'', date: todayISO(), status: defaultStatus(type), account: defaultAccount(type), payment:'', items: [], laborCosts: [] };
+  const order = { id: nextId(DB.orders), type, partyId:'', partyName:'', jobId:'', jobName:'', date: todayISO(), status: defaultStatus(type), account: defaultAccount(type), payment:'', payments: [], items: [], laborCosts: [] };
   DB.orders.push(order);
   go('orders', {editId: order.id, isNew:true});
 }
@@ -3435,6 +3431,34 @@ function renderOrderDetail(id){
 
     ${o.type==='INVOICE' ? `
     <div class="panel">
+      <div class="ph"><h3>Payments</h3>${canEdit()?`<button class="btn ghost sm" onclick="recordPayment(${o.id})">+ Record Payment</button>`:''}</div>
+      ${(()=>{
+        const payments = o.payments || [];
+        const totalPaid = orderTotalPaid(o);
+        const totalWithTax = total + tax;
+        const balance = totalWithTax - totalPaid;
+        return `
+        <div class="twrap"><table>
+          <tr><th>Date</th><th>Method</th><th>Reference</th><th class="right">Amount</th><th style="width:40px"></th></tr>
+          ${payments.map(pm=>`
+            <tr>
+              <td class="mut">${fmtDate(pm.date)}</td>
+              <td>${esc(pm.method||'—')}</td>
+              <td class="mut">${esc(pm.reference||'—')}</td>
+              <td class="num mono">${money(pm.amount)}</td>
+              <td>${canEdit()?`<button class="x" onclick="removePayment(${o.id},'${pm.id}')">✕</button>`:''}</td>
+            </tr>`).join('') || `<tr><td colspan="5" class="empty">No payments recorded yet</td></tr>`}
+        </table></div>
+        <div style="display:flex;justify-content:flex-end;margin-top:10px">
+          <div style="min-width:230px">
+            <div class="stat-row"><span class="mut">Invoice Total</span><span class="mono">${money(totalWithTax)}</span></div>
+            <div class="stat-row"><span class="mut">Total Paid</span><span class="mono" style="color:var(--green)">${money(totalPaid)}</span></div>
+            <div class="stat-row" style="font-weight:800;font-size:15px"><span>Balance Due</span><span class="mono" style="color:${balance>0?'var(--danger)':'var(--green)'}">${money(balance)}</span></div>
+          </div>
+        </div>`;
+      })()}
+    </div>
+    <div class="panel">
       <h3>Job Costing</h3>
       <div class="stat-row"><span class="mut">Revenue</span><span class="mono">${money(total)}</span></div>
       <div class="stat-row"><span class="mut">Cost of Goods</span><span class="mono">-${money(cost)}</span></div>
@@ -3475,11 +3499,61 @@ function assignORNumber(id){
   o.orNumber = 'OR-' + String(next).padStart(6,'0');
   saveDB(); toast('Official Receipt # assigned'); go('orders',{editId:id});
 }
+function orderTotalPaid(o){
+  const legacy = Number(o.payment)||0;
+  const recorded = (o.payments||[]).reduce((s,p)=>s+(Number(p.amount)||0),0);
+  return legacy + recorded;
+}
+function recordPayment(orderId){
+  openModal(`
+    <h3>Record Payment</h3>
+    <div class="grid2">
+      <div class="field"><label class="fl" for="pay_amount">Amount (₱)</label><input id="pay_amount" type="number" min="0" step="0.01" placeholder="0.00"></div>
+      <div class="field"><label class="fl" for="pay_date">Date</label><input id="pay_date" type="date" value="${todayISO()}"></div>
+      <div class="field"><label class="fl" for="pay_method">Method</label>
+        <select id="pay_method">
+          <option value="">— select —</option>
+          <option>Cash</option><option>Bank Transfer</option><option>Check</option><option>GCash</option><option>Maya</option><option>Credit Card</option><option>Other</option>
+        </select>
+      </div>
+      <div class="field"><label class="fl" for="pay_ref">Reference #</label><input id="pay_ref" placeholder="e.g. Check #, receipt #"></div>
+    </div>
+    <div class="field"><label class="fl" for="pay_notes">Notes</label><input id="pay_notes" placeholder="Optional notes"></div>
+    <div class="btnrow"><button class="btn pri" onclick="savePayment(${orderId})">Save Payment</button><button class="btn ghost" onclick="closeModal()">Cancel</button></div>
+  `);
+  document.getElementById('pay_amount').focus();
+}
+function savePayment(orderId){
+  const amount = Number(document.getElementById('pay_amount').value);
+  if(!amount || amount <= 0){ toast('Enter a valid payment amount'); return; }
+  const o = DB.orders.find(x=>x.id===orderId);
+  if(!o) return;
+  if(!o.payments) o.payments = [];
+  o.payments.push({
+    id: uid(),
+    amount,
+    date: document.getElementById('pay_date').value || todayISO(),
+    method: document.getElementById('pay_method').value,
+    reference: document.getElementById('pay_ref').value.trim(),
+    notes: document.getElementById('pay_notes').value.trim(),
+  });
+  const totalWithTax = orderTotal(o) * (1 + taxRateFor(o.type));
+  if(orderTotalPaid(o) >= totalWithTax) o.status = 'Paid';
+  saveDB(); closeModal(); toast('Payment recorded'); go('orders',{editId:orderId});
+}
+function removePayment(orderId, paymentId){
+  if(!confirm('Remove this payment record?')) return;
+  const o = DB.orders.find(x=>x.id===orderId);
+  if(!o || !o.payments) return;
+  o.payments = o.payments.filter(p=>p.id !== paymentId);
+  if(o.status === 'Paid' && orderTotalPaid(o) < orderTotal(o) * (1 + taxRateFor(o.type))) o.status = 'Sent';
+  saveDB(); toast('Payment removed'); go('orders',{editId:orderId});
+}
 function accountsReceivable(){
   const today = todayISO();
   return DB.orders.filter(o=>o.type==='INVOICE' && !['Paid','Closed'].includes(o.status)).map(o=>{
     const total = orderTotal(o);
-    const paid = Number(o.payment)||0;
+    const paid = orderTotalPaid(o);
     const balance = total - paid;
     const refDate = o.dueDate || o.date;
     const days = refDate ? Math.floor((new Date(today) - new Date(refDate)) / 86400000) : 0;
@@ -9891,6 +9965,16 @@ function runMigrationV33(){
   saveDB();
 }
 
+const MIGRATION_V34_KEY = 'buildsuite_migration_v34';
+function runMigrationV34(){
+  if(localStorage.getItem(MIGRATION_V34_KEY)) return;
+  DB.orders.forEach(o=>{
+    if(!o.payments) o.payments = [];
+  });
+  localStorage.setItem(MIGRATION_V34_KEY, '1');
+  saveDB();
+}
+
 function mergeDB(local, cloud){
   const merged = JSON.parse(JSON.stringify(local));
 
@@ -10078,6 +10162,7 @@ async function boot(){
   runMigrationV31();
   runMigrationV32();
   runMigrationV33();
+  runMigrationV34();
   loadCloudConfig();
   await restoreAuthSession();
   applyTheme(localStorage.getItem('buildsuite_theme') || (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
