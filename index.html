@@ -1146,16 +1146,6 @@ const SIDEBAR_GROUPS = [
     { key:'products', label:'Products' },
     { key:'leads', label:'Leads' },
   ]},
-  { section:'DOCUMENTS', items:[
-    { key:'rfis', label:'RFIs' },
-    { key:'submittals', label:'Submittals' },
-    { key:'changeOrders', label:'Change Orders' },
-    { key:'punchList', label:'Punch List' },
-    { key:'dailyLog', label:'Daily Log' },
-  ]},
-  { section:'SAFETY', items:[
-    { key:'safety', label:'Safety' },
-  ]},
   { section:'PEOPLE', items:[
     { key:'employees', label:'Employees' },
     { key:'fleet', label:'Fleet' },
@@ -2820,73 +2810,144 @@ function renderDashboard(){
       })()}
     </div>
     <div class="panel">
-      <div class="ph"><h3>🏗️ Active Project Progress</h3></div>
+      <div class="ph"><h3>🏗️ Project Site Overview</h3></div>
+      <div class="field" style="margin-bottom:14px">
+        <label class="fl">Select a Project</label>
+        <select id="dashProjectSelect" onchange="sub.dashProjectId=Number(this.value);renderDashboard()">
+          <option value="">— choose a project to view details —</option>
+          ${[...DB.customers].sort((a,b)=>a.name.localeCompare(b.name)).map(c=>`<option value="${c.id}" ${sub.dashProjectId==c.id?'selected':''}>${esc(c.name)} ${c.projectStatus==='Active'?'(Active)':c.projectStatus==='Completed'?'(Completed)':''}</option>`).join('')}
+        </select>
+      </div>
       ${(() => {
         const active = DB.customers.filter(c=>c.projectStatus==='Active').sort((a,b)=>projectCompletionPct(b)-projectCompletionPct(a));
         if(!active.length) return `<div class="empty">No active projects right now</div>`;
         return active.map(c=>{
           const pct = projectCompletionPct(c);
           return `
-          <div class="click" style="padding:8px 0" onclick="go('customers',{custId:${c.id}})">
-            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><b>${esc(c.name)}</b><span class="mut">${pct}%</span></div>
-            <div class="progress-tooltip-wrap">
-              <div class="progress"><div style="width:${pct}%;background:${pct>=100?'var(--green)':'var(--accent2)'}"></div></div>
-              <div class="progress-tooltip" onclick="event.stopPropagation()">
-                <b>${esc(c.name)} — ${pct}%</b>
-                ${(c.activities&&c.activities.length) ? `<div style="margin-top:6px">${c.activities.map((a,i)=>`<div style="display:flex;align-items:center;gap:6px;margin-top:3px"><span style="width:8px;height:8px;border-radius:50%;background:${activityColor(i)};flex-shrink:0"></span><span style="flex:1">${esc(a.name)}</span><span class="mono">${a.pct||0}%</span></div>`).join('')}</div>` : `<div class="mut" style="margin-top:4px">No activities defined yet</div>`}
-              </div>
-            </div>
+          <div class="click" style="padding:8px 0" onclick="document.getElementById('dashProjectSelect').value='${c.id}';sub.dashProjectId=${c.id};renderDashboard()">
+            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><b>${esc(c.name)}</b><span class="mono mut">${pct}%</span></div>
+            <div class="progress"><div style="width:${pct}%;background:${pct>=100?'var(--green)':'var(--accent2)'}"></div></div>
           </div>
         `;}).join('');
       })()}
     </div>
+    ${(() => {
+      const pid = sub.dashProjectId;
+      if(!pid) return '';
+      const proj = DB.customers.find(c=>c.id===pid);
+      if(!proj) return '';
+      if(!DB.scheduleActivities) DB.scheduleActivities = [];
+      const rows = DB.scheduleActivities.filter(a=>a.projectId===pid);
+      const totalCost = rows.reduce((s,a)=>s+(Number(a.cost)||0),0);
+      const completedActs = rows.filter(a=>a.status==='Completed');
+      const delayedActs = rows.filter(a=>a.status==='Delayed');
+      const inProgressActs = rows.filter(a=>a.status==='In Progress');
+      const pctComplete = totalCost ? rows.reduce((s,a)=>s+((Number(a.cost)||0)/totalCost)*scheduleProgressFraction(a)*100,0) : 0;
+
+      const allDates = rows.flatMap(a=>[a.plannedStart,a.plannedEnd,a.actualStart,a.actualEnd].filter(Boolean));
+      const minD = allDates.length ? new Date(Math.min(...allDates.map(d=>new Date(d).getTime()))) : new Date();
+      const maxD = allDates.length ? new Date(Math.max(...allDates.map(d=>new Date(d).getTime()))) : new Date();
+      const today = new Date();
+      const spanDays = Math.max(1, scheduleDaysBetween(minD, maxD));
+
+      const plannedDurDays = rows.length ? scheduleDaysBetween(
+        new Date(Math.min(...rows.filter(a=>a.plannedStart).map(a=>new Date(a.plannedStart).getTime()))),
+        new Date(Math.max(...rows.filter(a=>a.plannedEnd).map(a=>new Date(a.plannedEnd).getTime())))
+      ) : 0;
+      const actualDates = rows.filter(a=>a.actualStart);
+      const actualDurDays = actualDates.length ? scheduleDaysBetween(
+        new Date(Math.min(...actualDates.map(a=>new Date(a.actualStart).getTime()))),
+        new Date(Math.max(...actualDates.filter(a=>a.actualEnd).map(a=>new Date(a.actualEnd).getTime())).valueOf() || today.getTime()))
+      ) : 0;
+      const schedVariance = plannedDurDays - actualDurDays;
+
+      const todayPct = Math.max(0, Math.min(100, scheduleDaysBetween(minD, today) / spanDays * 100));
+
+      const monthLabels = [];
+      if(rows.length){
+        const ml = new Date(minD.getFullYear(), minD.getMonth(), 1);
+        while(ml <= maxD){ monthLabels.push({label:ml.toLocaleString(undefined,{month:'short',year:'2-digit'}), pct: Math.max(0, scheduleDaysBetween(minD, ml)/spanDays*100)}); ml.setMonth(ml.getMonth()+1); }
+      }
+
+      return `
+      <div class="panel" style="border:2px solid var(--accent);border-radius:var(--r)">
+        <div class="ph"><h3>📐 ${esc(proj.name)} — Project Details</h3>
+          <div style="display:flex;gap:6px">
+            <button class="btn ghost sm" onclick="go('customers',{custId:${pid}})">Open Project</button>
+            <button class="btn ghost sm" onclick="go('schedule')">Full Schedule</button>
+          </div>
+        </div>
+        <div class="cards" style="margin-bottom:16px">
+          <div class="kpi"><div class="l">Total Cost</div><div class="v cyan">${money0(totalCost)}</div></div>
+          <div class="kpi"><div class="l">Completion</div><div class="v ${pctComplete>=100?'green':pctComplete>=50?'amber':'danger'}">${pctComplete.toFixed(1)}%</div></div>
+          <div class="kpi"><div class="l">Planned Duration</div><div class="v">${plannedDurDays}d</div></div>
+          <div class="kpi"><div class="l">Schedule Variance</div><div class="v ${schedVariance>=0?'green':'danger'}">${schedVariance>=0?'+':''}${schedVariance}d</div></div>
+          <div class="kpi"><div class="l">Activities</div><div class="v">${rows.length}</div></div>
+          <div class="kpi"><div class="l">Completed</div><div class="v green">${completedActs.length}</div></div>
+          <div class="kpi"><div class="l">In Progress</div><div class="v amber">${inProgressActs.length}</div></div>
+          <div class="kpi"><div class="l">Delayed</div><div class="v ${delayedActs.length?'danger':'green'}">${delayedActs.length}</div></div>
+        </div>
+
+        ${rows.length ? `
+        <h3 style="margin-bottom:10px">GANTT CHART</h3>
+        <div style="overflow-x:auto;margin-bottom:20px">
+          <div style="position:relative;min-width:700px">
+            <div style="display:flex;border-bottom:1px solid var(--line);padding:0 0 4px 180px;margin-bottom:2px;position:relative">
+              ${monthLabels.map(m=>`<span class="mut" style="position:absolute;left:calc(180px + ${m.pct}%*(100% - 180px)/100);font-size:10px;font-weight:700;text-transform:uppercase">${m.label}</span>`).join('')}
+              &nbsp;
+            </div>
+            ${todayPct>0&&todayPct<100?`<div style="position:absolute;left:calc(180px + ${todayPct.toFixed(2)}%*(100% - 180px)/100);top:20px;bottom:0;width:2px;background:var(--danger);opacity:.5;z-index:2"><span style="position:absolute;top:-14px;left:-12px;font-size:9px;font-weight:800;color:var(--danger)">TODAY</span></div>`:''}
+            ${rows.map((a,i)=>{
+              const ps = a.plannedStart ? scheduleDaysBetween(minD, new Date(a.plannedStart))/spanDays*100 : 0;
+              const pw = a.plannedStart&&a.plannedEnd ? Math.max(1, scheduleDaysBetween(new Date(a.plannedStart), new Date(a.plannedEnd))/spanDays*100) : 0;
+              const hasActual = a.actualStart;
+              const as = hasActual ? scheduleDaysBetween(minD, new Date(a.actualStart))/spanDays*100 : 0;
+              const ae = a.actualEnd ? new Date(a.actualEnd) : (hasActual ? today : null);
+              const aw = hasActual && ae ? Math.max(0.5, scheduleDaysBetween(new Date(a.actualStart), ae)/spanDays*100) : 0;
+              const isDelayed = a.status==='Delayed' || (a.actualEnd && a.plannedEnd && a.actualEnd > a.plannedEnd);
+              const actualColor = isDelayed ? 'var(--danger)' : 'var(--green)';
+              return `
+              <div style="display:flex;align-items:center;height:28px;margin:1px 0">
+                <div style="width:180px;flex-shrink:0;font-size:11.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px" title="${esc(a.name)}">${i+1}. ${esc(a.name)}</div>
+                <div style="flex:1;position:relative;height:100%">
+                  <div style="position:absolute;top:2px;left:${ps.toFixed(2)}%;width:${pw.toFixed(2)}%;height:10px;background:var(--accent2);border-radius:3px;opacity:.5" title="Planned: ${a.plannedStart||'?'} to ${a.plannedEnd||'?'}"></div>
+                  ${hasActual?`<div style="position:absolute;top:14px;left:${as.toFixed(2)}%;width:${aw.toFixed(2)}%;height:10px;background:${actualColor};border-radius:3px" title="Actual: ${a.actualStart||'?'} to ${a.actualEnd||'ongoing'}"></div>`:''}
+                </div>
+              </div>`;
+            }).join('')}
+            <div style="display:flex;gap:16px;padding:10px 0 0 180px;font-size:11px">
+              <span style="display:flex;align-items:center;gap:4px"><span style="width:20px;height:8px;border-radius:2px;background:var(--accent2);opacity:.5"></span>Planned</span>
+              <span style="display:flex;align-items:center;gap:4px"><span style="width:20px;height:8px;border-radius:2px;background:var(--green)"></span>Actual (on time)</span>
+              <span style="display:flex;align-items:center;gap:4px"><span style="width:20px;height:8px;border-radius:2px;background:var(--danger)"></span>Actual (delayed)</span>
+            </div>
+          </div>
+        </div>
+
+        <h3 style="margin-bottom:10px">S-CURVE (Planned vs Actual Progress)</h3>
+        <canvas id="dashSCurve" width="800" height="320" style="width:100%;max-width:800px;height:auto"></canvas>
+        ` : `<div class="empty" style="padding:24px">No schedule activities for this project yet. <a style="color:var(--accent2);cursor:pointer" onclick="go('schedule')">Go to Schedule</a> to add activities.</div>`}
+
+        ${rows.length ? `
+        <h3 style="margin:18px 0 10px">ACTIVITY LIST</h3>
+        <div class="twrap"><table>
+          <tr><th>#</th><th>Activity</th><th>Cost</th><th>Weight</th><th>Planned</th><th>Actual</th><th>Status</th></tr>
+          ${rows.map((a,i)=>{
+            const weight = totalCost ? ((Number(a.cost)||0)/totalCost*100).toFixed(1)+'%' : '—';
+            return `<tr>
+              <td class="mono">${i+1}</td>
+              <td><b>${esc(a.name)}</b></td>
+              <td class="num">${money0(Number(a.cost)||0)}</td>
+              <td class="num mut">${weight}</td>
+              <td class="mut" style="font-size:11.5px">${a.plannedStart?fmtDate(a.plannedStart):''} — ${a.plannedEnd?fmtDate(a.plannedEnd):''}</td>
+              <td class="mut" style="font-size:11.5px">${a.actualStart?fmtDate(a.actualStart):'—'} — ${a.actualEnd?fmtDate(a.actualEnd):'ongoing'}</td>
+              <td><span class="badge ${scheduleStatusBadgeClass(a.status)}">${esc(a.status)}</span></td>
+            </tr>`;
+          }).join('')}
+        </table></div>
+        ` : ''}
+      </div>`;
+    })()}
     <div class="panel">
-      ${(() => {
-        const openRFIs = (DB.rfis||[]).filter(r=>r.status==='Open').length;
-        const pendingSubs = (DB.submittals||[]).filter(s=>['Submitted','Under Review'].includes(s.status)).length;
-        const pendingCOs = (DB.changeOrders||[]).filter(co=>co.status==='Pending Approval').length;
-        const approvedCOTotal = (DB.changeOrders||[]).filter(co=>co.status==='Approved').reduce((s,co)=>s+(Number(co.amount)||0),0);
-        const openIncidents = (DB.incidents||[]).filter(i=>!i.closed).length;
-        const hasModuleData = openRFIs || pendingSubs || pendingCOs || openIncidents || (DB.rfis||[]).length || (DB.changeOrders||[]).length;
-        if(!hasModuleData) return `<div style="display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap">
-          <div class="panel" style="flex:1;min-width:200px;padding:16px">
-            <h4 style="margin:0 0 8px">Document Control</h4>
-            <div class="mut" style="font-size:12.5px">Track RFIs and submittals from the <a style="cursor:pointer;color:var(--accent2)" onclick="go('rfis')">RFIs</a> and <a style="cursor:pointer;color:var(--accent2)" onclick="go('submittals')">Submittals</a> tabs.</div>
-          </div>
-          <div class="panel" style="flex:1;min-width:200px;padding:16px">
-            <h4 style="margin:0 0 8px">Change Orders & Safety</h4>
-            <div class="mut" style="font-size:12.5px">Manage <a style="cursor:pointer;color:var(--accent2)" onclick="go('changeOrders')">change orders</a> and log <a style="cursor:pointer;color:var(--accent2)" onclick="go('safety')">safety incidents</a>.</div>
-          </div>
-        </div>`;
-        return `<div style="display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap">
-          ${openRFIs||pendingSubs?`<div class="panel" style="flex:1;min-width:200px;padding:16px">
-            <h4 style="margin:0 0 8px">📋 Document Control</h4>
-            ${openRFIs?`<div style="display:flex;justify-content:space-between;padding:3px 0"><span class="mut">Open RFIs</span><a onclick="go('rfis')" style="cursor:pointer;font-weight:600;color:var(--warn)">${openRFIs}</a></div>`:''}
-            ${pendingSubs?`<div style="display:flex;justify-content:space-between;padding:3px 0"><span class="mut">Pending Submittals</span><a onclick="go('submittals')" style="cursor:pointer;font-weight:600;color:var(--warn)">${pendingSubs}</a></div>`:''}
-          </div>`:''}
-          ${pendingCOs||(DB.changeOrders||[]).length?`<div class="panel" style="flex:1;min-width:200px;padding:16px">
-            <h4 style="margin:0 0 8px">📝 Change Orders</h4>
-            ${pendingCOs?`<div style="display:flex;justify-content:space-between;padding:3px 0"><span class="mut">Pending Approval</span><a onclick="go('changeOrders')" style="cursor:pointer;font-weight:600;color:var(--warn)">${pendingCOs}</a></div>`:''}
-            <div style="display:flex;justify-content:space-between;padding:3px 0"><span class="mut">Approved Total</span><b style="color:var(--accent)">${money0(approvedCOTotal)}</b></div>
-          </div>`:''}
-          ${openIncidents||(DB.incidents||[]).length?`<div class="panel" style="flex:1;min-width:200px;padding:16px">
-            <h4 style="margin:0 0 8px">⚠️ Safety</h4>
-            <div style="display:flex;justify-content:space-between;padding:3px 0"><span class="mut">Open Incidents</span><a onclick="go('safety')" style="cursor:pointer;font-weight:600;color:${openIncidents?'var(--danger)':'var(--accent)'}">${openIncidents}</a></div>
-            <div style="display:flex;justify-content:space-between;padding:3px 0"><span class="mut">Total Incidents</span><b>${(DB.incidents||[]).length}</b></div>
-          </div>`:''}
-          ${(()=>{
-            const openPunch = (DB.punchItems||[]).filter(p=>p.status!=='Closed').length;
-            const totalPunch = (DB.punchItems||[]).length;
-            const todayLogs = (DB.dailyLogs||[]).filter(l=>l.date===todayISO()).length;
-            if(!totalPunch && !todayLogs && !(DB.dailyLogs||[]).length) return '';
-            return `<div class="panel" style="flex:1;min-width:200px;padding:16px">
-              <h4 style="margin:0 0 8px">📋 Site Activity</h4>
-              ${totalPunch?`<div style="display:flex;justify-content:space-between;padding:3px 0"><span class="mut">Open Punch Items</span><a onclick="go('punchList')" style="cursor:pointer;font-weight:600;color:${openPunch?'var(--warn)':'var(--green)'}">${openPunch}/${totalPunch}</a></div>`:''}
-              <div style="display:flex;justify-content:space-between;padding:3px 0"><span class="mut">Daily Logs Today</span><a onclick="go('dailyLog')" style="cursor:pointer;font-weight:600;color:${todayLogs?'var(--green)':'var(--muted)'}">${todayLogs}</a></div>
-            </div>`;
-          })()}
-        </div>`;
-      })()}
       <div class="ph"><h3>🔔 Recent Activity</h3><button class="btn ghost sm" onclick="go('notificationLog')">View Full Log</button></div>
       ${(() => {
         const recent = [...DB.notificationLog].sort((a,b)=>(b.time||'').localeCompare(a.time||'')).slice(0,8);
@@ -2902,6 +2963,19 @@ function renderDashboard(){
       })()}
     </div>
   `;
+  if(sub.dashProjectId){
+    const _rows = DB.scheduleActivities.filter(a=>String(a.projectId)===String(sub.dashProjectId));
+    if(_rows.length){
+      setTimeout(()=>{
+        const dates = _rows.flatMap(a=>[a.plannedStart,a.plannedEnd,a.actualStart,a.actualEnd].filter(Boolean)).map(d=>new Date(d));
+        if(!dates.length) return;
+        const minD = new Date(Math.min(...dates));
+        const maxD = new Date(Math.max(...dates.map(d=>d.getTime()), Date.now()));
+        const series = scheduleBuildSeries(_rows, minD, maxD);
+        drawScheduleSCurve(series, minD, maxD, new Date(), 'dashSCurve');
+      }, 60);
+    }
+  }
 }
 function renderReceivables(){
   const ar = accountsReceivable();
@@ -6256,8 +6330,8 @@ function renderSchedule(){
   setTimeout(()=>drawScheduleSCurve(series, minD, maxD, today), 10);
 }
 
-function drawScheduleSCurve(series, minD, maxD, today){
-  const canvas = document.getElementById('scurveCanvas');
+function drawScheduleSCurve(series, minD, maxD, today, canvasId){
+  const canvas = document.getElementById(canvasId||'scurveCanvas');
   if(!canvas) return;
   const cs = getComputedStyle(document.documentElement);
   const colorLine = (cs.getPropertyValue('--line')||'#333').trim();
