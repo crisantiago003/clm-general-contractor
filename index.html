@@ -447,9 +447,21 @@ function scheduleCloudPush(){
 }
 async function cloudPush(alreadyRetried){
   if(!cloud.connected) return;
+  if(cloud._pushing) return;
+  cloud._pushing = true;
   cloud.syncing = true;
   try{
-    const updatedAt = localStorage.getItem('buildsuite_updated_at') || new Date().toISOString();
+    // Pull and merge before pushing to avoid overwriting concurrent edits from other devices/users
+    try{
+      const remote = await cloudPull();
+      if(remote && remote.data){
+        DB = mergeDB(DB, remote.data);
+        localStorage.setItem('buildsuite_v1', JSON.stringify(DB));
+        takeSnapshot();
+      }
+    }catch(pullErr){ console.warn('cloudPush: pre-push pull failed, pushing local state', pullErr); }
+    const updatedAt = new Date().toISOString();
+    localStorage.setItem('buildsuite_updated_at', updatedAt);
     const res = await fetch(`${cloud.url}/rest/v1/buildsuite_sync?on_conflict=id`, {
       method: 'POST',
       headers: { ...cloudHeaders(), 'Prefer': 'resolution=merge-duplicates' },
@@ -479,6 +491,7 @@ async function cloudPush(alreadyRetried){
     console.error('cloudPush failed', e);
   }
   cloud.syncing = false;
+  cloud._pushing = false;
   if(document.getElementById('headerBar')) renderHeader();
 }
 async function cloudPull(){
@@ -889,7 +902,7 @@ function fmtDateTime(s){
   if(isNaN(d)) return s;
   return d.toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
 }
-function todayISO(){ return new Date().toISOString().slice(0,10); }
+function todayISO(){ return new Date().toLocaleDateString('en-CA'); }
 function initials(name){ return (name||'?').split(' ').filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join(''); }
 function avatarHtml(user, size){
   const s = size || 22;
@@ -2292,7 +2305,7 @@ function renderLogin(){
       <div class="field"><label class="fl">Username <span class="mut" style="font-weight:400">(this is what you'll type to log in)</span></label><input id="suUsername" placeholder="e.g. jdelacruz" autocomplete="username"></div>
       <div class="field"><label class="fl" for="suPosition">Position</label><select id="suPosition">${empTypeOptions('')}</select></div>
       <div class="grid2">
-        ${pwField('suPw','Password','At least 4 characters','new-password')}
+        ${pwField('suPw','Password','At least 8 characters','new-password')}
         ${pwField('suPw2','Confirm Password','Retype password','new-password')}
       </div>
       <div class="field"><label class="fl" for="suEmail">Personal Email</label><input id="suEmail" type="email" placeholder="you@email.com" autocomplete="email"></div>
@@ -8275,7 +8288,7 @@ function renderMyProfile(){
       <h3>Change Password</h3>
       <div class="grid3">
         ${pwField('pw_current','Current Password','','current-password')}
-        ${pwField('pw_new','New Password','At least 4 characters','new-password')}
+        ${pwField('pw_new','New Password','At least 8 characters','new-password')}
         ${pwField('pw_confirm','Confirm New Password','','new-password')}
       </div>
       <button class="btn save" onclick="changeMyPassword()">Update Password</button>
@@ -8479,7 +8492,7 @@ function confirmEditPaidEmployee(paidId){
   if(e.govDeductions){ deductionBreakdown = govDeductionsFor(gross); deductions = deductionBreakdown.total; }
   const advCb = document.getElementById('f_deductAdvance');
   const advanceDeducted = (advCb && advCb.checked) ? outstandingAdvanceTotal(e.id) : 0;
-  Object.assign(p, { regHours, otHours, regPay, otPay, grossPay: gross, govDeductions: deductions, deductionBreakdown, advanceDeducted, netPay: gross - deductions - advanceDeducted });
+  Object.assign(p, { regHours, otHours, regPay, otPay, grossPay: gross, govDeductions: deductions, deductionBreakdown, advanceDeducted, netPay: Math.max(0, gross - deductions - advanceDeducted) });
   saveDB(); closeModal(); toast('Pay updated'); go('payroll',{runId:p.payrollId});
 }
 function periodLengthDays(fromDate, toDate){
@@ -8539,7 +8552,7 @@ function confirmQuickAddFromLastSite(runId){
     DB.paidEmployees.push({
       id: uid(), payrollId: pr.id, employeeId: e.id, employeeName: e.name, payType: e.payType,
       regHours, otHours, regPay, otPay, grossPay: gross, govDeductions: deductions, deductionBreakdown,
-      advanceDeducted: 0, netPay: gross - deductions,
+      advanceDeducted: 0, netPay: Math.max(0, gross - deductions),
     });
   });
   saveDB(); closeModal(); toast(`Added ${checked.length} employee${checked.length===1?'':'s'}`); go('payroll',{runId});
@@ -9074,7 +9087,7 @@ function confirmAddToPayroll(runId, empId){
   DB.paidEmployees.push({
     id: uid(), payrollId: runId, employeeId: empId, employeeName: e.name, payType: e.payType,
     regHours, otHours, regPay, otPay, grossPay: gross, govDeductions: deductions, deductionBreakdown,
-    advanceDeducted, netPay: gross - deductions - advanceDeducted,
+    advanceDeducted, netPay: Math.max(0, gross - deductions - advanceDeducted),
   });
   saveDB(); closeModal(); toast('Employee added to payroll'); go('payroll',{runId});
 }
