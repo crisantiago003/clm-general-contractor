@@ -2857,7 +2857,7 @@ function renderDashboard(){
       const actualDates = rows.filter(a=>a.actualStart);
       const actualDurDays = actualDates.length ? scheduleDaysBetween(
         new Date(Math.min(...actualDates.map(a=>new Date(a.actualStart).getTime()))),
-        new Date(Math.max(...actualDates.filter(a=>a.actualEnd).map(a=>new Date(a.actualEnd).getTime())).valueOf() || today.getTime()))
+        new Date(Math.max(...actualDates.filter(a=>a.actualEnd).map(a=>new Date(a.actualEnd).getTime())).valueOf() || today.getTime())
       ) : 0;
       const schedVariance = plannedDurDays - actualDurDays;
 
