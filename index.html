@@ -9962,16 +9962,10 @@ async function boot(){
     }catch(e){}
   }
   if(DB.users.length === 0){
-    // CRITICAL SAFETY CHECK: Before showing "set up a new workspace," verify the cloud doesn't
-    // already have real company data. If it does, this device simply has empty local storage —
-    // the right action is to pull the real data down, NOT to let someone create a fresh workspace
-    // that would overwrite the real one.
     if(cloud.connected){
       try{
         const existing = await cloudPull();
         if(existing && existing.data && existing.data.users && existing.data.users.length > 0){
-          // Real company data exists in the cloud — this device just hasn't seen it yet.
-          // Pull it in and go to the normal login screen instead of First-Time Setup.
           DB = existing.data;
           backfillMissingKeys(DB);
           localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
@@ -9982,9 +9976,9 @@ async function boot(){
         }
       }catch(e){
         console.debug('Cloud check before first-time setup failed:', e);
-        renderLogin();
-        return;
       }
+      renderLogin();
+      return;
     }
     renderFirstTimeSetup();
     return;
