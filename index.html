@@ -771,8 +771,13 @@ function stampChangedRecords(){
 function takeSnapshot(){ _dbSnap = JSON.parse(JSON.stringify(DB)); }
 function saveDB(){
   stampChangedRecords();
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
-  localStorage.setItem('buildsuite_updated_at', new Date().toISOString());
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
+    localStorage.setItem('buildsuite_updated_at', new Date().toISOString());
+  }catch(e){
+    console.error('saveDB: localStorage write failed', e);
+    toast('Storage full — your data may not be saved locally. Try clearing old photos or exporting a backup.');
+  }
   takeSnapshot();
   scheduleCloudPush();
 }
@@ -9976,24 +9981,30 @@ function runMigrationV34(){
 }
 
 function mergeDB(local, cloud){
+  if(!cloud || typeof cloud !== 'object') return local;
   const merged = JSON.parse(JSON.stringify(local));
 
   const trashedIds = {};
   (merged.trash || []).forEach(t => {
+    if(!t || !t.type) return;
     const arrKey = t.type === 'payrollRun' ? 'payrolls' : TRASH_TYPE_ARRAYS[t.type];
     if(!arrKey) return;
     if(!trashedIds[arrKey]) trashedIds[arrKey] = new Set();
-    trashedIds[arrKey].add(t.type === 'payrollRun' ? t.data.run.id : t.data.id);
+    const itemId = t.type === 'payrollRun' ? (t.data && t.data.run && t.data.run.id) : (t.data && t.data.id);
+    if(itemId != null) trashedIds[arrKey].add(itemId);
   });
 
   Object.keys(cloud).forEach(key => {
     const cloudVal = cloud[key];
+    if(cloudVal == null) return;
     if(Array.isArray(cloudVal)){
       if(!Array.isArray(merged[key])) merged[key] = [];
       if(key === 'users'){
         const localMap = new Map(merged.users.map(u=>[(u.name||'').trim().toLowerCase(), u]));
         cloudVal.forEach(cu=>{
+          if(!cu || typeof cu !== 'object') return;
           const k = (cu.name||'').trim().toLowerCase();
+          if(!k) return;
           const lu = localMap.get(k);
           if(!lu) merged.users.push(cu);
           else if((cu._ts||0) > (lu._ts||0)) Object.assign(lu, cu);
@@ -10002,13 +10013,14 @@ function mergeDB(local, cloud){
         const localMap = new Map(merged[key].map(r=>[r.id, r]));
         const deleted = trashedIds[key] || new Set();
         cloudVal.forEach(rec=>{
+          if(!rec || typeof rec !== 'object' || rec.id == null) return;
           if(deleted.has(rec.id)) return;
           const localRec = localMap.get(rec.id);
           if(!localRec){ merged[key].push(rec); return; }
           if((rec._ts||0) > (localRec._ts||0)) Object.assign(localRec, rec);
         });
       }
-    } else if(cloudVal && typeof cloudVal === 'object'){
+    } else if(typeof cloudVal === 'object'){
       merged[key] = { ...cloudVal, ...(merged[key]||{}) };
     }
   });

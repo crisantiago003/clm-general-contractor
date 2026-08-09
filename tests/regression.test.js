@@ -23,7 +23,7 @@
 const { chromium } = require('playwright');
 const path = require('path');
 
-const APP_PATH = 'file://' + path.resolve(__dirname, '..', 'BuildSuite.html');
+const APP_PATH = 'file://' + path.resolve(__dirname, '..', 'index.html');
 
 async function withApp(fn) {
   const browser = await chromium.launch();
