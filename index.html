@@ -540,6 +540,10 @@ async function cloudPush(alreadyRetried){
       throw new Error('HTTP '+res.status);
     }
     cloud.lastError = '';
+    if(DB._purgedTrashIds && DB._purgedTrashIds.length){
+      DB._purgedTrashIds = [];
+      localStorage.setItem('buildsuite_v1', JSON.stringify(DB));
+    }
   }catch(e){
     if(!cloud.lastError) cloud.lastError = 'Sync failed — check your connection or Supabase settings.';
     console.error('cloudPush failed', e);
@@ -1684,7 +1688,7 @@ function daysLeftInTrash(t){
   const ageMs = Date.now() - new Date(t.deletedAt).getTime();
   return Math.max(0, 30 - Math.floor(ageMs / (24*60*60*1000)));
 }
-function restoreFromTrash(trashId){
+async function restoreFromTrash(trashId){
   if(session.type !== 'Admin'){ toast('Only an Admin can restore items.'); return; }
   const t = DB.trash.find(x=>x.id===trashId);
   if(!t) return;
@@ -1705,14 +1709,19 @@ function restoreFromTrash(trashId){
   }
   DB.trash = DB.trash.filter(x=>x.id!==t.id);
   logNotification('Restore', `${TRASH_TYPE_LABELS[t.type]} "${trashLabel(t)}" restored from Trash`, null);
-  saveDB(); toast('Restored'); renderTrash();
+  renderTrash();
+  const r = await saveDBAndConfirmSync();
+  toast(r.synced ? 'Restored' : `⚠️ Restored locally, sync pending — ${r.error||'check connection'}`);
 }
-function permanentlyDeleteTrash(trashId){
+async function permanentlyDeleteTrash(trashId){
   if(session.type !== 'Admin'){ toast('Only an Admin can permanently delete.'); return; }
   if(!confirm('Permanently delete this? This cannot be undone — not even the Trash can bring it back after this.')) return;
   DB.trash = DB.trash.filter(x=>x.id!==trashId);
+  if(!DB._purgedTrashIds) DB._purgedTrashIds = [];
+  DB._purgedTrashIds.push(trashId);
   sub.trashSelected && sub.trashSelected.delete(trashId);
-  saveDB(); toast('Permanently deleted'); renderTrash();
+  const r = await saveDBAndConfirmSync(); renderTrash();
+  toast(r.synced ? 'Permanently deleted' : `⚠️ Deleted locally, sync pending — ${r.error||'check connection'}`);
 }
 function trashToggle(id){
   if(!sub.trashSelected) sub.trashSelected = new Set();
@@ -1727,17 +1736,22 @@ function trashSelectAll(){
   if(allChecked){ rows.forEach(t=>sub.trashSelected.delete(t.id)); } else { rows.forEach(t=>sub.trashSelected.add(t.id)); }
   renderTrash();
 }
-function trashDeleteSelected(){
+async function trashDeleteSelected(){
   if(session.type !== 'Admin'){ toast('Only an Admin can permanently delete.'); return; }
   const count = sub.trashSelected ? sub.trashSelected.size : 0;
   if(!count){ toast('Nothing selected'); return; }
   if(!confirm(`Permanently delete ${count} item${count>1?'s':''}? This cannot be undone.`)) return;
+  const deletedIds = [...sub.trashSelected];
   DB.trash = DB.trash.filter(x=>!sub.trashSelected.has(x.id));
+  if(!DB._purgedTrashIds) DB._purgedTrashIds = [];
+  DB._purgedTrashIds.push(...deletedIds);
   logNotification('Deletion', `${count} item${count>1?'s':''} permanently deleted from Trash`, null);
   sub.trashSelected = new Set();
-  saveDB(); toast(`${count} item${count>1?'s':''} permanently deleted`); renderTrash();
+  renderTrash();
+  const r = await saveDBAndConfirmSync();
+  toast(r.synced ? `${count} item${count>1?'s':''} permanently deleted` : `⚠️ Deleted locally, sync pending — ${r.error||'check connection'}`);
 }
-function trashRestoreSelected(){
+async function trashRestoreSelected(){
   if(session.type !== 'Admin'){ toast('Only an Admin can restore items.'); return; }
   const count = sub.trashSelected ? sub.trashSelected.size : 0;
   if(!count){ toast('Nothing selected'); return; }
@@ -1764,7 +1778,9 @@ function trashRestoreSelected(){
   });
   logNotification('Restore', `${count} item${count>1?'s':''} restored from Trash`, null);
   sub.trashSelected = new Set();
-  saveDB(); toast(`${count} item${count>1?'s':''} restored`); renderTrash();
+  renderTrash();
+  const r = await saveDBAndConfirmSync();
+  toast(r.synced ? `${count} item${count>1?'s':''} restored` : `⚠️ Restored locally, sync pending — ${r.error||'check connection'}`);
 }
 function renderHelp(){
   if(session.type === 'Pending') return;
@@ -10367,6 +10383,8 @@ function mergeDB(local, cloud){
     if(itemId != null) trashedIds[arrKey].add(itemId);
   });
 
+  const purgedIds = new Set(merged._purgedTrashIds || []);
+
   Object.keys(cloud).forEach(key => {
     const cloudVal = cloud[key];
     if(cloudVal == null) return;
@@ -10394,6 +10412,7 @@ function mergeDB(local, cloud){
         cloudVal.forEach(rec=>{
           if(!rec || typeof rec !== 'object' || rec.id == null) return;
           if(deleted.has(rec.id)) return;
+          if(key === 'trash' && purgedIds.has(rec.id)) return;
           const localRec = localMap.get(rec.id);
           if(!localRec){ merged[key].push(rec); return; }
           if((rec._ts||0) > (localRec._ts||0)){
