@@ -1065,6 +1065,11 @@ function exportLeadsCSV(){
   const rows = DB.leads.map(l=>[l.id, l.name, l.source||'', l.status||'', l.value||0, l.contact||'', l.date||'']);
   downloadCSV(`Leads_${todayISO()}.csv`, headers, rows);
 }
+function exportMaterialsCSV(){
+  const headers = ['ID','Name','Qty','Unit','Unit Price','Site','Received From','Date','Reorder Point'];
+  const rows = DB.materials.map(m=>[m.id, m.name, m.qty||0, m.unit||'', m.unitPrice||0, m.site||'', m.receivedFrom||'', m.date||'', m.reorderPoint||'']);
+  downloadCSV(`Materials_${todayISO()}.csv`, headers, rows);
+}
 
 /* ---------- password show/hide toggle ---------- */
 function togglePw(inputId, btn){
@@ -3279,15 +3284,23 @@ function renderDashboard(){
 function renderReceivables(){
   const ar = accountsReceivable();
   const total = ar.reduce((s,r)=>s+r.balance,0);
+  const cur = ar.filter(r=>r.daysOutstanding<=30);
+  const over30 = ar.filter(r=>r.daysOutstanding>30 && r.daysOutstanding<=60);
+  const over60 = ar.filter(r=>r.daysOutstanding>60 && r.daysOutstanding<=90);
+  const over90 = ar.filter(r=>r.daysOutstanding>90);
+  const sumBal = arr => arr.reduce((s,r)=>s+r.balance,0);
   document.getElementById('mainArea').innerHTML = `
     <div class="crumb"><a onclick="go('dashboard')" style="color:var(--muted);text-decoration:none">Dashboard</a> &nbsp;/&nbsp; <b>Accounts Receivable</b></div>
     <div class="cards">
       <div class="kpi"><div class="l">Total Outstanding</div><div class="v danger">${money0(total)}</div></div>
       <div class="kpi"><div class="l">Open Invoices</div><div class="v">${ar.length}</div></div>
-      <div class="kpi"><div class="l">Over 30 Days</div><div class="v ${ar.some(r=>r.daysOutstanding>30)?'danger':'green'}">${ar.filter(r=>r.daysOutstanding>30).length}</div></div>
+      <div class="kpi"><div class="l">Current (0-30d)</div><div class="v green">${money0(sumBal(cur))}</div></div>
+      <div class="kpi"><div class="l">31-60 Days</div><div class="v ${over30.length?'amber':'green'}">${money0(sumBal(over30))}</div></div>
+      <div class="kpi"><div class="l">61-90 Days</div><div class="v ${over60.length?'danger':'green'}">${money0(sumBal(over60))}</div></div>
+      <div class="kpi"><div class="l">90+ Days</div><div class="v ${over90.length?'danger':'green'}">${money0(sumBal(over90))}</div></div>
     </div>
     <div class="panel">
-      <h3>Outstanding Invoices</h3>
+      <div class="ph"><h3>Outstanding Invoices</h3><button class="btn ghost sm" onclick="exportReceivablesCSV()">📥 CSV</button></div>
       <div class="twrap"><table>
         <tr><th>#</th><th>Customer / Project</th><th>Date</th><th>Status</th><th class="right">Total</th><th class="right">Paid</th><th class="right">Balance</th><th class="right">Days</th></tr>
         ${ar.map(r=>`
@@ -3304,6 +3317,12 @@ function renderReceivables(){
       </table></div>
     </div>
   `;
+}
+function exportReceivablesCSV(){
+  const ar = accountsReceivable();
+  const headers = ['Invoice #','Customer','Date','Status','Total','Paid','Balance','Days Outstanding'];
+  const rows = ar.map(r=>[r.order.id, partyName(r.order), r.order.date||'', r.order.status||'', r.total.toFixed(2), r.paid.toFixed(2), r.balance.toFixed(2), r.daysOutstanding]);
+  downloadCSV(`Receivables_${todayISO()}.csv`, headers, rows);
 }
 function viewProjectReport(){
   const id = document.getElementById('dashProjSelect').value;
@@ -6540,21 +6559,22 @@ function renderVendors(){
   if(sub.vendClass !== 'ALL') rows = rows.filter(v=>(v.classification||'')===sub.vendClass);
   if(sub.search){ const q=sub.search.toLowerCase(); rows = rows.filter(v=>v.name.toLowerCase().includes(q) || (v.item||'').toLowerCase().includes(q) || (v.contactPerson||'').toLowerCase().includes(q)); }
   rows = [...rows].sort((a,b)=>a.name.localeCompare(b.name));
+  const pg = paginate(rows, sub.page||1);
   const classesPresent = [...new Set(DB.vendors.map(v=>v.classification).filter(Boolean))].sort();
   document.getElementById('mainArea').innerHTML = `
     <div class="crumb">Suppliers</div>
     <div class="panel">
-      <div class="ph"><h3 style="font-size:18px">Suppliers</h3><div class="btnrow" style="margin:0"><button class="btn ghost" onclick="openBulkImport('vendors')">Bulk Import</button><button class="btn pri" onclick="editVendor(null)">+ New Supplier</button></div></div>
+      <div class="ph"><h3 style="font-size:18px">Suppliers</h3><div class="btnrow" style="margin:0"><button class="btn ghost" onclick="openBulkImport('vendors')">Bulk Import</button><button class="btn ghost" onclick="exportVendorsCSV()">📥 CSV</button><button class="btn pri" onclick="editVendor(null)">+ New Supplier</button></div></div>
       <div class="searchbar">
-        <input id="searchVendors" placeholder="Search by name, item, or contact person..." value="${esc(sub.search)}" oninput="searchInput(this,()=>{sub.search=this.value;renderVendors();})">
-        <select onchange="sub.vendClass=this.value;renderVendors()" style="width:auto">
+        <input id="searchVendors" placeholder="Search by name, item, or contact person..." value="${esc(sub.search)}" oninput="searchInput(this,()=>{sub.search=this.value;sub.page=1;renderVendors();})">
+        <select onchange="sub.vendClass=this.value;sub.page=1;renderVendors()" style="width:auto">
           <option value="ALL" ${sub.vendClass==='ALL'?'selected':''}>All Categories</option>
           ${classesPresent.map(c=>`<option ${sub.vendClass===c?'selected':''}>${esc(c)}</option>`).join('')}
         </select>
       </div>
       <div class="twrap"><table>
         <tr><th>Name</th><th>Category</th><th>Item / Specialty</th><th>Contact</th><th>City</th><th class="right">Purchase Orders</th><th></th></tr>
-        ${rows.map(v=>{
+        ${pg.items.map(v=>{
           const orders = DB.orders.filter(o=>o.type==='PURCHASE' && o.partyId==v.id);
           return `<tr class="click" onclick="editVendor(${v.id})">
             <td><b>${esc(v.name)}</b><div class="mut" style="font-size:12px">${esc(v.phone)}</div></td>
@@ -6567,8 +6587,15 @@ function renderVendors(){
           </tr>`;
         }).join('') || `<tr><td colspan="7" class="empty">No suppliers found</td></tr>`}
       </table></div>
+      ${paginationHtml(pg,'vendPage')}
     </div>
   `;
+}
+function vendPage(p){ sub.page=p; renderVendors(); }
+function exportVendorsCSV(){
+  const headers = ['ID','Name','Classification','Item/Specialty','Contact Person','Phone','Email','Address','City'];
+  const rows = DB.vendors.map(v=>[v.id, v.name, v.classification||'', v.item||'', v.contactPerson||'', v.phone||'', v.email||'', v.address||'', v.city||'']);
+  downloadCSV(`Suppliers_${todayISO()}.csv`, headers, rows);
 }
 function supplierPurchaseHistory(vendorName){
   const nameL = (vendorName||'').trim().toLowerCase();
@@ -7720,7 +7747,7 @@ function renderMaterialsInner(){
 
   const sorted = [...rows].sort((a,b)=>(b.date||'').localeCompare(a.date||'') || a.name.localeCompare(b.name));
   return `
-    <div class="ph"><h3 style="font-size:18px">Materials</h3><div class="btnrow" style="margin:0"><button class="btn ghost" onclick="openBulkImport('materials')">Bulk Import</button><button class="btn pri" onclick="editMaterial(null)">+ Add Material</button></div></div>
+    <div class="ph"><h3 style="font-size:18px">Materials</h3><div class="btnrow" style="margin:0"><button class="btn ghost" onclick="openBulkImport('materials')">Bulk Import</button><button class="btn ghost" onclick="exportMaterialsCSV()">📥 CSV</button><button class="btn pri" onclick="editMaterial(null)">+ Add Material</button></div></div>
     ${materialsToolbar()}
     <div class="twrap"><table>
       <tr><th>Material</th><th>Site</th><th class="right">Qty</th><th>Received From</th><th>Date</th><th class="right">Value</th><th></th></tr>
