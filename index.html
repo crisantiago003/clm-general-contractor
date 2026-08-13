@@ -343,7 +343,7 @@ td,th,.stat-value,.kpi-val,.money{font-variant-numeric:tabular-nums}
 .form-error{color:var(--danger);font-size:12px;margin-top:4px;font-weight:600}
 .field-success input,.field-success select,.field-success textarea{border-color:var(--green)}
 .field-error input,.field-error select,.field-error textarea{border-color:var(--danger)}
-.loading-overlay{position:absolute;inset:0;background:rgba(var(--bg),.7);display:flex;align-items:center;justify-content:center;z-index:10;border-radius:inherit}
+.loading-overlay{position:absolute;inset:0;background:color-mix(in srgb,var(--bg) 70%,transparent);display:flex;align-items:center;justify-content:center;z-index:10;border-radius:inherit}
 .btn.loading{position:relative;color:transparent;pointer-events:none}
 .btn.loading::after{content:'';position:absolute;width:16px;height:16px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite;left:calc(50% - 8px);top:calc(50% - 8px);color:var(--accent-ink)}
 @media(max-width:480px){.dash-welcome h1{font-size:18px}.dash-welcome{flex-direction:column;align-items:flex-start}.dash-grid6{grid-template-columns:1fr!important}.hero-cards{grid-template-columns:1fr}.stat-strip{grid-template-columns:1fr 1fr}.svc-grid,.proj-grid{grid-template-columns:1fr}.process-grid{grid-template-columns:1fr 1fr}}
@@ -495,11 +495,15 @@ async function restoreAuthSession(){
   const maxRetries = 2;
   for(let attempt = 0; attempt <= maxRetries; attempt++){
     try{
+      const ctrl = new AbortController();
+      const t = setTimeout(()=>ctrl.abort(), 8000);
       const res = await fetch(`${cloud.url}/auth/v1/token?grant_type=refresh_token`, {
         method: 'POST',
         headers: { 'apikey': cloud.key, 'Content-Type': 'application/json' },
         body: JSON.stringify({ refresh_token: saved.refreshToken }),
+        signal: ctrl.signal,
       });
+      clearTimeout(t);
       const data = await res.json().catch(()=>({}));
       if(res.ok && data.access_token){
         saveAuthSession(data.access_token, data.refresh_token || saved.refreshToken);
@@ -609,28 +613,33 @@ async function cloudPush(alreadyRetried){
   if(document.getElementById('headerBar')) renderHeader();
 }
 async function cloudPull(){
-  const res = await fetch(`${cloud.url}/rest/v1/buildsuite_sync?id=eq.${encodeURIComponent(cloud.code)}&select=data,updated_at`, {
-    headers: cloudHeaders(),
-  });
-  if(!res.ok) throw new Error('HTTP '+res.status);
-  const rows = await res.json();
-  return rows.length ? rows[0] : null;
+  const ctrl = new AbortController();
+  const timer = setTimeout(()=>ctrl.abort(), 10000);
+  try{
+    const res = await fetch(`${cloud.url}/rest/v1/buildsuite_sync?id=eq.${encodeURIComponent(cloud.code)}&select=data,updated_at`, {
+      headers: cloudHeaders(), signal: ctrl.signal,
+    });
+    clearTimeout(timer);
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const rows = await res.json();
+    return rows.length ? rows[0] : null;
+  }catch(e){ clearTimeout(timer); throw e; }
 }
 async function fetchPublicProfile(){
-  // The landing page is meant to be public — but under our locked-down reads, an anonymous
-  // visitor's browser never actually gets real company data unless they've logged in before on
-  // that device. This calls a narrow function that returns ONLY the intentionally-public
-  // subset (company profile, testimonials, gallery) — never payroll, employees, or anything else.
   if(!cloud.connected) return null;
+  const ctrl = new AbortController();
+  const timer = setTimeout(()=>ctrl.abort(), 8000);
   try{
     const res = await fetch(`${cloud.url}/rest/v1/rpc/get_public_profile`, {
       method: 'POST',
       headers: cloudHeaders(),
       body: JSON.stringify({ company_code: cloud.code }),
+      signal: ctrl.signal,
     });
+    clearTimeout(timer);
     if(!res.ok) return null;
     return await res.json();
-  }catch(e){ return null; }
+  }catch(e){ clearTimeout(timer); return null; }
 }
 async function submitLeadToCloud(lead){
   // The contact form is used by anonymous website visitors who will never have an account —
@@ -10825,7 +10834,18 @@ window.addEventListener('error', e => {
 window.addEventListener('unhandledrejection', e => {
   console.error('Unhandled promise rejection:', e.reason);
 });
-document.addEventListener('DOMContentLoaded', ()=>{ updateOfflineStatus(); boot(); });
+document.addEventListener('DOMContentLoaded', ()=>{
+  updateOfflineStatus();
+  const safetyTimer = setTimeout(()=>{
+    const loader = document.getElementById('appLoading');
+    if(loader){ loader.classList.add('hide'); setTimeout(()=>{ if(loader) loader.remove(); }, 400); }
+  }, 15000);
+  boot().catch(e=>{ console.error('Boot failed:', e); renderLanding(); }).finally(()=>{
+    clearTimeout(safetyTimer);
+    const loader = document.getElementById('appLoading');
+    if(loader){ loader.classList.add('hide'); setTimeout(()=>{ if(loader) loader.remove(); }, 400); }
+  });
+});
 
 </script>
 </body>
