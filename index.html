@@ -1982,6 +1982,21 @@ function openSettings(){
       </div>
       <button class="btn ghost sm" onclick="saveTaxRates()">Save Tax Rates</button>
     </div>
+    <div style="border-top:1px solid var(--line);padding-top:14px;margin-bottom:14px">
+      <label class="fl">Database Stats</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:12px;color:var(--muted)">
+        <span>Projects: <b style="color:var(--text)">${DB.customers.length}</b></span>
+        <span>Orders: <b style="color:var(--text)">${DB.orders.length}</b></span>
+        <span>Employees: <b style="color:var(--text)">${DB.employees.length}</b></span>
+        <span>Products: <b style="color:var(--text)">${DB.products.length}</b></span>
+        <span>Vendors: <b style="color:var(--text)">${DB.vendors.length}</b></span>
+        <span>Materials: <b style="color:var(--text)">${DB.materials.length}</b></span>
+        <span>Vehicles: <b style="color:var(--text)">${DB.vehicles.length}</b></span>
+        <span>Equipment: <b style="color:var(--text)">${DB.equipment.length}</b></span>
+        <span>Transactions: <b style="color:var(--text)">${DB.transactions.length}</b></span>
+      </div>
+      <div class="mut" style="font-size:11px;margin-top:6px">Storage: ~${(JSON.stringify(DB).length/1024).toFixed(0)} KB used</div>
+    </div>
     <div class="btnrow" style="border-top:1px solid var(--line);padding-top:14px">
       <button class="btn ghost" onclick="exportJSON()">⬇ Export data (JSON)</button>
       <button class="btn ghost" onclick="exportTimestampedJSON()">💾 Timestamped Backup</button>
