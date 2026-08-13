@@ -280,7 +280,24 @@ td,th,.stat-value,.kpi-val,.money{font-variant-numeric:tabular-nums}
 .jobcard:hover{border-color:var(--accent2)}
 .itemsedit input,.itemsedit select{padding:7px 8px;font-size:12.8px}
 .itemsedit td{padding:6px}
-@media print{.sidebar,.sidebar-overlay,.sidebar-toggle,.topbar,.noprint,.toast,.modal-bg,.searchbar,.btnrow,.pillnav,.hamburger{display:none!important}.app-main{margin-left:0!important}body{background:#fff;color:#000;font-size:12px}main{max-width:none;padding:0}.panel,.kpi,.kpi-hero,.kpi-sec{border:1px solid #ccc;box-shadow:none;break-inside:avoid}table{font-size:11px}th{background:#f0f0f0!important;color:#000!important}.progress>div{print-color-adjust:exact;-webkit-print-color-adjust:exact}.badge{border:1px solid #999;print-color-adjust:exact;-webkit-print-color-adjust:exact}canvas{max-width:100%!important}@page{margin:1.5cm}}
+@media print{.sidebar,.sidebar-overlay,.sidebar-toggle,.topbar,.noprint,.toast,.toast-container,.modal-bg,.searchbar,.btnrow,.pillnav,.hamburger,.offline-banner,.skip-link,.app-loading,.dash-quick-actions{display:none!important}.app-main{margin-left:0!important}body{background:#fff;color:#000;font-size:12px}main{max-width:none;padding:0}.panel,.kpi,.kpi-hero,.kpi-sec,.dash-kpi{border:1px solid #ccc;box-shadow:none;break-inside:avoid}table{font-size:11px;break-inside:auto}tr{break-inside:avoid}th{background:#f0f0f0!important;color:#000!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}.progress>div{print-color-adjust:exact;-webkit-print-color-adjust:exact}.progress{border:1px solid #ccc}.badge{border:1px solid #999;print-color-adjust:exact;-webkit-print-color-adjust:exact}canvas{max-width:100%!important}a{color:inherit;text-decoration:none}h1,h2,h3{page-break-after:avoid}.hero-cards,.dash-grid6,.dash-grid3,.grid2,.grid3,.cards{display:block}.hero-cards>*,.dash-grid6>*,.dash-grid3>*,.grid2>*,.grid3>*,.cards>*{margin-bottom:8px;break-inside:avoid}@page{margin:1.5cm;size:A4}}
+.btn:active:not(:disabled){transform:scale(.97)}
+.sidebar-item:active{transform:scale(.98)}
+.view-enter{animation:viewFade .2s ease-out}
+@keyframes viewFade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.skeleton{background:linear-gradient(90deg,var(--chip) 25%,var(--line) 50%,var(--chip) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:6px;min-height:16px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.confirm-dialog{text-align:center;padding:20px 10px}
+.confirm-dialog h3{margin-bottom:12px}
+.confirm-dialog p{color:var(--muted);font-size:13px;margin-bottom:20px}
+.confirm-dialog .btnrow{justify-content:center}
+.form-error{color:var(--danger);font-size:12px;margin-top:4px;font-weight:600}
+.field-success input,.field-success select,.field-success textarea{border-color:var(--green)}
+.field-error input,.field-error select,.field-error textarea{border-color:var(--danger)}
+.loading-overlay{position:absolute;inset:0;background:rgba(var(--bg),.7);display:flex;align-items:center;justify-content:center;z-index:10;border-radius:inherit}
+.btn.loading{position:relative;color:transparent;pointer-events:none}
+.btn.loading::after{content:'';position:absolute;width:16px;height:16px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite;left:calc(50% - 8px);top:calc(50% - 8px);color:var(--accent-ink)}
+@media(max-width:480px){.dash-welcome h1{font-size:18px}.dash-welcome{flex-direction:column;align-items:flex-start}.dash-grid6{grid-template-columns:1fr!important}.hero-cards{grid-template-columns:1fr}.stat-strip{grid-template-columns:1fr 1fr}.svc-grid,.proj-grid{grid-template-columns:1fr}.process-grid{grid-template-columns:1fr 1fr}}
 
 /* ===== Public Landing Page ===== */
 .landing{min-height:100vh;background:var(--bg)}
@@ -973,6 +990,81 @@ function toast(msg){
   }, 2200);
   while(container.children.length > 5) container.firstChild.remove();
 }
+function toastError(msg){ toast('⚠ ' + msg); }
+function confirm2(title, message, onConfirm, confirmLabel){
+  openModal(`<div class="confirm-dialog">
+    <h3>${esc(title)}</h3>
+    <p>${esc(message)}</p>
+    <div class="btnrow">
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn del" id="confirmBtn">${esc(confirmLabel||'Delete')}</button>
+    </div>
+  </div>`);
+  document.getElementById('confirmBtn').onclick = () => { closeModal(); onConfirm(); };
+}
+function validateField(input, rules){
+  const val = (input.value||'').trim();
+  const wrap = input.closest('.field');
+  let err = '';
+  for(const r of rules){
+    if(r.required && !val) err = r.required;
+    else if(r.minLength && val.length < r.minLength) err = `Minimum ${r.minLength} characters`;
+    else if(r.maxLength && val.length > r.maxLength) err = `Maximum ${r.maxLength} characters`;
+    else if(r.pattern && !r.pattern.test(val)) err = r.message || 'Invalid format';
+    else if(r.custom && !r.custom(val)) err = r.message || 'Invalid value';
+    if(err) break;
+  }
+  if(wrap){
+    wrap.classList.toggle('field-error', !!err);
+    wrap.classList.toggle('field-success', !err && !!val);
+    let errEl = wrap.querySelector('.form-error');
+    if(err && !errEl){ errEl = document.createElement('div'); errEl.className='form-error'; wrap.appendChild(errEl); }
+    if(errEl) errEl.textContent = err;
+    if(!err && errEl) errEl.remove();
+  }
+  return !err;
+}
+function btnLoading(btn, loading){
+  if(loading){ btn.classList.add('loading'); btn.disabled = true; }
+  else { btn.classList.remove('loading'); btn.disabled = false; }
+}
+function exportTimestampedJSON(){
+  const ts = todayISO().replace(/-/g,'');
+  const blob = new Blob([JSON.stringify(DB,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  a.href = url;
+  a.download = `buildsuite-backup-${ts}.json`;
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  toast('Backup exported');
+}
+function exportOrdersCSV(){
+  const headers = ['ID','Type','Status','Customer','Total','Balance','Date Created'];
+  const rows = DB.orders.map(o=>[
+    o.id, o.type, o.status,
+    (DB.customers.find(c=>c.id===o.customerId)||{}).name||'',
+    orderTotal(o).toFixed(2),
+    (orderTotal(o) - orderTotalPaid(o)).toFixed(2),
+    o.createdAt||''
+  ]);
+  downloadCSV(`Orders_${todayISO()}.csv`, headers, rows);
+}
+function exportProductsCSV(){
+  const headers = ['ID','Name','Category','Unit','Price','Stock','Reorder Level'];
+  const rows = DB.products.map(p=>[p.id, p.name, p.category||'', p.unit||'', p.price||0, p.stock||0, p.reorderLevel||0]);
+  downloadCSV(`Products_${todayISO()}.csv`, headers, rows);
+}
+function exportCustomersCSV(){
+  const headers = ['ID','Name','Contact','Email','Phone','Address'];
+  const rows = DB.customers.map(c=>[c.id, c.name, c.contact||'', c.email||'', c.phone||'', c.address||'']);
+  downloadCSV(`Customers_${todayISO()}.csv`, headers, rows);
+}
+function exportLeadsCSV(){
+  const headers = ['ID','Name','Source','Status','Value','Contact','Date'];
+  const rows = DB.leads.map(l=>[l.id, l.name, l.source||'', l.status||'', l.value||0, l.contact||'', l.date||'']);
+  downloadCSV(`Leads_${todayISO()}.csv`, headers, rows);
+}
 
 /* ---------- password show/hide toggle ---------- */
 function togglePw(inputId, btn){
@@ -996,6 +1088,22 @@ function searchInput(el, apply){
     ne.focus();
     try{ ne.setSelectionRange(pos, pos); }catch(e){}
   }
+}
+const PAGE_SIZE = 50;
+function paginate(arr, page){
+  page = Math.max(1, page||1);
+  const total = arr.length;
+  const pages = Math.ceil(total / PAGE_SIZE) || 1;
+  if(page > pages) page = pages;
+  return { items: arr.slice((page-1)*PAGE_SIZE, page*PAGE_SIZE), page, pages, total };
+}
+function paginationHtml(pg, onPage){
+  if(pg.pages <= 1) return '';
+  const btns = [];
+  if(pg.page > 1) btns.push(`<button class="btn ghost sm" onclick="${onPage}(${pg.page-1})">← Prev</button>`);
+  btns.push(`<span class="mut" style="font-size:12px;padding:6px 8px">Page ${pg.page} of ${pg.pages} (${pg.total} records)</span>`);
+  if(pg.page < pg.pages) btns.push(`<button class="btn ghost sm" onclick="${onPage}(${pg.page+1})">Next →</button>`);
+  return `<div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;flex-wrap:wrap">${btns.join('')}</div>`;
 }
 
 /* ---------- debounce ---------- */
@@ -1377,6 +1485,8 @@ function render(){
     help: renderHelp,
   };
   (renderers[view] || renderDashboard)();
+  const main = document.getElementById('mainArea');
+  if(main){ main.classList.remove('view-enter'); void main.offsetWidth; main.classList.add('view-enter'); }
 }
 function renderHeader(){
   const sidebarNavHtml = SIDEBAR_GROUPS.map(group => {
@@ -1830,7 +1940,8 @@ function openSettings(){
     </div>
     <div class="btnrow" style="border-top:1px solid var(--line);padding-top:14px">
       <button class="btn ghost" onclick="exportJSON()">⬇ Export data (JSON)</button>
-      <button class="btn del" onclick="resetAll();closeModal()">↻ Reset sample data</button>
+      <button class="btn ghost" onclick="exportTimestampedJSON()">💾 Timestamped Backup</button>
+      <button class="btn del" onclick="if(confirm('This will restore sample data and erase your changes. Continue?')){resetAll();closeModal();}">↻ Reset sample data</button>
       <div class="spacer"></div>
       <button class="btn ghost" onclick="closeModal()">Close</button>
     </div>
@@ -3348,21 +3459,25 @@ function renderOrders(){
     rows = rows.filter(o => partyName(o).toLowerCase().includes(q) || String(o.id).includes(q) || (o.jobName||'').toLowerCase().includes(q));
   }
   rows = [...rows].sort((a,b)=> b.id - a.id);
+  const pg = paginate(rows, sub.page||1);
 
   document.getElementById('mainArea').innerHTML = `
     <div class="crumb">Orders${foremanOnly?` — ${esc(foremanSite())}`:''}</div>
     <div class="panel">
       <div class="ph">
         <h3 style="font-size:18px">Orders</h3>
-        ${canCreateForSite(foremanOnly?foremanSite():null) || canEdit() ? `<button class="btn pri" onclick="newOrder(sub.type==='ALL'?'INVOICE':sub.type)">+ New Order</button>` : ''}
+        <div style="display:flex;gap:8px;align-items:center">
+          ${canEdit() ? `<button class="btn ghost sm" onclick="exportOrdersCSV()" title="Export CSV">📥 CSV</button>` : ''}
+          ${canCreateForSite(foremanOnly?foremanSite():null) || canEdit() ? `<button class="btn pri" onclick="newOrder(sub.type==='ALL'?'INVOICE':sub.type)">+ New Order</button>` : ''}
+        </div>
       </div>
-      <div class="pillnav">${types.map(([k,l])=>`<button class="${sub.type===k?'on':''}" onclick="sub.type='${k}';renderOrders()">${l}</button>`).join('')}</div>
+      <div class="pillnav">${types.map(([k,l])=>`<button class="${sub.type===k?'on':''}" onclick="sub.type='${k}';sub.page=1;renderOrders()">${l}</button>`).join('')}</div>
       <div class="searchbar">
-        <input id="searchOrders" placeholder="Search by order #, party, or job..." value="${esc(sub.search)}" oninput="searchInput(this,()=>{sub.search=this.value;renderOrders();})">
+        <input id="searchOrders" placeholder="Search by order #, party, or job..." value="${esc(sub.search)}" oninput="searchInput(this,()=>{sub.search=this.value;sub.page=1;renderOrders();})">
       </div>
       <div class="twrap"><table>
         <tr><th>#</th><th>Type</th><th>Party</th><th>Job</th><th>Date</th><th>Status</th>${!foremanOnly?'<th class="right">Total</th><th class="right">Profit</th>':''}</tr>
-        ${rows.map(o=>{
+        ${pg.items.map(o=>{
           const p = orderProfit(o);
           return `<tr class="click" onclick="go('orders',{editId:${o.id},type:sub.type})">
             <td class="mono">${o.id}</td>
@@ -3375,10 +3490,12 @@ function renderOrders(){
           </tr>`;
         }).join('') || `<tr><td colspan="${foremanOnly?6:8}" class="empty">No orders found</td></tr>`}
       </table></div>
+      ${paginationHtml(pg,'ordersPage')}
     </div>
   `;
 }
 
+function ordersPage(p){ sub.page=p; renderOrders(); }
 function newOrder(type){
   const order = { id: nextId(DB.orders), type, partyId:'', partyName:'', jobId:'', jobName:'', date: todayISO(), status: defaultStatus(type), account: defaultAccount(type), payment:'', payments: [], items: [], laborCosts: [] };
   DB.orders.push(order);
@@ -3716,15 +3833,16 @@ function renderProducts(){
   let rows = DB.products;
   if(sub.search){ const q=sub.search.toLowerCase(); rows = rows.filter(p=>p.name.toLowerCase().includes(q) || (p.description||'').toLowerCase().includes(q)); }
   rows = [...rows].sort((a,b)=>a.name.localeCompare(b.name));
+  const pg = paginate(rows, sub.page||1);
 
   document.getElementById('mainArea').innerHTML = `
     <div class="crumb">Products</div>
     <div class="panel">
-      <div class="ph"><h3 style="font-size:18px">Products & Inventory</h3><div class="btnrow" style="margin:0"><button class="btn ghost" onclick="openBulkImport('products')">Bulk Import</button><button class="btn pri" onclick="editProduct(null)">+ New Product</button></div></div>
-      <div class="searchbar"><input id="searchProducts" placeholder="Search products..." value="${esc(sub.search)}" oninput="searchInput(this,()=>{sub.search=this.value;renderProducts();})"></div>
+      <div class="ph"><h3 style="font-size:18px">Products & Inventory</h3><div class="btnrow" style="margin:0"><button class="btn ghost" onclick="openBulkImport('products')">Bulk Import</button><button class="btn ghost" onclick="exportProductsCSV()">📥 CSV</button><button class="btn pri" onclick="editProduct(null)">+ New Product</button></div></div>
+      <div class="searchbar"><input id="searchProducts" placeholder="Search products..." value="${esc(sub.search)}" oninput="searchInput(this,()=>{sub.search=this.value;sub.page=1;renderProducts();})"></div>
       <div class="twrap"><table>
         <tr><th>Product</th><th>Description</th><th class="right">Purchase Price</th><th class="right">Sales Price</th><th class="right">In Stock</th><th class="right">Value on Hand</th><th></th></tr>
-        ${rows.map(p=>{
+        ${pg.items.map(p=>{
           const stock = stockFor(p.id);
           return `<tr class="click" onclick="editProduct(${p.id})">
             <td><b>${esc(p.name)}</b></td>
@@ -3737,9 +3855,11 @@ function renderProducts(){
           </tr>`;
         }).join('') || `<tr><td colspan="7" class="empty">No products found</td></tr>`}
       </table></div>
+      ${paginationHtml(pg,'prodPage')}
     </div>
   `;
 }
+function prodPage(p){ sub.page=p; renderProducts(); }
 const BULK_IMPORT_CONFIG = {
   activities: {
     label: 'Activities',
@@ -3904,7 +4024,7 @@ function renderCustomers(){
   document.getElementById('mainArea').innerHTML = `
     <div class="crumb">Projects</div>
     <div class="panel">
-      <div class="ph"><h3 style="font-size:18px">Projects / Customers</h3>${canEdit()?'<button class="btn pri" onclick="editCustomer(null)">+ New Project</button>':''}</div>
+      <div class="ph"><h3 style="font-size:18px">Projects / Customers</h3><div style="display:flex;gap:8px">${canEdit()?'<button class="btn ghost sm" onclick="exportCustomersCSV()">📥 CSV</button><button class="btn pri" onclick="editCustomer(null)">+ New Project</button>':''}</div></div>
       <div class="searchbar"><input id="searchProjects" placeholder="Search projects..." value="${esc(sub.search)}" oninput="searchInput(this,()=>{sub.search=this.value;renderCustomers();})"></div>
       <div class="twrap"><table>
         <tr><th>Project / Customer</th><th>Status</th><th>City / State</th><th>Phone</th><th class="right">Jobs</th><th></th></tr>
@@ -4284,7 +4404,7 @@ function renderLeads(){
   rows = [...rows].sort((a,b)=>(b.createdDate||'').localeCompare(a.createdDate||''));
   document.getElementById('mainArea').innerHTML = `
     <div class="panel">
-      <div class="ph"><h3 style="font-size:18px">Leads</h3><button class="btn pri" onclick="openNewLead()">+ Add Lead</button></div>
+      <div class="ph"><h3 style="font-size:18px">Leads</h3><div style="display:flex;gap:8px"><button class="btn ghost sm" onclick="exportLeadsCSV()">📥 CSV</button><button class="btn pri" onclick="openNewLead()">+ Add Lead</button></div></div>
       <div class="mut" style="font-size:12px;margin-bottom:10px">Every inquiry from your website's contact form lands here automatically, alongside anything you add by hand — phone calls, walk-ins, referrals.</div>
       <div class="searchbar">
         <input id="leadSearchInput" placeholder="Search name, email, message..." value="${esc(sub.leadSearch)}" oninput="sub.leadSearch=this.value;renderLeads()">
@@ -6689,20 +6809,21 @@ function renderEmployees(){
   if(sub.search){ const q=sub.search.toLowerCase(); rows = rows.filter(e=>e.name.toLowerCase().includes(q) || (e.type||'').toLowerCase().includes(q)); }
   rows = [...rows].sort((a,b)=>a.name.localeCompare(b.name));
   if(sub.empGroup && sub.empGroup!=='ALL'){ rows = rows.filter(e=>EMP_TYPE_GROUPS[sub.empGroup].includes(e.type)); }
+  const pg = paginate(rows, sub.page||1);
   document.getElementById('mainArea').innerHTML = `
     <div class="crumb">Employees</div>
     <div class="panel">
       <div class="ph"><h3 style="font-size:18px">Employees</h3><div class="btnrow" style="margin:0"><button class="btn ghost" onclick="openBulkImport('employees')">Bulk Import</button><button class="btn ghost" onclick="exportEmployeesCSV()">Export CSV</button>${session.type==='Admin'?`<button class="btn ghost" onclick="generateAccountsModal()">🔑 Generate Accounts</button>`:''}<button class="btn pri" onclick="editEmployee(null)">+ New Employee</button></div></div>
       <div class="searchbar">
-        <input id="searchEmployees" placeholder="Search employees..." value="${esc(sub.search)}" oninput="searchInput(this,()=>{sub.search=this.value;renderEmployees();})">
-        <select onchange="sub.empGroup=this.value;renderEmployees()">
+        <input id="searchEmployees" placeholder="Search employees..." value="${esc(sub.search)}" oninput="searchInput(this,()=>{sub.search=this.value;sub.page=1;renderEmployees();})">
+        <select onchange="sub.empGroup=this.value;sub.page=1;renderEmployees()">
           <option value="ALL">All Positions</option>
           ${Object.keys(EMP_TYPE_GROUPS).map(g=>`<option ${sub.empGroup===g?'selected':''}>${esc(g)}</option>`).join('')}
         </select>
       </div>
       <div class="twrap"><table>
         <tr><th>Name</th><th>Position</th><th>Pay Type</th><th class="right">Rate</th><th>Current Site</th><th>License</th><th>Active</th><th></th></tr>
-        ${rows.map(e=>{
+        ${pg.items.map(e=>{
           const cur = currentSiteFor(e.id);
           const lic = employeeLicenseStatus(e);
           return `<tr class="click" onclick="go('employees',{empId:${e.id}})">
@@ -6717,9 +6838,11 @@ function renderEmployees(){
           </tr>`;
         }).join('') || `<tr><td colspan="8" class="empty">No employees found</td></tr>`}
       </table></div>
+      ${paginationHtml(pg,'empPage')}
     </div>
   `;
 }
+function empPage(p){ sub.page=p; renderEmployees(); }
 function editEmployee(id){
   window.__positionManuallySet = false;
   const e = id ? employeeById(id) : {id:null,name:'',type:EMP_TYPES[0],payType:'Hourly',regAmount:0,otRate:0,hourlyCost:0,phone:'',email:'',address:'',city:'',state:'',zip:'',active:true,govDeductions:false,tin:'',sssNo:'',philhealthNo:'',pagibigNo:'',licenseType:'',licenseNumber:'',licenseExpiry:'',foremanName:window.__pendingForeman||''};
@@ -9276,6 +9399,7 @@ function renderTransactions(){
   if(sub.typeFilter !== 'ALL') rows = rows.filter(t=>t.accountType===sub.typeFilter);
   if(sub.search){ const q=sub.search.toLowerCase(); rows = rows.filter(t=>t.name.toLowerCase().includes(q) || (t.account||'').toLowerCase().includes(q)); }
   rows = [...rows].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const pg = paginate(rows, sub.page||1);
   const income = DB.transactions.filter(t=>t.accountType==='Income').reduce((s,t)=>s+(Number(t.amount)||0),0);
   const expense = DB.transactions.filter(t=>t.accountType!=='Income').reduce((s,t)=>s+(Number(t.amount)||0),0);
 
@@ -9287,12 +9411,12 @@ function renderTransactions(){
       <div class="kpi"><div class="l">Net</div><div class="v ${income-expense>=0?'green':'danger'}">${money0(income-expense)}</div></div>
     </div>
     <div class="panel">
-      <div class="ph"><h3 style="font-size:18px">Transactions</h3><button class="btn pri" onclick="editTransaction(null)">+ New Transaction</button></div>
-      <div class="pillnav">${['ALL',...ACCOUNT_TYPES].map(t=>`<button class="${sub.typeFilter===t?'on':''}" onclick="sub.typeFilter='${t}';renderTransactions()">${t==='ALL'?'All':t}</button>`).join('')}</div>
-      <div class="searchbar"><input id="searchTransactions" placeholder="Search transactions..." value="${esc(sub.search)}" oninput="searchInput(this,()=>{sub.search=this.value;renderTransactions();})"></div>
+      <div class="ph"><h3 style="font-size:18px">Transactions</h3><div style="display:flex;gap:8px"><button class="btn ghost sm" onclick="exportTransactionsCSV()">📥 CSV</button><button class="btn pri" onclick="editTransaction(null)">+ New Transaction</button></div></div>
+      <div class="pillnav">${['ALL',...ACCOUNT_TYPES].map(t=>`<button class="${sub.typeFilter===t?'on':''}" onclick="sub.typeFilter='${t}';sub.page=1;renderTransactions()">${t==='ALL'?'All':t}</button>`).join('')}</div>
+      <div class="searchbar"><input id="searchTransactions" placeholder="Search transactions..." value="${esc(sub.search)}" oninput="searchInput(this,()=>{sub.search=this.value;sub.page=1;renderTransactions();})"></div>
       <div class="twrap"><table>
         <tr><th>Name</th><th>Account</th><th>Type</th><th>Job</th><th>Date</th><th class="right">Amount</th><th></th></tr>
-        ${rows.map(t=>`
+        ${pg.items.map(t=>`
           <tr class="click" onclick="editTransaction(${t.id})">
             <td><b>${esc(t.name)}</b></td>
             <td class="mut">${esc(t.account)}</td>
@@ -9303,8 +9427,15 @@ function renderTransactions(){
             <td><button class="x" aria-label="Close" onclick="event.stopPropagation();deleteTransaction(${t.id})">✕</button></td>
           </tr>`).join('') || `<tr><td colspan="7" class="empty">No transactions found</td></tr>`}
       </table></div>
+      ${paginationHtml(pg,'txnPage')}
     </div>
   `;
+}
+function txnPage(p){ sub.page=p; renderTransactions(); }
+function exportTransactionsCSV(){
+  const headers = ['ID','Name','Account','Type','Job','Date','Amount','Notes'];
+  const rows = DB.transactions.map(t=>[t.id, t.name, t.account||'', t.accountType||'', t.jobName||'', t.date||'', t.amount||0, t.notes||'']);
+  downloadCSV(`Transactions_${todayISO()}.csv`, headers, rows);
 }
 function editTransaction(id){
   const t = id ? DB.transactions.find(x=>x.id===id) : {id:null,name:'',date:todayISO(),amount:0,account:ACCOUNTS[0],accountType:'Expense',jobId:'',jobName:'',notes:''};
@@ -10385,6 +10516,13 @@ function updateOfflineStatus(){
 }
 window.addEventListener('online', ()=>{ updateOfflineStatus(); toast('Back online — syncing...'); if(cloud.connected) cloudPush(); });
 window.addEventListener('offline', updateOfflineStatus);
+window.addEventListener('error', e => {
+  console.error('Uncaught error:', e.error);
+  if(typeof toastError === 'function') toastError('Something went wrong. Try refreshing.');
+});
+window.addEventListener('unhandledrejection', e => {
+  console.error('Unhandled promise rejection:', e.reason);
+});
 document.addEventListener('DOMContentLoaded', ()=>{ updateOfflineStatus(); boot(); });
 
 </script>
