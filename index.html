@@ -1146,6 +1146,8 @@ function debounce(fn, ms){
 
 /* ---------- keyboard shortcuts ---------- */
 document.addEventListener('keydown', function(e){
+  const active = document.activeElement;
+  const inInput = active && (active.tagName==='INPUT'||active.tagName==='TEXTAREA'||active.tagName==='SELECT'||active.isContentEditable);
   if(e.key === 'Escape'){
     const modal = document.getElementById('modalBg');
     if(modal){ closeModal(); e.preventDefault(); return; }
@@ -1156,6 +1158,16 @@ document.addEventListener('keydown', function(e){
     if(searchBtn){ searchBtn.click(); return; }
     const searchBox = document.querySelector('.searchbar input');
     if(searchBox) searchBox.focus();
+  }
+  if(e.key === '?' && !inInput && !e.ctrlKey && !e.metaKey){
+    e.preventDefault();
+    openModal(`<h3>Keyboard Shortcuts</h3>
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:8px 16px;font-size:13px;margin-top:12px">
+        <kbd style="background:var(--chip);padding:2px 8px;border-radius:4px;font-family:monospace">Ctrl+K</kbd><span>Search everything</span>
+        <kbd style="background:var(--chip);padding:2px 8px;border-radius:4px;font-family:monospace">Esc</kbd><span>Close modal / dialog</span>
+        <kbd style="background:var(--chip);padding:2px 8px;border-radius:4px;font-family:monospace">?</kbd><span>Show this help</span>
+      </div>
+      <div class="btnrow" style="margin-top:16px"><button class="btn ghost" onclick="closeModal()">Close</button></div>`);
   }
 });
 
