@@ -113,7 +113,8 @@ a{color:var(--accent2);cursor:pointer}
 .app-main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-height:100vh;transition:margin-left .28s cubic-bezier(.4,0,.2,1)}
 .sidebar.collapsed{width:var(--sidebar-collapsed-w)}
 .sidebar.collapsed~.app-main{margin-left:var(--sidebar-collapsed-w)}
-.sidebar.collapsed .sidebar-section-label,.sidebar.collapsed .brand .name,.sidebar.collapsed .uinfo,.sidebar.collapsed .sidebar-logout span,.sidebar.collapsed .sidebar-item span:not(.icon){opacity:0;width:0;overflow:hidden;white-space:nowrap}
+.sidebar-item .label{transition:opacity .2s,width .2s;overflow:hidden}
+.sidebar.collapsed .sidebar-section-label,.sidebar.collapsed .brand .name,.sidebar.collapsed .uinfo,.sidebar.collapsed .sidebar-logout span,.sidebar.collapsed .sidebar-item .label{opacity:0;width:0;overflow:hidden;white-space:nowrap;display:none}
 .sidebar.collapsed .brand{padding:18px 12px 14px;justify-content:center}
 .sidebar.collapsed .sidebar-item{padding:9px 0;justify-content:center}
 .sidebar.collapsed .sidebar-item .icon{width:auto;margin:0}
@@ -1608,7 +1609,7 @@ function renderHeader(){
       <div class="sidebar-section-label">${group.section}</div>
       ${visibleItems.map(item =>
         `<button class="sidebar-item${item.key===view?' on':''}" onclick="go('${item.key}');closeSidebar()">
-          <span class="icon">${NAV_ICONS[item.key]||'📄'}</span>${item.label}</button>`
+          <span class="icon">${NAV_ICONS[item.key]||'📄'}</span><span class="label">${item.label}</span></button>`
       ).join('')}
     </div>`;
   }).join('');
