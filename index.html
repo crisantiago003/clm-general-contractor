@@ -1711,7 +1711,60 @@ function permanentlyDeleteTrash(trashId){
   if(session.type !== 'Admin'){ toast('Only an Admin can permanently delete.'); return; }
   if(!confirm('Permanently delete this? This cannot be undone — not even the Trash can bring it back after this.')) return;
   DB.trash = DB.trash.filter(x=>x.id!==trashId);
+  sub.trashSelected && sub.trashSelected.delete(trashId);
   saveDB(); toast('Permanently deleted'); renderTrash();
+}
+function trashToggle(id){
+  if(!sub.trashSelected) sub.trashSelected = new Set();
+  if(sub.trashSelected.has(id)) sub.trashSelected.delete(id); else sub.trashSelected.add(id);
+  renderTrash();
+}
+function trashSelectAll(){
+  if(!sub.trashSelected) sub.trashSelected = new Set();
+  let rows = [...DB.trash];
+  if(sub.trashType && sub.trashType !== 'ALL') rows = rows.filter(t=>t.type===sub.trashType);
+  const allChecked = rows.length > 0 && rows.every(t=>sub.trashSelected.has(t.id));
+  if(allChecked){ rows.forEach(t=>sub.trashSelected.delete(t.id)); } else { rows.forEach(t=>sub.trashSelected.add(t.id)); }
+  renderTrash();
+}
+function trashDeleteSelected(){
+  if(session.type !== 'Admin'){ toast('Only an Admin can permanently delete.'); return; }
+  const count = sub.trashSelected ? sub.trashSelected.size : 0;
+  if(!count){ toast('Nothing selected'); return; }
+  if(!confirm(`Permanently delete ${count} item${count>1?'s':''}? This cannot be undone.`)) return;
+  DB.trash = DB.trash.filter(x=>!sub.trashSelected.has(x.id));
+  logNotification('Deletion', `${count} item${count>1?'s':''} permanently deleted from Trash`, null);
+  sub.trashSelected = new Set();
+  saveDB(); toast(`${count} item${count>1?'s':''} permanently deleted`); renderTrash();
+}
+function trashRestoreSelected(){
+  if(session.type !== 'Admin'){ toast('Only an Admin can restore items.'); return; }
+  const count = sub.trashSelected ? sub.trashSelected.size : 0;
+  if(!count){ toast('Nothing selected'); return; }
+  if(!confirm(`Restore ${count} item${count>1?'s':''}?`)) return;
+  const ids = [...sub.trashSelected];
+  ids.forEach(trashId=>{
+    const t = DB.trash.find(x=>x.id===trashId);
+    if(!t) return;
+    if(t.type === 'payrollRun'){
+      DB.payrolls.push(t.data.run);
+      DB.paidEmployees.push(...t.data.paidEmployees);
+    } else if(t.type === 'vehicle'){
+      const { expenses, fuelLogs, meterLogs, reminders, ...veh } = t.data;
+      DB.vehicles.push(veh);
+      if(expenses) DB.vehicleExpenses.push(...expenses);
+      if(fuelLogs) DB.fuelLogs.push(...fuelLogs);
+      if(meterLogs) DB.meterLogs.push(...meterLogs);
+      if(reminders) DB.vehicleReminders.push(...reminders);
+    } else {
+      const arr = TRASH_TYPE_ARRAYS[t.type];
+      if(arr) DB[arr].push(t.data);
+    }
+    DB.trash = DB.trash.filter(x=>x.id!==trashId);
+  });
+  logNotification('Restore', `${count} item${count>1?'s':''} restored from Trash`, null);
+  sub.trashSelected = new Set();
+  saveDB(); toast(`${count} item${count>1?'s':''} restored`); renderTrash();
 }
 function renderHelp(){
   if(session.type === 'Pending') return;
@@ -1761,23 +1814,33 @@ function renderTrash(){
   if(session.type !== 'Admin'){ go('dashboard'); return; }
   purgeOldTrash();
   sub.trashType = sub.trashType || 'ALL';
+  if(!sub.trashSelected) sub.trashSelected = new Set();
   let rows = [...DB.trash];
   if(sub.trashType !== 'ALL') rows = rows.filter(t=>t.type===sub.trashType);
   rows.sort((a,b)=>(b.deletedAt||'').localeCompare(a.deletedAt||''));
   const typesPresent = [...new Set(DB.trash.map(t=>t.type))];
+  const selCount = sub.trashSelected.size;
+  const allChecked = rows.length > 0 && rows.every(t=>sub.trashSelected.has(t.id));
   document.getElementById('mainArea').innerHTML = `
     <div class="crumb">Trash</div>
     <div class="panel">
-      <div class="ph"><h3 style="font-size:18px">🗑️ Trash</h3></div>
+      <div class="ph"><h3 style="font-size:18px">🗑️ Trash</h3>
+        ${rows.length ? `<div class="btnrow" style="margin:0">
+          <button class="btn ghost sm" onclick="trashSelectAll()">${allChecked ? 'Deselect All' : 'Select All'}</button>
+          ${selCount ? `<button class="btn del sm" onclick="trashDeleteSelected()">Delete Selected (${selCount})</button>
+          <button class="btn save sm" onclick="trashRestoreSelected()">Restore Selected (${selCount})</button>` : ''}
+        </div>` : ''}
+      </div>
       <div class="mut" style="font-size:12.5px;margin-bottom:10px">Deleted items stay here for 30 days before being permanently removed. Only an Admin can restore or permanently delete.</div>
       <div class="pillnav">
-        <button class="${sub.trashType==='ALL'?'on':''}" onclick="sub.trashType='ALL';renderTrash()">All</button>
-        ${typesPresent.map(t=>`<button class="${sub.trashType===t?'on':''}" onclick="sub.trashType='${t}';renderTrash()">${TRASH_TYPE_LABELS[t]}</button>`).join('')}
+        <button class="${sub.trashType==='ALL'?'on':''}" onclick="sub.trashType='ALL';sub.trashSelected=new Set();renderTrash()">All</button>
+        ${typesPresent.map(t=>`<button class="${sub.trashType===t?'on':''}" onclick="sub.trashType='${t}';sub.trashSelected=new Set();renderTrash()">${TRASH_TYPE_LABELS[t]}</button>`).join('')}
       </div>
       <div class="twrap"><table>
-        <tr><th>Type</th><th>Item</th><th>Deleted By</th><th>Deleted On</th><th>Expires In</th><th></th></tr>
+        <tr><th style="width:32px"><input type="checkbox" ${allChecked?'checked':''} onchange="trashSelectAll()"></th><th>Type</th><th>Item</th><th>Deleted By</th><th>Deleted On</th><th>Expires In</th><th></th></tr>
         ${rows.map(t=>`
           <tr>
+            <td><input type="checkbox" ${sub.trashSelected.has(t.id)?'checked':''} onchange="trashToggle('${t.id}')"></td>
             <td><span class="badge b-status">${TRASH_TYPE_LABELS[t.type]}</span></td>
             <td><b>${esc(trashLabel(t))}</b></td>
             <td class="mut">${esc(t.deletedBy)}</td>
@@ -1787,7 +1850,7 @@ function renderTrash(){
               <button class="btn save sm" onclick="restoreFromTrash('${t.id}')">Restore</button>
               <button class="btn del sm" onclick="permanentlyDeleteTrash('${t.id}')">Delete Forever</button>
             </td>
-          </tr>`).join('') || `<tr><td colspan="6" class="empty">Trash is empty</td></tr>`}
+          </tr>`).join('') || `<tr><td colspan="7" class="empty">Trash is empty</td></tr>`}
       </table></div>
     </div>
   `;
@@ -9802,11 +9865,13 @@ async function saveUser(id){
 async function deleteUser(id){
   if(!guardDelete()) return;
   if(DB.users.length <= 1){ toast('You must keep at least one user'); return; }
-  if(!confirm('Move this user account to Trash? You can restore it within 30 days.')) return;
-  const u0 = DB.users.find(x=>x.id===id);
-  if(u0) moveToTrash('user', u0);
-  DB.users = DB.users.filter(u=>u.id!==id);
-  logNotification('Deletion', `User account "${u0?u0.name:id}" moved to Trash`, 'trash');
+  const u0 = DB.users.find(x=>x.id==id);
+  if(!u0){ toast('User not found'); return; }
+  if(u0.username === session.username){ toast('You cannot delete your own account'); return; }
+  if(!confirm(`Move "${u0.name}" to Trash? You can restore it within 30 days.`)) return;
+  moveToTrash('user', u0);
+  DB.users = DB.users.filter(u=>u.id!=id);
+  logNotification('Deletion', `User account "${u0.name}" moved to Trash`, 'trash');
   const r = await saveDBAndConfirmSync(); closeModal(); toast(r.synced ? 'User moved to Trash' : `⚠️ Deleted here, but failed to sync — ${r.error||'check your connection'}`); renderUsers();
 }
 
