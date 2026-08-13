@@ -1070,6 +1070,33 @@ function exportMaterialsCSV(){
   const rows = DB.materials.map(m=>[m.id, m.name, m.qty||0, m.unit||'', m.unitPrice||0, m.site||'', m.receivedFrom||'', m.date||'', m.reorderPoint||'']);
   downloadCSV(`Materials_${todayISO()}.csv`, headers, rows);
 }
+function exportEquipmentCSV(){
+  const headers = ['ID','Name','Brand','Serial','Qty','Unit','Status','Site','Received From','Date'];
+  const rows = DB.equipment.map(e=>[e.id, e.name, e.brand||'', e.serial||'', e.qty||1, e.unit||'', e.status||'', e.site||'', e.receivedFrom||'', e.date||'']);
+  downloadCSV(`Equipment_${todayISO()}.csv`, headers, rows);
+}
+function exportVehiclesCSV(){
+  const headers = ['ID','Name','Make','Model','Year','Plate','Type','Active','Driver'];
+  const rows = DB.vehicles.map(v=>{
+    const d = v.assignedDriverId ? (DB.employees.find(e=>e.id==v.assignedDriverId)||{}).name||'' : '';
+    return [v.id, v.name, v.make||'', v.model||'', v.year||'', v.plate||'', v.type||'', v.active?'Yes':'No', d];
+  });
+  downloadCSV(`Vehicles_${todayISO()}.csv`, headers, rows);
+}
+function exportEmployeesCSV(){
+  const headers = ['ID','Name','Role','Type','Rate','Phone','Email','SSS','PhilHealth','PagIBIG','TIN','Status'];
+  const rows = DB.employees.map(e=>[e.id, e.name, e.role||'', e.payType||'', e.rate||0, e.phone||'', e.email||'', e.sss||'', e.philhealth||'', e.pagibig||'', e.tin||'', e._trash?'Trashed':'Active']);
+  downloadCSV(`Employees_${todayISO()}.csv`, headers, rows);
+}
+function exportScheduleCSV(){
+  if(!DB.scheduleActivities) return;
+  const headers = ['ID','Project','Activity','Planned Start','Planned End','Actual Start','Actual End','Status','Cost','Weight','Completion %'];
+  const rows = DB.scheduleActivities.map(a=>{
+    const proj = DB.customers.find(c=>c.id==a.projectId);
+    return [a.id, proj?proj.name:'', a.name||'', a.plannedStart||'', a.plannedEnd||'', a.actualStart||'', a.actualEnd||'', a.status||'', a.cost||0, a.weight||0, a.completion||0];
+  });
+  downloadCSV(`Schedule_${todayISO()}.csv`, headers, rows);
+}
 
 /* ---------- password show/hide toggle ---------- */
 function togglePw(inputId, btn){
@@ -5867,6 +5894,7 @@ function renderSchedule(){
       <div class="ph">
         <h3 style="font-size:18px">Project Activity List</h3>
         <div class="btnrow" style="margin:0">
+          <button class="btn ghost" onclick="exportScheduleCSV()">📥 CSV</button>
           <button class="btn pri" onclick="editScheduleActivity(null)">+ New Activity</button>
         </div>
       </div>
@@ -7268,7 +7296,7 @@ function renderFleet(){
 function renderVehicleListInner(){
   const rows = [...DB.vehicles].sort((a,b)=>a.name.localeCompare(b.name));
   return `
-    <div class="ph"><h3 style="font-size:18px">Vehicles</h3><button class="btn pri" onclick="editVehicle(null)">+ New Vehicle</button></div>
+    <div class="ph"><h3 style="font-size:18px">Vehicles</h3><div class="btnrow" style="margin:0"><button class="btn ghost" onclick="exportVehiclesCSV()">📥 CSV</button><button class="btn pri" onclick="editVehicle(null)">+ New Vehicle</button></div></div>
     <div class="twrap"><table>
       <tr><th>Vehicle</th><th>Plate #</th><th>Type</th><th>Driver</th><th class="right">Odometer</th><th class="right">Total Cost</th><th>Maintenance</th><th></th></tr>
       ${rows.map(v=>{
@@ -7958,7 +7986,7 @@ function renderEquipmentInner(){
     });
     const list = Object.values(groups).sort((a,b)=>b.entries.length-a.entries.length || a.name.localeCompare(b.name));
     return `
-      <div class="ph"><h3 style="font-size:18px">Tools & Equipment Monitoring</h3><button class="btn pri" onclick="editEquipment(null)">+ Add Equipment</button></div>
+      <div class="ph"><h3 style="font-size:18px">Tools & Equipment Monitoring</h3><div class="btnrow" style="margin:0"><button class="btn ghost" onclick="exportEquipmentCSV()">📥 CSV</button><button class="btn pri" onclick="editEquipment(null)">+ Add Equipment</button></div></div>
       ${toolbar}
       <div class="mut" style="font-size:12px;margin-bottom:10px">Grouped by tool name — click a tool to see everywhere it's been logged, in order, with sites, dates, and status.</div>
       <div class="twrap"><table>
@@ -7981,7 +8009,7 @@ function renderEquipmentInner(){
 
   const sorted = [...rows].sort((a,b)=>(b.date||'').localeCompare(a.date||'') || a.name.localeCompare(b.name));
   return `
-    <div class="ph"><h3 style="font-size:18px">Tools & Equipment Monitoring</h3><button class="btn pri" onclick="editEquipment(null)">+ Add Equipment</button></div>
+    <div class="ph"><h3 style="font-size:18px">Tools & Equipment Monitoring</h3><div class="btnrow" style="margin:0"><button class="btn ghost" onclick="exportEquipmentCSV()">📥 CSV</button><button class="btn pri" onclick="editEquipment(null)">+ Add Equipment</button></div></div>
     ${toolbar}
     <div class="twrap"><table>
       <tr><th>Equipment</th><th>Brand</th><th>Serial #</th><th>Site</th><th class="right">Qty</th><th>Status</th><th>Date</th><th></th></tr>
