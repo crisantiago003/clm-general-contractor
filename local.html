@@ -442,7 +442,7 @@ td,th,.stat-value,.kpi-val,.money{font-variant-numeric:tabular-nums}
 let SEED;
 try { SEED = JSON.parse(document.getElementById('seed-data').textContent); }
 catch(e) { console.error('Failed to parse seed data:', e); SEED = {}; }
-const STORAGE_KEY = 'buildsuite_v1';
+const STORAGE_KEY = 'buildsuite_local_v1';
 
 let DB = null;
 let _dbSnap = null;      // snapshot for change-detection stamping
