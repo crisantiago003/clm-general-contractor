@@ -189,6 +189,11 @@ main{max-width:1280px;margin:0 auto;padding:22px 18px 60px;width:100%}
 .dash-welcome{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px;animation:kpiEnter .4s cubic-bezier(.4,0,.2,1) both}
 .dash-welcome h1{font-size:24px;font-weight:800;margin:0;line-height:1.2;letter-spacing:-.02em}
 .dash-welcome .dash-date{font-size:13px;color:var(--muted);margin-top:3px}
+.dash-period-bar{display:flex;align-items:center;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+.dash-period-bar .period-btn{padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
+.dash-period-bar .period-btn:hover{border-color:var(--accent);color:var(--text)}
+.dash-period-bar .period-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.dash-period-label{font-size:13px;color:var(--muted);margin-left:auto;font-weight:500}
 .dash-quick-actions{display:flex;gap:8px;flex-wrap:wrap}
 .dash-quick-actions .btn{font-size:12px;padding:7px 16px;border-radius:8px;transition:all .2s}
 .dash-quick-actions .btn:hover{transform:translateY(-1px)}
@@ -3215,39 +3220,78 @@ function roundRect(ctx,x,y,w,h,r){
 }
 function renderDashboard(){
   if(session.type === 'Employee'){ renderEmployeeHome(); return; }
-  const invoices = DB.orders.filter(o=>o.type==='INVOICE');
-  const purchases = DB.orders.filter(o=>o.type==='PURCHASE');
+  const now = new Date();
+  const dashPeriod = sub.dashPeriod || 'month';
+  let periodStart, periodEnd, prevStart, prevEnd, periodLabel;
+  if(dashPeriod === 'month'){
+    periodStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0,10);
+    periodEnd = new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().slice(0,10);
+    prevStart = new Date(now.getFullYear(), now.getMonth()-1, 1).toISOString().slice(0,10);
+    prevEnd = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().slice(0,10);
+    periodLabel = now.toLocaleString(undefined,{month:'long',year:'numeric'});
+  } else if(dashPeriod === 'quarter'){
+    const q = Math.floor(now.getMonth()/3);
+    periodStart = new Date(now.getFullYear(), q*3, 1).toISOString().slice(0,10);
+    periodEnd = new Date(now.getFullYear(), q*3+3, 0).toISOString().slice(0,10);
+    prevStart = new Date(now.getFullYear(), q*3-3, 1).toISOString().slice(0,10);
+    prevEnd = new Date(now.getFullYear(), q*3, 0).toISOString().slice(0,10);
+    periodLabel = `Q${q+1} ${now.getFullYear()}`;
+  } else if(dashPeriod === 'year'){
+    periodStart = `${now.getFullYear()}-01-01`;
+    periodEnd = `${now.getFullYear()}-12-31`;
+    prevStart = `${now.getFullYear()-1}-01-01`;
+    prevEnd = `${now.getFullYear()-1}-12-31`;
+    periodLabel = String(now.getFullYear());
+  } else {
+    periodStart = '2000-01-01'; periodEnd = '2099-12-31';
+    prevStart = '1900-01-01'; prevEnd = '1999-12-31';
+    periodLabel = 'All Time';
+  }
+  const inPeriod = (d) => d && d >= periodStart && d <= periodEnd;
+  const inPrev = (d) => d && d >= prevStart && d <= prevEnd;
+
+  const allInvoices = DB.orders.filter(o=>o.type==='INVOICE');
+  const allPurchases = DB.orders.filter(o=>o.type==='PURCHASE');
   const workOrders = DB.orders.filter(o=>o.type==='WORK ORDER');
+  const invoices = allInvoices.filter(o=>inPeriod(o.date));
+  const purchases = allPurchases.filter(o=>inPeriod(o.date));
+  const prevInvoices = allInvoices.filter(o=>inPrev(o.date));
+  const prevPurchases = allPurchases.filter(o=>inPrev(o.date));
+
   const revenue = invoices.reduce((s,o)=>s+orderTotal(o),0);
   const spend = purchases.reduce((s,o)=>s+orderTotal(o),0);
-  const outstanding = invoices.filter(o=>!['Paid','Completed','Closed'].includes(o.status)).reduce((s,o)=>s+orderTotal(o),0);
+  const prevRevenue = prevInvoices.reduce((s,o)=>s+orderTotal(o),0);
+  const prevSpend = prevPurchases.reduce((s,o)=>s+orderTotal(o),0);
+  const outstanding = allInvoices.filter(o=>!['Paid','Completed','Closed'].includes(o.status)).reduce((s,o)=>s+orderTotal(o),0);
   const lowStock = DB.products.filter(p=>stockFor(p.id) < 5);
   const activeProjects = DB.customers.filter(c=>c.projectStatus==='Active');
   const totalProfit = invoices.reduce((s,o)=>s+(orderProfit(o)||0),0);
+  const prevProfit = prevInvoices.reduce((s,o)=>s+(orderProfit(o)||0),0);
   const activeEmps = DB.employees.filter(e=>e.active);
   const activeVehicles = DB.vehicles.filter(v=>v.active);
-  const payrollSpend = DB.paidEmployees.reduce((s,pe)=>s+(Number(pe.netPay)||0),0);
+  const payrollSpend = DB.paidEmployees.filter(pe=>{
+    const pr=DB.payrolls.find(x=>x.id===pe.payrollId); return inPeriod(pr&&pr.payDate);
+  }).reduce((s,pe)=>s+(Number(pe.netPay)||0),0);
+  const prevPayrollSpend = DB.paidEmployees.filter(pe=>{
+    const pr=DB.payrolls.find(x=>x.id===pe.payrollId); return inPrev(pr&&pr.payDate);
+  }).reduce((s,pe)=>s+(Number(pe.netPay)||0),0);
+  const txExpenses = DB.transactions.filter(t=>t.accountType!=='Income' && inPeriod(t.date)).reduce((s,t)=>s+(Number(t.amount)||0),0);
+  const prevTxExpenses = DB.transactions.filter(t=>t.accountType!=='Income' && inPrev(t.date)).reduce((s,t)=>s+(Number(t.amount)||0),0);
 
   const byMonth = {};
-  invoices.forEach(o=>{ const m=(o.date||'').slice(0,7); if(!m) return; byMonth[m]=(byMonth[m]||0)+orderTotal(o); });
+  allInvoices.forEach(o=>{ const m=(o.date||'').slice(0,7); if(!m) return; byMonth[m]=(byMonth[m]||0)+orderTotal(o); });
   const expByMonth = {};
-  purchases.forEach(o=>{ const m=(o.date||'').slice(0,7); if(!m) return; expByMonth[m]=(expByMonth[m]||0)+orderTotal(o); });
+  allPurchases.forEach(o=>{ const m=(o.date||'').slice(0,7); if(!m) return; expByMonth[m]=(expByMonth[m]||0)+orderTotal(o); });
   DB.paidEmployees.forEach(pe=>{ const pr=DB.payrolls.find(x=>x.id===pe.payrollId); const m=(pr&&pr.payDate||'').slice(0,7); if(!m) return; expByMonth[m]=(expByMonth[m]||0)+(Number(pe.netPay)||0); });
   DB.transactions.filter(t=>t.accountType!=='Income').forEach(t=>{ const m=(t.date||'').slice(0,7); if(!m) return; expByMonth[m]=(expByMonth[m]||0)+(Number(t.amount)||0); });
   const months = [...new Set([...Object.keys(byMonth), ...Object.keys(expByMonth)])].sort().slice(-8);
-  const maxM = Math.max(1, ...months.map(m=>Math.max(byMonth[m]||0, expByMonth[m]||0)));
   const fmtMonth = m => { const d=new Date(m+'-02'); return isNaN(d)?m:d.toLocaleString(undefined,{month:'short',year:'2-digit'}); };
 
-  const now = new Date();
-  const thisMonthKey = now.toISOString().slice(0,7);
-  const lastMonthKey = new Date(now.getFullYear(), now.getMonth()-1, 2).toISOString().slice(0,7);
-  const sumForMonth = (orders, key) => orders.filter(o=>(o.date||'').slice(0,7)===key).reduce((s,o)=>s+orderTotal(o),0);
-  const profitForMonth = (key) => invoices.filter(o=>(o.date||'').slice(0,7)===key).reduce((s,o)=>s+(orderProfit(o)||0),0);
-  const revenueTrend = kpiTrend(sumForMonth(invoices, thisMonthKey), sumForMonth(invoices, lastMonthKey));
-  const purchaseTrend = kpiTrend(sumForMonth(purchases, thisMonthKey), sumForMonth(purchases, lastMonthKey));
-  const profitTrend = kpiTrend(profitForMonth(thisMonthKey), profitForMonth(lastMonthKey));
-
-  const totalExpenses = spend + payrollSpend + DB.transactions.filter(t=>t.accountType!=='Income').reduce((s,t)=>s+(Number(t.amount)||0),0);
+  const revenueTrend = kpiTrend(revenue, prevRevenue);
+  const totalExpenses = spend + payrollSpend + txExpenses;
+  const prevTotalExpenses = prevSpend + prevPayrollSpend + prevTxExpenses;
+  const purchaseTrend = kpiTrend(totalExpenses, prevTotalExpenses);
+  const profitTrend = kpiTrend(totalProfit, prevProfit);
   const cashFlow = revenue - totalExpenses;
 
   const recentOrders = [...DB.orders].filter(o=>o.date).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,6);
@@ -3284,6 +3328,14 @@ function renderDashboard(){
       </div>
     </div>
 
+    <div class="dash-period-bar">
+      <button class="period-btn${dashPeriod==='month'?' active':''}" onclick="sub.dashPeriod='month';renderDashboard()">This Month</button>
+      <button class="period-btn${dashPeriod==='quarter'?' active':''}" onclick="sub.dashPeriod='quarter';renderDashboard()">Quarter</button>
+      <button class="period-btn${dashPeriod==='year'?' active':''}" onclick="sub.dashPeriod='year';renderDashboard()">Year</button>
+      <button class="period-btn${dashPeriod==='all'?' active':''}" onclick="sub.dashPeriod='all';renderDashboard()">All Time</button>
+      <span class="dash-period-label">${esc(periodLabel)}</span>
+    </div>
+
     ${alertItems.length ? `
     <div class="panel" style="border-left:3px solid var(--danger);margin-bottom:18px;padding:14px 18px">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
@@ -3303,7 +3355,7 @@ function renderDashboard(){
     <div class="dash-grid6">
       <div class="dash-kpi">
         <div class="dk-icon" style="background:rgba(56,183,117,.14);color:var(--green)">${KPI_ICONS.revenue}</div>
-        <div class="dk-label">Total Revenue</div>
+        <div class="dk-label">Revenue</div>
         <div class="dk-value" style="color:var(--green)">${money0(revenue)}</div>
         <div class="kpi-trend ${revenueTrend.cls}">${revenueTrend.arrow} ${revenueTrend.label}</div>
       </div>
@@ -3340,7 +3392,7 @@ function renderDashboard(){
     </div>
 
     <div class="panel" style="margin-bottom:18px">
-      <h3 class="section-label">Cash Flow Summary</h3>
+      <h3 class="section-label">Cash Flow Summary — ${esc(periodLabel)}</h3>
       <div class="dash-cashflow">
         <div class="cf-item"><div class="cf-label">Money In</div><div class="cf-val" style="color:var(--green)">${money0(revenue)}</div></div>
         <div class="cf-item"><div class="cf-label">Money Out</div><div class="cf-val" style="color:var(--danger)">${money0(totalExpenses)}</div></div>
