@@ -125,6 +125,15 @@ a{color:var(--accent2);cursor:pointer}
 .sidebar.collapsed .sidebar-logout{justify-content:center;padding:8px}
 .sidebar-collapse-btn{display:flex;align-items:center;justify-content:center;background:none;border:1px solid var(--line);color:var(--muted);width:28px;height:28px;border-radius:8px;cursor:pointer;transition:all .2s;margin:8px auto 4px;flex-shrink:0}
 .sidebar-collapse-btn:hover{background:var(--chip);color:var(--text)}
+.sidebar-quote{margin:12px 14px;padding:14px 16px;background:linear-gradient(135deg,rgba(240,165,55,.08),rgba(56,197,219,.06));border-left:3px solid var(--accent);border-radius:0 8px 8px 0;transition:opacity .3s}
+.sidebar-quote .sq-text{font-size:12.5px;line-height:1.55;font-style:italic;color:var(--text);opacity:.85}
+.sidebar-quote .sq-author{font-size:11px;color:var(--accent);margin-top:8px;font-weight:600}
+.sidebar.collapsed .sidebar-quote{display:none}
+.dash-donut-wrap{display:flex;align-items:center;gap:16px;padding:8px 0}
+.dash-donut-legend{display:flex;flex-direction:column;gap:6px;font-size:12px}
+.dash-donut-legend .dl-item{display:flex;align-items:center;gap:6px}
+.dash-donut-legend .dl-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.dash-donut-legend .dl-pct{color:var(--muted);margin-left:auto;font-variant-numeric:tabular-nums}
 .topbar{display:flex;align-items:center;gap:8px;padding:0 20px;height:54px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--panel) 92%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);position:sticky;top:0;z-index:20;flex-shrink:0}
 .spacer{flex:1}
 .iconbtn{background:var(--chip);border:1px solid var(--line);color:var(--text);border-radius:8px;width:34px;height:34px;font-size:15px;display:flex;align-items:center;justify-content:center;transition:background .15s}
@@ -1638,6 +1647,10 @@ function renderHeader(){
       <div class="name">${esc(companyDisplayName())}</div>
     </div>
     <div class="sidebar-nav">${sidebarNavHtml}</div>
+    <div class="sidebar-quote" id="sidebarQuote">
+      <div class="sq-text">"${esc(getDailyQuote().q)}"</div>
+      <div class="sq-author">— ${esc(getDailyQuote().a)}</div>
+    </div>
     <div class="sidebar-bottom">
       <button class="sidebar-collapse-btn noprint" onclick="collapseSidebar()" title="${isCollapsed?'Expand sidebar':'Collapse sidebar'}" aria-label="${isCollapsed?'Expand sidebar':'Collapse sidebar'}">${isCollapsed?'▶':'◀'}</button>
       <div class="sidebar-user" onclick="go('myProfile');closeSidebar()">
@@ -3036,6 +3049,70 @@ function renderNotificationLog(){
     </div>
   `;
 }
+const DAILY_QUOTES = [
+  {q:"The only way to do great work is to love what you do.", a:"Steve Jobs"},
+  {q:"Success is not final, failure is not fatal: it is the courage to continue that counts.", a:"Winston Churchill"},
+  {q:"In the middle of difficulty lies opportunity.", a:"Albert Einstein"},
+  {q:"The best time to plant a tree was 20 years ago. The second best time is now.", a:"Chinese Proverb"},
+  {q:"It does not matter how slowly you go as long as you do not stop.", a:"Confucius"},
+  {q:"The future belongs to those who believe in the beauty of their dreams.", a:"Eleanor Roosevelt"},
+  {q:"Build your own dreams, or someone else will hire you to build theirs.", a:"Farrah Gray"},
+  {q:"Quality means doing it right when no one is looking.", a:"Henry Ford"},
+  {q:"The price of success is hard work, dedication, and a determination that whether we win or lose, we have applied the best of ourselves.", a:"Vince Lombardi"},
+  {q:"Construction is the art of making a meaningful whole out of many parts.", a:"Red Adair"},
+  {q:"Success usually comes to those who are too busy to be looking for it.", a:"Henry David Thoreau"},
+  {q:"Your limitation — it's only your imagination.", a:"Unknown"},
+  {q:"Great things are done by a series of small things brought together.", a:"Vincent Van Gogh"},
+  {q:"Don't watch the clock; do what it does. Keep going.", a:"Sam Levenson"},
+  {q:"Everything you've ever wanted is on the other side of fear.", a:"George Addair"},
+  {q:"The only impossible journey is the one you never begin.", a:"Tony Robbins"},
+  {q:"Believe you can and you're halfway there.", a:"Theodore Roosevelt"},
+  {q:"Hard work beats talent when talent doesn't work hard.", a:"Tim Notke"},
+  {q:"It always seems impossible until it's done.", a:"Nelson Mandela"},
+  {q:"The secret of getting ahead is getting started.", a:"Mark Twain"},
+  {q:"Opportunities don't happen. You create them.", a:"Chris Grosser"},
+  {q:"The man who moves a mountain begins by carrying away small stones.", a:"Confucius"},
+  {q:"You miss 100% of the shots you don't take.", a:"Wayne Gretzky"},
+  {q:"Do what you can, with what you have, where you are.", a:"Theodore Roosevelt"},
+  {q:"A smooth sea never made a skilled sailor.", a:"Franklin D. Roosevelt"},
+  {q:"What we build lasts long after we are gone.", a:"Roman Proverb"},
+  {q:"The foundation of all construction starts with a plan and a purpose.", a:"Unknown"},
+  {q:"Act as if what you do makes a difference. It does.", a:"William James"},
+  {q:"Success is walking from failure to failure with no loss of enthusiasm.", a:"Winston Churchill"},
+  {q:"Work hard in silence. Let success be your noise.", a:"Frank Ocean"},
+  {q:"The harder you work for something, the greater you'll feel when you achieve it.", a:"Unknown"},
+];
+function getDailyQuote(){
+  const d = new Date();
+  const dayOfYear = Math.floor((d - new Date(d.getFullYear(),0,0)) / 86400000);
+  return DAILY_QUOTES[dayOfYear % DAILY_QUOTES.length];
+}
+function drawDonut(canvasId, segments, centerText, centerSub){
+  const el = document.getElementById(canvasId);
+  if(!el) return;
+  const dpr = window.devicePixelRatio || 1;
+  const size = Math.min(el.clientWidth, el.clientHeight) || 200;
+  el.width = size * dpr; el.height = size * dpr;
+  el.style.width = size+'px'; el.style.height = size+'px';
+  const ctx = el.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const cx = size/2, cy = size/2, r = size*0.38, lw = size*0.08;
+  const total = segments.reduce((s,seg)=>s+seg.value, 0);
+  if(!total){ ctx.fillStyle='#555'; ctx.font=`${size*0.07}px sans-serif`; ctx.textAlign='center'; ctx.fillText('No data', cx, cy); return; }
+  let angle = -Math.PI/2;
+  const gap = 0.04;
+  segments.forEach(seg=>{
+    const sweep = (seg.value/total)*Math.PI*2 - gap;
+    if(sweep <= 0) return;
+    ctx.beginPath(); ctx.arc(cx, cy, r, angle+gap/2, angle+sweep+gap/2); ctx.lineWidth=lw; ctx.strokeStyle=seg.color; ctx.lineCap='round'; ctx.stroke();
+    angle += sweep + gap;
+  });
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text').trim()||'#e8ecf1';
+  ctx.font = `bold ${size*0.14}px sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(centerText, cx, cy - size*0.03);
+  ctx.font = `${size*0.06}px sans-serif`; ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--muted').trim()||'#7c8699';
+  ctx.fillText(centerSub, cx, cy + size*0.1);
+}
 const KPI_ICONS = {
   revenue: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15 9.5c0-1.4-1.3-2.5-3-2.5s-3 1.1-3 2.5 1.3 2 3 2 3 .6 3 2-1.3 2.5-3 2.5-3-1.1-3-2.5"/><path d="M12 6v1.3M12 16.7V18"/></svg>',
   purchases: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l2.5 12.5a2 2 0 0 0 2 1.5h8a2 2 0 0 0 2-1.6L21 8H6"/><circle cx="9.5" cy="20" r="1"/><circle cx="17.5" cy="20" r="1"/></svg>',
@@ -3304,6 +3381,49 @@ function renderDashboard(){
     </div>
 
     <div class="dash-grid3">
+      <div class="panel">
+        <div class="ph"><h3>Project Status</h3></div>
+        <div class="dash-donut-wrap">
+          <canvas id="projStatusDonut" style="width:140px;height:140px;flex-shrink:0"></canvas>
+          <div class="dash-donut-legend">
+            ${(() => {
+              const active = DB.customers.filter(c=>c.projectStatus==='Active').length;
+              const completed = DB.customers.filter(c=>c.projectStatus==='Completed').length;
+              const onHold = DB.customers.filter(c=>c.projectStatus==='On Hold').length;
+              const pending = DB.customers.filter(c=>!c.projectStatus||c.projectStatus==='Pending').length;
+              const total = DB.customers.length;
+              if(!total) return '<span class="mut">No projects yet</span>';
+              return [
+                {l:'Active', v:active, c:'var(--green)'},
+                {l:'Completed', v:completed, c:'var(--accent2)'},
+                {l:'On Hold', v:onHold, c:'var(--warn)'},
+                {l:'Pending', v:pending, c:'var(--muted)'},
+              ].filter(x=>x.v).map(x=>`<div class="dl-item"><span class="dl-dot" style="background:${x.c}"></span>${x.l}<span class="dl-pct">${x.v} (${(x.v/total*100).toFixed(0)}%)</span></div>`).join('');
+            })()}
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ph"><h3>Workforce by Role</h3></div>
+        <div class="dash-donut-wrap">
+          <canvas id="empRoleDonut" style="width:140px;height:140px;flex-shrink:0"></canvas>
+          <div class="dash-donut-legend">
+            ${(() => {
+              const roles = {};
+              const roleColors = {'Foreman':'#38c5db','Worker':'#34d399','Operator':'#f0a537','Driver':'#8b5cf6','Staff':'#ec4899','Engineer':'#06b6d4','Laborer':'#f97316'};
+              const fallbackColors = ['#6366f1','#14b8a6','#ef4444','#a855f7','#eab308'];
+              activeEmps.forEach(e=>{ const r=e.type||'Other'; roles[r]=(roles[r]||0)+1; });
+              const total = activeEmps.length;
+              if(!total) return '<span class="mut">No employees yet</span>';
+              let ci=0;
+              return Object.entries(roles).sort((a,b)=>b[1]-a[1]).map(([role,count])=>{
+                const c = roleColors[role] || fallbackColors[ci++ % fallbackColors.length];
+                return `<div class="dl-item"><span class="dl-dot" style="background:${c}"></span>${esc(role)}<span class="dl-pct">${count} (${(count/total*100).toFixed(0)}%)</span></div>`;
+              }).join('');
+            })()}
+          </div>
+        </div>
+      </div>
       <div class="panel">
         <div class="ph"><h3>Accounts Receivable</h3><button class="btn ghost sm" onclick="go('receivables')">View all</button></div>
         ${(() => {
@@ -3576,6 +3696,24 @@ function renderDashboard(){
   if(months.length){
     requestAnimationFrame(()=>drawRevenueChart('revExpCanvas', months, byMonth, expByMonth, fmtMonth));
   }
+  requestAnimationFrame(()=>{
+    const active = DB.customers.filter(c=>c.projectStatus==='Active').length;
+    const completed = DB.customers.filter(c=>c.projectStatus==='Completed').length;
+    const onHold = DB.customers.filter(c=>c.projectStatus==='On Hold').length;
+    const pending = DB.customers.filter(c=>!c.projectStatus||c.projectStatus==='Pending').length;
+    const total = DB.customers.length;
+    drawDonut('projStatusDonut', [
+      {value:active, color:'#34d399'}, {value:completed, color:'#38c5db'},
+      {value:onHold, color:'#f0a537'}, {value:pending, color:'#7c8699'},
+    ], String(total), 'Projects');
+    const roleColors = {'Foreman':'#38c5db','Worker':'#34d399','Operator':'#f0a537','Driver':'#8b5cf6','Staff':'#ec4899','Engineer':'#06b6d4','Laborer':'#f97316'};
+    const fallbackColors = ['#6366f1','#14b8a6','#ef4444','#a855f7','#eab308'];
+    const roles = {};
+    activeEmps.forEach(e=>{ const r=e.type||'Other'; roles[r]=(roles[r]||0)+1; });
+    let ci=0;
+    const empSegs = Object.entries(roles).sort((a,b)=>b[1]-a[1]).map(([role,count])=>({value:count, color:roleColors[role]||fallbackColors[ci++%fallbackColors.length]}));
+    drawDonut('empRoleDonut', empSegs, String(activeEmps.length), 'Employees');
+  });
 }
 function renderReceivables(){
   const ar = accountsReceivable();
