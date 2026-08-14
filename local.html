@@ -25,9 +25,6 @@
 <meta name="apple-mobile-web-app-title" content="CLM Contractor">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#f2a93b">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#0f1117; --panel:#181b23; --panel2:#1e222c; --line:#272d3a; --text:#e8ecf1; --muted:#7c8699;
@@ -2516,19 +2513,14 @@ function renderPendingScreen(){
 }
 async function checkApprovalNow(){
   toast('Checking...');
-  try{
-      const liveUser = DB.users.find(u=>u.id===session.id);
-      if(liveUser && liveUser.type !== 'Pending'){
-        session = { id: liveUser.id, name: liveUser.name, type: liveUser.type };
-        sessionStorage.setItem('buildsuite_session', JSON.stringify(session));
-        toast('You\'ve been approved! Loading your access...');
-        go('dashboard');
-      } else {
-        toast('Still waiting for approval — check back soon.');
-      }
-    }
-  }catch(e){
-    toast('Could not reach the shared database. Try again in a moment.');
+  const liveUser = DB.users.find(u=>u.id===session.id);
+  if(liveUser && liveUser.type !== 'Pending'){
+    session = { id: liveUser.id, name: liveUser.name, type: liveUser.type };
+    sessionStorage.setItem('buildsuite_session', JSON.stringify(session));
+    toast('You\'ve been approved! Loading your access...');
+    go('dashboard');
+  } else {
+    toast('Still waiting for approval — check back soon.');
   }
 }
 
