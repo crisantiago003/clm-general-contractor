@@ -131,6 +131,8 @@ a{color:var(--accent2);cursor:pointer}
 .iconbtn:hover{background:var(--line)}
 .syncdot{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block;margin-right:6px}
 .syncdot.on{background:var(--green);box-shadow:0 0 0 3px rgba(56,183,117,.18)}
+.syncdot.warn{background:var(--warn);box-shadow:0 0 0 3px rgba(240,165,55,.18);animation:syncpulse 1.5s ease-in-out infinite}
+@keyframes syncpulse{0%,100%{opacity:1}50%{opacity:.4}}
 .sidebar-toggle{display:none;background:none;border:none;color:var(--text);font-size:22px;padding:6px;cursor:pointer;line-height:1}
 @media(max-width:768px){
   .sidebar{transform:translateX(-100%)}
@@ -541,10 +543,13 @@ async function supabaseAuthSignIn(email, password){
   return { ok:true, accessToken: data.access_token, refreshToken: data.refresh_token, userId: data.user ? data.user.id : null };
 }
 let pushTimer = null;
+let _pushQueued = false;
+let _pushRetries = 0;
+const PUSH_MAX_RETRIES = 5;
 async function saveDBAndConfirmSync(){
   saveDB();
   if(!cloud.connected) return { synced: true, offline: true };
-  clearTimeout(pushTimer); // don't wait for the debounce — push this one immediately since we need to know if it worked
+  clearTimeout(pushTimer);
   await cloudPush();
   return { synced: !cloud.lastError, error: cloud.lastError };
 }
@@ -553,13 +558,18 @@ function scheduleCloudPush(){
   clearTimeout(pushTimer);
   pushTimer = setTimeout(cloudPush, 800);
 }
-async function cloudPush(alreadyRetried){
+async function cloudPush(retryAttempt){
   if(!cloud.connected) return;
-  if(cloud._pushing) return;
+  const attempt = retryAttempt || 0;
+  if(cloud._pushing){
+    _pushQueued = true;
+    return;
+  }
   cloud._pushing = true;
   cloud.syncing = true;
+  const pushCtrl = new AbortController();
+  const pushTimeout = setTimeout(()=>pushCtrl.abort(), 15000);
   try{
-    // Pull and merge before pushing to avoid overwriting concurrent edits from other devices/users
     try{
       const remote = await cloudPull();
       if(remote && remote.data){
@@ -574,17 +584,17 @@ async function cloudPush(alreadyRetried){
       method: 'POST',
       headers: { ...cloudHeaders(), 'Prefer': 'resolution=merge-duplicates' },
       body: JSON.stringify([{ id: cloud.code, data: DB, updated_at: updatedAt }]),
+      signal: pushCtrl.signal,
     });
+    clearTimeout(pushTimeout);
     if(!res.ok){
       const body = await res.text().catch(()=>'');
       console.error('cloudPush failed — HTTP', res.status, body);
-      if((res.status === 401 || res.status === 403) && !alreadyRetried){
-        // Session tokens expire after a while (commonly ~1 hour) — if someone's been working in the
-        // app that whole time without reloading, this is expected, not a real error. Silently refresh
-        // using the stored refresh token and retry once before bothering anyone with a warning.
+      if((res.status === 401 || res.status === 403) && attempt === 0){
         cloud.syncing = false;
+        cloud._pushing = false;
         await restoreAuthSession();
-        return cloudPush(true);
+        return cloudPush(1);
       }
       if(res.status === 401 || res.status === 403){
         cloud.lastError = cloud.authToken ? 'Sync blocked — your session may have expired. Try logging out and back in.' : 'Sync blocked — this account hasn\'t completed backend sign-in yet. Try logging out and back in once more.';
@@ -594,24 +604,31 @@ async function cloudPush(alreadyRetried){
       throw new Error('HTTP '+res.status);
     }
     cloud.lastError = '';
+    _pushRetries = 0;
     if(DB._purgedTrashIds && DB._purgedTrashIds.length){
       DB._purgedTrashIds = [];
       localStorage.setItem('buildsuite_v1', JSON.stringify(DB));
     }
   }catch(e){
+    clearTimeout(pushTimeout);
     if(!cloud.lastError) cloud.lastError = 'Sync failed — check your connection or Supabase settings.';
     console.error('cloudPush failed', e);
-    if(!alreadyRetried && navigator.onLine){
+    if(attempt < PUSH_MAX_RETRIES && navigator.onLine){
       cloud.syncing = false;
       cloud._pushing = false;
-      const delay = 2000 + Math.random() * 1000;
-      setTimeout(()=>cloudPush(true), delay);
+      _pushRetries = attempt + 1;
+      const delay = Math.min(1000 * Math.pow(2, attempt), 30000) + Math.random() * 1000;
+      setTimeout(()=>cloudPush(_pushRetries), delay);
       return;
     }
   }
   cloud.syncing = false;
   cloud._pushing = false;
   if(document.getElementById('headerBar')) renderHeader();
+  if(_pushQueued){
+    _pushQueued = false;
+    scheduleCloudPush();
+  }
 }
 async function cloudPull(){
   const ctrl = new AbortController();
@@ -1634,7 +1651,7 @@ function renderHeader(){
   const alerts = getAlerts();
   document.getElementById('topBar').innerHTML = `
     <button class="sidebar-toggle" onclick="toggleSidebar()" title="Menu" aria-label="Toggle sidebar menu">☰</button>
-    <span class="mut syncstatus" style="font-size:12px;display:flex;align-items:center;white-space:nowrap"><span class="syncdot ${cloud.connected?'on':''}"></span>${cloud.syncing?'Syncing…':cloud.connected?(cloud.lastError?'Sync error':'Cloud synced'):'Saved in this browser'}</span>
+    <span class="mut syncstatus" style="font-size:12px;display:flex;align-items:center;white-space:nowrap;cursor:${cloud.lastError?'pointer':'default'}" ${cloud.lastError?'onclick="toast(cloud.lastError)"':''}><span class="syncdot ${cloud.connected?(cloud.lastError?'warn':'on'):''}"></span>${cloud.syncing?'Syncing…':cloud.connected?(cloud.lastError?(_pollFailCount>=3?'Reconnecting…':'Sync error'):'Cloud synced'):'Saved in this browser'}</span>
     <div class="spacer"></div>
     <div style="position:relative">
       <button class="iconbtn" onclick="toggleNotifications()" title="Notifications" aria-label="Notifications">🔔${alerts.length?`<span style="position:absolute;top:-3px;right:-3px;background:var(--danger);color:#fff;font-size:10px;font-weight:800;border-radius:999px;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 3px">${alerts.length}</span>`:''}</button>
@@ -10634,13 +10651,21 @@ function dbFingerprint(){
   });
   return h;
 }
+let _pollFailCount = 0;
 function startCloudPolling(){
   if(cloudPollTimer) clearInterval(cloudPollTimer);
   if(!cloud.connected) return;
+  _pollFailCount = 0;
   cloudPollTimer = setInterval(async () => {
     if(!cloud.connected || cloud.syncing) return;
     try{
       const row = await cloudPull();
+      if(_pollFailCount > 0){
+        _pollFailCount = 0;
+        cloud.lastError = '';
+        if(document.getElementById('headerBar')) renderHeader();
+        toast('Sync restored');
+      }
       if(row && row.data){
         const before = dbFingerprint();
         const cloudUser = session ? row.data.users.find(u=>u.id===session.id) : null;
@@ -10668,8 +10693,17 @@ function startCloudPolling(){
           go('dashboard');
         }
       }
-    }catch(e){ /* stay quiet on background poll failures */ }
-  }, 30000);
+    }catch(e){
+      _pollFailCount++;
+      if(_pollFailCount === 3){
+        cloud.lastError = 'Connection lost — retrying automatically...';
+        if(document.getElementById('headerBar')) renderHeader();
+      }
+      if(_pollFailCount >= 3 && _pollFailCount % 6 === 0){
+        try{ await restoreAuthSession(); }catch(re){}
+      }
+    }
+  }, 15000);
 }
 async function syncOnBoot(){
   try{
@@ -10805,6 +10839,25 @@ document.addEventListener('visibilitychange', () => {
     pushTimer = null;
     cloudPush();
   }
+  if(document.visibilityState === 'visible' && cloud.connected && session){
+    (async ()=>{
+      try{
+        const row = await cloudPull();
+        if(row && row.data){
+          const before = dbFingerprint();
+          DB = mergeDB(DB, row.data);
+          backfillMissingKeys(DB);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
+          takeSnapshot();
+          if(dbFingerprint() !== before){
+            if(document.getElementById('headerBar')) renderHeader();
+            if(view) render();
+          }
+        }
+        if(_pollFailCount > 0){ _pollFailCount = 0; cloud.lastError = ''; if(document.getElementById('headerBar')) renderHeader(); }
+      }catch(e){}
+    })();
+  }
 });
 window.addEventListener('beforeunload', () => {
   if(!cloud.connected || !pushTimer) return;
@@ -10826,7 +10879,16 @@ function updateOfflineStatus(){
   const banner = document.getElementById('offlineBanner');
   if(banner) banner.classList.toggle('visible', !navigator.onLine);
 }
-window.addEventListener('online', ()=>{ updateOfflineStatus(); toast('Back online — syncing...'); if(cloud.connected) cloudPush(); });
+window.addEventListener('online', ()=>{
+  updateOfflineStatus();
+  toast('Back online — syncing...');
+  if(cloud.connected){
+    _pollFailCount = 0;
+    cloud.lastError = '';
+    cloudPush();
+    if(!cloudPollTimer) startCloudPolling();
+  }
+});
 window.addEventListener('offline', updateOfflineStatus);
 window.addEventListener('error', e => {
   console.error('Uncaught error:', e.error);
