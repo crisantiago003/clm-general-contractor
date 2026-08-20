@@ -1,4 +1,4 @@
-const CACHE_NAME = 'buildsuite-local-v1';
+const CACHE_NAME = 'buildsuite-local-v2';
 const ASSETS = ['./local.html', './manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', e => {
