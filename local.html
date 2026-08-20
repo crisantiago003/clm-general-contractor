@@ -449,7 +449,7 @@ td,th,.stat-value,.kpi-val,.money{font-variant-numeric:tabular-nums}
 <div class="offline-banner" id="offlineBanner">⚠ You are offline — changes are saved locally and will sync when you reconnect</div>
 <div class="toast-container" id="toastContainer"></div>
 
-<script id="seed-data" type="application/json">{"customers":[],"vendors":[],"jobs":[],"products":[],"orders":[],"employees":[],"timesheets":[],"transactions":[],"users":[],"payrolls":[],"paidEmployees":[],"payItems":[],"vehicles":[],"vehicleExpenses":[],"fuelLogs":[],"meterLogs":[],"vehicleReminders":[],"materials":[],"equipment":[],"cashAdvances":[],"purchaseRequests":[],"equipmentReminders":[],"settings":{"salesTaxRate":0.08,"poTaxRate":0.1,"signupCode":"BUILD2026","companyName":"","companyDescription":"","companyAddress":"","companyPhone":"","companyEmail":"","companyTIN":"","sheetsWebhookUrl":"","companyShortName":""},"siteAssignments":[],"announcements":[],"notificationLog":[],"galleryPhotos":[],"trash":[],"testimonials":[],"materialTransfers":[],"siteDiaries":[],"defects":[],"leads":[],"scheduleActivities":[],"costMaterials":[],"laborRates":[],"costEstimates":[]}</script>
+<script id="seed-data" type="application/json">{"customers":[],"vendors":[],"jobs":[],"products":[],"orders":[],"employees":[],"timesheets":[],"transactions":[],"users":[],"payrolls":[],"paidEmployees":[],"payItems":[],"vehicles":[],"vehicleExpenses":[],"fuelLogs":[],"meterLogs":[],"vehicleReminders":[],"materials":[],"equipment":[],"cashAdvances":[],"purchaseRequests":[],"equipmentReminders":[],"settings":{"salesTaxRate":0.08,"poTaxRate":0.1,"signupCode":"BUILD2026","companyName":"","companyDescription":"","companyAddress":"","companyPhone":"","companyEmail":"","companyTIN":"","sheetsWebhookUrl":"","companyShortName":""},"siteAssignments":[],"announcements":[],"notificationLog":[],"galleryPhotos":[],"trash":[],"testimonials":[],"materialTransfers":[],"siteDiaries":[],"defects":[],"leads":[],"scheduleActivities":[],"costMaterials":[],"laborRates":[],"costEstimates":[],"dailyLogs":[],"documents":[],"timecards":[],"bids":[],"progressBills":[],"subReports":[],"takeoffs":[]}</script>
 <script>
 /* ============================================================
    CLM General Contractor & Services, Inc. — Construction Management System
@@ -1111,8 +1111,8 @@ function logout(skipConfirm){
 /* ---------- role-based permissions ---------- */
 // Admin: everything. Manager: everything except managing Users. Sales: limited to sales-facing tabs, no deletes.
 // Clerk: same tab access as Manager but cannot delete records.
-const SALES_TABS = ['dashboard','orders','products','leads','customers','vendors','calculator','costEstimator','schedule'];
-const EMPLOYEE_TABS = ['dashboard','customers','calculator'];
+const SALES_TABS = ['dashboard','orders','products','leads','customers','vendors','calculator','costEstimator','schedule','bids','takeoffs','clientPortal','reports'];
+const EMPLOYEE_TABS = ['dashboard','customers','calculator','timecards','dailyLogs'];
 function roleCanAccessTab(tabKey){
   if(!session) return false;
   if(tabKey==='myProfile') return session.type!=='Pending'; // everyone with real access can manage their own profile
@@ -1191,6 +1191,9 @@ const NAV_ICONS = {
   dashboard:'📊', orders:'📋', products:'📦', leads:'🎯', customers:'🏗️',
   vendors:'🏪', inventory:'📦', employees:'👷', fleet:'🚛',
   payroll:'💰', transactions:'💳', users:'👥',
+  dailyLogs:'📝', documents:'📁', timecards:'⏱️', bids:'📑',
+  progressBilling:'💲', reports:'🖨️', clientPortal:'🏠',
+  subPortal:'🔧', costVariance:'📉', takeoffs:'📏',
   calculator:'🧮', costEstimator:'💵', schedule:'📐'
 };
 const NAV = [
@@ -1230,10 +1233,24 @@ const SIDEBAR_GROUPS = [
     { key:'inventory', label:'Inventory' },
     { key:'vendors', label:'Suppliers' },
   ]},
+  { section:'FIELD OPS', items:[
+    { key:'dailyLogs', label:'Daily Logs' },
+    { key:'timecards', label:'Timecards' },
+    { key:'documents', label:'Documents' },
+    { key:'subPortal', label:'Subcontractors' },
+  ]},
+  { section:'ESTIMATING', items:[
+    { key:'takeoffs', label:'Qty Takeoffs' },
+    { key:'bids', label:'Bids' },
+    { key:'progressBilling', label:'Progress Billing' },
+    { key:'costVariance', label:'Cost Variance' },
+  ]},
   { section:'TOOLS', items:[
     { key:'calculator', label:'Calculator' },
     { key:'costEstimator', label:'Cost Estimator' },
     { key:'schedule', label:'Schedule' },
+    { key:'reports', label:'Reports' },
+    { key:'clientPortal', label:'Client Portal' },
   ]},
   { section:'ADMIN', items:[
     { key:'users', label:'Users' },
@@ -1319,6 +1336,16 @@ function render(){
     calculator: renderCalculator,
     costEstimator: renderCostEstimator,
     schedule: renderSchedule,
+    dailyLogs: renderDailyLogs,
+    documents: renderDocuments,
+    timecards: renderTimecards,
+    bids: renderBids,
+    progressBilling: renderProgressBilling,
+    reports: renderReports,
+    clientPortal: renderClientPortal,
+    subPortal: renderSubPortal,
+    costVariance: renderCostVariance,
+    takeoffs: renderTakeoffs,
     projectReport: () => renderProjectReport(sub.projectId, sub.from, sub.to),
     receivables: renderReceivables,
     myProfile: renderMyProfile,
@@ -1428,6 +1455,22 @@ function globalSearchResults(q){
     });
   }
   if(roleCanAccessTab('rfis')){
+  }
+  if(roleCanAccessTab('bids')){
+    (DB.bids||[]).filter(b=>(b.projectName||'').toLowerCase().includes(q)||(b.client||'').toLowerCase().includes(q)).slice(0,6).forEach(b=>{
+      results.push({ group:'Bids', label:b.projectName||'BID-'+b.id, sub:b.status||'', action:()=>go('bids') });
+    });
+  }
+  if(roleCanAccessTab('documents')){
+    (DB.documents||[]).filter(d=>(d.name||'').toLowerCase().includes(q)||(d.tags||'').toLowerCase().includes(q)).slice(0,6).forEach(d=>{
+      results.push({ group:'Documents', label:d.name, sub:d.category||'', action:()=>go('documents') });
+    });
+  }
+  if(roleCanAccessTab('dailyLogs')){
+    (DB.dailyLogs||[]).filter(l=>(l.notes||'').toLowerCase().includes(q)||(l.workPerformed||'').toLowerCase().includes(q)).slice(0,6).forEach(l=>{
+      const p = (DB.customers||[]).find(x=>x.id===l.projectId);
+      results.push({ group:'Daily Logs', label:l.date+(p?' — '+p.name:''), sub:l.weather||'', action:()=>go('dailyLogs') });
+    });
   }
   return results;
 }
@@ -9537,6 +9580,910 @@ async function deleteTransaction(id){
   const r = await saveDBAndConfirmSync(); toast(r.synced ? 'Transaction moved to Trash' : `⚠️ Deleted here, but failed to sync — ${r.error||'check your connection'}`); renderTransactions();
 }
 
+/* ============ 1. DAILY LOGS / SITE DIARY ============ */
+function renderDailyLogs(){
+  if(!DB.dailyLogs) DB.dailyLogs = [];
+  const projFilter = sub.dlProjFilter || '';
+  let logs = [...DB.dailyLogs].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  if(projFilter) logs = logs.filter(l=>String(l.projectId)===projFilter);
+  const projs = (DB.customers||[]).filter(p=>p.status!=='Completed');
+  document.getElementById('mainArea').innerHTML = `
+    <div class="crumb">Daily Logs / Site Diary</div>
+    <div class="panel">
+      <div class="ph"><h3 style="font-size:18px">Daily Logs</h3><button class="btn pri" onclick="editDailyLog(null)">+ New Entry</button></div>
+      <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+        <select onchange="sub.dlProjFilter=this.value;renderDailyLogs()" style="padding:6px 10px;border-radius:var(--r);border:1px solid var(--line);background:var(--bg2);color:var(--text)">
+          <option value="">All Projects</option>
+          ${projs.map(p=>`<option value="${p.id}" ${projFilter==String(p.id)?'selected':''}>${esc(p.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="twrap"><table>
+        <tr><th>Date</th><th>Project</th><th>Weather</th><th>Crew</th><th>Equipment Hrs</th><th>Visitors</th><th>Notes</th><th></th></tr>
+        ${logs.map(l=>{
+          const pName = (DB.customers||[]).find(p=>p.id===l.projectId);
+          return `<tr class="click" onclick="editDailyLog(${l.id})">
+            <td><b>${esc(l.date)}</b></td>
+            <td>${pName?esc(pName.name):'—'}</td>
+            <td>${esc(l.weather||'—')}</td>
+            <td class="num">${l.crewCount||0}</td>
+            <td class="num">${l.equipmentHours||0}</td>
+            <td class="num">${(l.visitors||[]).length}</td>
+            <td class="mut" style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.notes||'')}</td>
+            <td><button class="x" aria-label="Close" onclick="event.stopPropagation();deleteDailyLog(${l.id})">&#10005;</button></td>
+          </tr>`;
+        }).join('') || `<tr><td colspan="8" class="empty">No daily logs yet</td></tr>`}
+      </table></div>
+    </div>
+  `;
+}
+function editDailyLog(id){
+  const projs = (DB.customers||[]);
+  const l = id ? DB.dailyLogs.find(x=>x.id===id) : {id:null,projectId:projs[0]?.id||'',date:todayISO(),weather:'Sunny',crewCount:0,equipmentHours:0,visitors:[],notes:'',safetyIncidents:'',workPerformed:'',materialsUsed:''};
+  openModal(`
+    <h3>${id?'Edit':'New'} Daily Log</h3>
+    <div class="grid2">
+      <div class="field"><label class="fl">Project</label><select id="f_dlProj">${projs.map(p=>`<option value="${p.id}" ${l.projectId==p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select></div>
+      <div class="field"><label class="fl">Date</label><input id="f_dlDate" type="date" value="${l.date}"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label class="fl">Weather</label><select id="f_dlWeather">${['Sunny','Cloudy','Rainy','Stormy','Windy','Hot','Cold'].map(w=>`<option ${l.weather===w?'selected':''}>${w}</option>`).join('')}</select></div>
+      <div class="field"><label class="fl">Crew Count</label><input id="f_dlCrew" type="number" value="${l.crewCount}"></div>
+    </div>
+    <div class="field"><label class="fl">Equipment Hours</label><input id="f_dlEquip" type="number" step="0.5" value="${l.equipmentHours}"></div>
+    <div class="field"><label class="fl">Work Performed</label><textarea id="f_dlWork" rows="3" style="width:100%;resize:vertical">${esc(l.workPerformed||'')}</textarea></div>
+    <div class="field"><label class="fl">Materials Used</label><textarea id="f_dlMats" rows="2" style="width:100%;resize:vertical">${esc(l.materialsUsed||'')}</textarea></div>
+    <div class="field"><label class="fl">Safety Incidents</label><textarea id="f_dlSafety" rows="2" style="width:100%;resize:vertical">${esc(l.safetyIncidents||'')}</textarea></div>
+    <div class="field"><label class="fl">Visitors (comma-separated)</label><input id="f_dlVisitors" value="${(l.visitors||[]).join(', ')}"></div>
+    <div class="field"><label class="fl">Notes</label><textarea id="f_dlNotes" rows="3" style="width:100%;resize:vertical">${esc(l.notes||'')}</textarea></div>
+    <div class="btnrow">
+      <button class="btn save" onclick="saveDailyLog(${id})">Save</button>
+      ${id?`<button class="btn del" onclick="deleteDailyLog(${id})">Delete</button>`:''}
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+    </div>
+  `);
+}
+function saveDailyLog(id){
+  const vals = {
+    projectId: Number(document.getElementById('f_dlProj').value),
+    date: document.getElementById('f_dlDate').value || todayISO(),
+    weather: document.getElementById('f_dlWeather').value,
+    crewCount: Number(document.getElementById('f_dlCrew').value)||0,
+    equipmentHours: Number(document.getElementById('f_dlEquip').value)||0,
+    workPerformed: document.getElementById('f_dlWork').value.trim(),
+    materialsUsed: document.getElementById('f_dlMats').value.trim(),
+    safetyIncidents: document.getElementById('f_dlSafety').value.trim(),
+    visitors: document.getElementById('f_dlVisitors').value.split(',').map(v=>v.trim()).filter(Boolean),
+    notes: document.getElementById('f_dlNotes').value.trim(),
+    _ts: new Date().toISOString()
+  };
+  if(id){ Object.assign(DB.dailyLogs.find(x=>x.id===id), vals); }
+  else { DB.dailyLogs.push({id:nextId(DB.dailyLogs), ...vals}); }
+  saveDB(); closeModal(); toast('Daily log saved'); renderDailyLogs();
+}
+function deleteDailyLog(id){
+  if(!confirm('Delete this daily log entry?')) return;
+  DB.dailyLogs = DB.dailyLogs.filter(x=>x.id!==id);
+  saveDB(); closeModal(); toast('Deleted'); renderDailyLogs();
+}
+
+/* ============ 2. DOCUMENT MANAGEMENT ============ */
+function renderDocuments(){
+  if(!DB.documents) DB.documents = [];
+  const projFilter = sub.docProjFilter || '';
+  const catFilter = sub.docCatFilter || '';
+  let docs = [...DB.documents].sort((a,b)=>(b.uploadDate||'').localeCompare(a.uploadDate||''));
+  if(projFilter) docs = docs.filter(d=>String(d.projectId)===projFilter);
+  if(catFilter) docs = docs.filter(d=>d.category===catFilter);
+  const projs = (DB.customers||[]);
+  const cats = ['Drawing','Permit','Contract','Photo','Report','Specification','Other'];
+  document.getElementById('mainArea').innerHTML = `
+    <div class="crumb">Document Management</div>
+    <div class="panel">
+      <div class="ph"><h3 style="font-size:18px">Documents & Files</h3><button class="btn pri" onclick="editDocument(null)">+ Upload Document</button></div>
+      <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+        <select onchange="sub.docProjFilter=this.value;renderDocuments()" style="padding:6px 10px;border-radius:var(--r);border:1px solid var(--line);background:var(--bg2);color:var(--text)">
+          <option value="">All Projects</option>
+          ${projs.map(p=>`<option value="${p.id}" ${projFilter==String(p.id)?'selected':''}>${esc(p.name)}</option>`).join('')}
+        </select>
+        <select onchange="sub.docCatFilter=this.value;renderDocuments()" style="padding:6px 10px;border-radius:var(--r);border:1px solid var(--line);background:var(--bg2);color:var(--text)">
+          <option value="">All Categories</option>
+          ${cats.map(c=>`<option ${catFilter===c?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </div>
+      <div class="twrap"><table>
+        <tr><th>Name</th><th>Category</th><th>Project</th><th>Version</th><th>Uploaded</th><th>Size</th><th></th></tr>
+        ${docs.map(d=>{
+          const pName = projs.find(p=>p.id===d.projectId);
+          return `<tr class="click" onclick="editDocument(${d.id})">
+            <td><b>${esc(d.name)}</b></td>
+            <td><span class="badge b-status">${esc(d.category||'Other')}</span></td>
+            <td>${pName?esc(pName.name):'General'}</td>
+            <td class="num">v${d.version||1}</td>
+            <td class="mut">${esc(d.uploadDate||'')}</td>
+            <td class="mut">${esc(d.fileSize||'—')}</td>
+            <td><button class="x" aria-label="Close" onclick="event.stopPropagation();deleteDocument(${d.id})">&#10005;</button></td>
+          </tr>`;
+        }).join('') || `<tr><td colspan="7" class="empty">No documents yet</td></tr>`}
+      </table></div>
+    </div>
+  `;
+}
+function editDocument(id){
+  const projs = (DB.customers||[]);
+  const cats = ['Drawing','Permit','Contract','Photo','Report','Specification','Other'];
+  const d = id ? DB.documents.find(x=>x.id===id) : {id:null,name:'',category:'Other',projectId:'',version:1,uploadDate:todayISO(),fileSize:'',description:'',tags:''};
+  openModal(`
+    <h3>${id?'Edit':'Add'} Document</h3>
+    <div class="field"><label class="fl">Document Name *</label><input id="f_docName" value="${esc(d.name)}"></div>
+    <div class="grid2">
+      <div class="field"><label class="fl">Category</label><select id="f_docCat">${cats.map(c=>`<option ${d.category===c?'selected':''}>${c}</option>`).join('')}</select></div>
+      <div class="field"><label class="fl">Project</label><select id="f_docProj"><option value="">General</option>${projs.map(p=>`<option value="${p.id}" ${d.projectId==p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label class="fl">Version</label><input id="f_docVer" type="number" min="1" value="${d.version||1}"></div>
+      <div class="field"><label class="fl">File Size</label><input id="f_docSize" value="${esc(d.fileSize||'')}" placeholder="e.g. 2.5 MB"></div>
+    </div>
+    <div class="field"><label class="fl">Description</label><textarea id="f_docDesc" rows="3" style="width:100%;resize:vertical">${esc(d.description||'')}</textarea></div>
+    <div class="field"><label class="fl">Tags (comma-separated)</label><input id="f_docTags" value="${esc(d.tags||'')}"></div>
+    <div class="btnrow">
+      <button class="btn save" onclick="saveDocument(${id})">Save</button>
+      ${id?`<button class="btn del" onclick="deleteDocument(${id})">Delete</button>`:''}
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+    </div>
+  `);
+}
+function saveDocument(id){
+  const name = document.getElementById('f_docName').value.trim();
+  if(!name){ toast('Please enter a document name'); return; }
+  const vals = {
+    name, category: document.getElementById('f_docCat').value,
+    projectId: Number(document.getElementById('f_docProj').value)||null,
+    version: Number(document.getElementById('f_docVer').value)||1,
+    fileSize: document.getElementById('f_docSize').value.trim(),
+    description: document.getElementById('f_docDesc').value.trim(),
+    tags: document.getElementById('f_docTags').value.trim(),
+    uploadDate: todayISO(), _ts: new Date().toISOString()
+  };
+  if(id){ Object.assign(DB.documents.find(x=>x.id===id), vals); }
+  else { DB.documents.push({id:nextId(DB.documents), ...vals}); }
+  saveDB(); closeModal(); toast('Document saved'); renderDocuments();
+}
+function deleteDocument(id){
+  if(!confirm('Delete this document?')) return;
+  DB.documents = DB.documents.filter(x=>x.id!==id);
+  saveDB(); closeModal(); toast('Deleted'); renderDocuments();
+}
+
+/* ============ 3. GPS TIMECARDS ============ */
+function renderTimecards(){
+  if(!DB.timecards) DB.timecards = [];
+  const empFilter = sub.tcEmpFilter || '';
+  let cards = [...DB.timecards].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  if(empFilter) cards = cards.filter(c=>String(c.employeeId)===empFilter);
+  const emps = (DB.employees||[]);
+  document.getElementById('mainArea').innerHTML = `
+    <div class="crumb">GPS Timecards</div>
+    <div class="panel">
+      <div class="ph"><h3 style="font-size:18px">Timecards</h3>
+        <div style="display:flex;gap:8px">
+          <button class="btn sec" onclick="clockInOut()">&#9201; Clock In/Out</button>
+          <button class="btn pri" onclick="editTimecard(null)">+ Manual Entry</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+        <select onchange="sub.tcEmpFilter=this.value;renderTimecards()" style="padding:6px 10px;border-radius:var(--r);border:1px solid var(--line);background:var(--bg2);color:var(--text)">
+          <option value="">All Employees</option>
+          ${emps.map(e=>`<option value="${e.id}" ${empFilter==String(e.id)?'selected':''}>${esc(e.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="twrap"><table>
+        <tr><th>Date</th><th>Employee</th><th>Clock In</th><th>Clock Out</th><th>Hours</th><th>Location</th><th>Project</th><th></th></tr>
+        ${cards.map(c=>{
+          const emp = emps.find(e=>e.id===c.employeeId);
+          const proj = (DB.customers||[]).find(p=>p.id===c.projectId);
+          const hrs = c.clockIn && c.clockOut ? ((new Date('2000-01-01T'+c.clockOut) - new Date('2000-01-01T'+c.clockIn))/3600000).toFixed(1) : '—';
+          return `<tr class="click" onclick="editTimecard(${c.id})">
+            <td><b>${esc(c.date)}</b></td>
+            <td>${emp?esc(emp.name):'—'}</td>
+            <td class="mono">${esc(c.clockIn||'—')}</td>
+            <td class="mono">${esc(c.clockOut||'—')}</td>
+            <td class="num">${hrs}</td>
+            <td class="mut" style="max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.location||'—')}</td>
+            <td>${proj?esc(proj.name):'—'}</td>
+            <td><button class="x" aria-label="Close" onclick="event.stopPropagation();deleteTimecard(${c.id})">&#10005;</button></td>
+          </tr>`;
+        }).join('') || `<tr><td colspan="8" class="empty">No timecards yet</td></tr>`}
+      </table></div>
+    </div>
+  `;
+}
+function clockInOut(){
+  const now = new Date();
+  const time = now.toTimeString().slice(0,5);
+  const empId = session ? session.id : null;
+  const open = DB.timecards.find(c=>c.employeeId===empId && c.date===todayISO() && !c.clockOut);
+  if(open){
+    open.clockOut = time;
+    open._ts = new Date().toISOString();
+    saveDB(); toast('Clocked out at '+time); renderTimecards();
+  } else {
+    if(navigator.geolocation){
+      navigator.geolocation.getCurrentPosition(function(pos){
+        const location = pos.coords.latitude.toFixed(4)+', '+pos.coords.longitude.toFixed(4);
+        DB.timecards.push({id:nextId(DB.timecards), employeeId:empId, date:todayISO(), clockIn:time, clockOut:'', location:location, projectId:null, _ts:new Date().toISOString()});
+        saveDB(); toast('Clocked in at '+time+' ('+location+')'); renderTimecards();
+      }, function(){
+        DB.timecards.push({id:nextId(DB.timecards), employeeId:empId, date:todayISO(), clockIn:time, clockOut:'', location:'GPS unavailable', projectId:null, _ts:new Date().toISOString()});
+        saveDB(); toast('Clocked in at '+time); renderTimecards();
+      });
+    } else {
+      DB.timecards.push({id:nextId(DB.timecards), employeeId:empId, date:todayISO(), clockIn:time, clockOut:'', location:'N/A', projectId:null, _ts:new Date().toISOString()});
+      saveDB(); toast('Clocked in at '+time); renderTimecards();
+    }
+  }
+}
+function editTimecard(id){
+  const emps = (DB.employees||[]);
+  const projs = (DB.customers||[]);
+  const c = id ? DB.timecards.find(x=>x.id===id) : {id:null,employeeId:emps[0]?.id||'',date:todayISO(),clockIn:'',clockOut:'',location:'',projectId:''};
+  openModal(`
+    <h3>${id?'Edit':'New'} Timecard</h3>
+    <div class="grid2">
+      <div class="field"><label class="fl">Employee</label><select id="f_tcEmp">${emps.map(e=>`<option value="${e.id}" ${c.employeeId==e.id?'selected':''}>${esc(e.name)}</option>`).join('')}</select></div>
+      <div class="field"><label class="fl">Date</label><input id="f_tcDate" type="date" value="${c.date}"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label class="fl">Clock In</label><input id="f_tcIn" type="time" value="${c.clockIn}"></div>
+      <div class="field"><label class="fl">Clock Out</label><input id="f_tcOut" type="time" value="${c.clockOut}"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label class="fl">Project</label><select id="f_tcProj"><option value="">—</option>${projs.map(p=>`<option value="${p.id}" ${c.projectId==p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select></div>
+      <div class="field"><label class="fl">Location</label><input id="f_tcLoc" value="${esc(c.location||'')}"></div>
+    </div>
+    <div class="btnrow">
+      <button class="btn save" onclick="saveTimecard(${id})">Save</button>
+      ${id?`<button class="btn del" onclick="deleteTimecard(${id})">Delete</button>`:''}
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+    </div>
+  `);
+}
+function saveTimecard(id){
+  const vals = {
+    employeeId: Number(document.getElementById('f_tcEmp').value),
+    date: document.getElementById('f_tcDate').value || todayISO(),
+    clockIn: document.getElementById('f_tcIn').value,
+    clockOut: document.getElementById('f_tcOut').value,
+    projectId: Number(document.getElementById('f_tcProj').value)||null,
+    location: document.getElementById('f_tcLoc').value.trim(),
+    _ts: new Date().toISOString()
+  };
+  if(id){ Object.assign(DB.timecards.find(x=>x.id===id), vals); }
+  else { DB.timecards.push({id:nextId(DB.timecards), ...vals}); }
+  saveDB(); closeModal(); toast('Timecard saved'); renderTimecards();
+}
+function deleteTimecard(id){
+  if(!confirm('Delete this timecard?')) return;
+  DB.timecards = DB.timecards.filter(x=>x.id!==id);
+  saveDB(); closeModal(); toast('Deleted'); renderTimecards();
+}
+
+/* ============ 4. BID MANAGEMENT ============ */
+function renderBids(){
+  if(!DB.bids) DB.bids = [];
+  const statusFilter = sub.bidStatusFilter || '';
+  let bids = [...DB.bids].sort((a,b)=>(b.dueDate||'').localeCompare(a.dueDate||''));
+  if(statusFilter) bids = bids.filter(b=>b.status===statusFilter);
+  document.getElementById('mainArea').innerHTML = `
+    <div class="crumb">Bid Management</div>
+    <div class="panel">
+      <div class="ph"><h3 style="font-size:18px">Bids & Proposals</h3><button class="btn pri" onclick="editBid(null)">+ New Bid</button></div>
+      <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+        <select onchange="sub.bidStatusFilter=this.value;renderBids()" style="padding:6px 10px;border-radius:var(--r);border:1px solid var(--line);background:var(--bg2);color:var(--text)">
+          <option value="">All Statuses</option>
+          ${['Draft','Submitted','Under Review','Won','Lost','Expired'].map(s=>`<option ${statusFilter===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;margin-bottom:14px">
+        ${['Draft','Submitted','Under Review','Won','Lost'].map(s=>{
+          const cnt = DB.bids.filter(b=>b.status===s).length;
+          const colors = {Draft:'var(--muted)',Submitted:'#3b82f6','Under Review':'#f59e0b',Won:'#22c55e',Lost:'#ef4444'};
+          return '<div style="text-align:center;padding:10px;background:var(--bg2);border-radius:var(--r);border:1px solid var(--line)"><div style="font-size:20px;font-weight:800;color:'+(colors[s]||'var(--text)')+'">'+cnt+'</div><div class="mut" style="font-size:11px">'+s+'</div></div>';
+        }).join('')}
+      </div>
+      <div class="twrap"><table>
+        <tr><th>Bid #</th><th>Project / Description</th><th>Client</th><th>Amount</th><th>Due Date</th><th>Status</th><th></th></tr>
+        ${bids.map(b=>`<tr class="click" onclick="editBid(${b.id})">
+          <td class="mono mut">BID-${String(b.id).padStart(3,'0')}</td>
+          <td><b>${esc(b.projectName||'')}</b></td>
+          <td class="mut">${esc(b.client||'—')}</td>
+          <td class="num mono">${money(b.amount||0)}</td>
+          <td class="mut">${esc(b.dueDate||'—')}</td>
+          <td><span class="badge b-${b.status==='Won'?'Completed':b.status==='Lost'?'Cancelled':'Active'}">${esc(b.status)}</span></td>
+          <td><button class="x" aria-label="Close" onclick="event.stopPropagation();deleteBid(${b.id})">&#10005;</button></td>
+        </tr>`).join('') || '<tr><td colspan="7" class="empty">No bids yet</td></tr>'}
+      </table></div>
+    </div>
+  `;
+}
+function editBid(id){
+  const b = id ? DB.bids.find(x=>x.id===id) : {id:null,projectName:'',client:'',amount:0,dueDate:'',status:'Draft',scope:'',notes:'',vendors:''};
+  openModal(`
+    <h3>${id?'Edit':'New'} Bid</h3>
+    <div class="field"><label class="fl">Project / Description *</label><input id="f_bidName" value="${esc(b.projectName)}"></div>
+    <div class="grid2">
+      <div class="field"><label class="fl">Client</label><input id="f_bidClient" value="${esc(b.client||'')}"></div>
+      <div class="field"><label class="fl">Bid Amount (&#8369;)</label><input id="f_bidAmt" type="number" step="0.01" value="${b.amount||0}"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label class="fl">Due Date</label><input id="f_bidDue" type="date" value="${b.dueDate||''}"></div>
+      <div class="field"><label class="fl">Status</label><select id="f_bidStatus">${['Draft','Submitted','Under Review','Won','Lost','Expired'].map(s=>`<option ${b.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
+    </div>
+    <div class="field"><label class="fl">Scope of Work</label><textarea id="f_bidScope" rows="3" style="width:100%;resize:vertical">${esc(b.scope||'')}</textarea></div>
+    <div class="field"><label class="fl">Invited Vendors (comma-separated)</label><input id="f_bidVendors" value="${esc(b.vendors||'')}"></div>
+    <div class="field"><label class="fl">Notes</label><textarea id="f_bidNotes" rows="2" style="width:100%;resize:vertical">${esc(b.notes||'')}</textarea></div>
+    <div class="btnrow">
+      <button class="btn save" onclick="saveBid(${id})">Save</button>
+      ${id?`<button class="btn del" onclick="deleteBid(${id})">Delete</button>`:''}
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+    </div>
+  `);
+}
+function saveBid(id){
+  const projectName = document.getElementById('f_bidName').value.trim();
+  if(!projectName){ toast('Please enter a project description'); return; }
+  const vals = {
+    projectName, client: document.getElementById('f_bidClient').value.trim(),
+    amount: Number(document.getElementById('f_bidAmt').value)||0,
+    dueDate: document.getElementById('f_bidDue').value,
+    status: document.getElementById('f_bidStatus').value,
+    scope: document.getElementById('f_bidScope').value.trim(),
+    vendors: document.getElementById('f_bidVendors').value.trim(),
+    notes: document.getElementById('f_bidNotes').value.trim(),
+    _ts: new Date().toISOString()
+  };
+  if(id){ Object.assign(DB.bids.find(x=>x.id===id), vals); }
+  else { DB.bids.push({id:nextId(DB.bids), ...vals}); }
+  saveDB(); closeModal(); toast('Bid saved'); renderBids();
+}
+function deleteBid(id){
+  if(!confirm('Delete this bid?')) return;
+  DB.bids = DB.bids.filter(x=>x.id!==id);
+  saveDB(); closeModal(); toast('Deleted'); renderBids();
+}
+
+/* ============ 5. PROGRESS BILLING / MILESTONE INVOICING ============ */
+function renderProgressBilling(){
+  if(!DB.progressBills) DB.progressBills = [];
+  const projs = (DB.customers||[]);
+  const projFilter = sub.pbProjFilter || '';
+  let bills = [...DB.progressBills].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  if(projFilter) bills = bills.filter(b=>String(b.projectId)===projFilter);
+  const totalBilled = bills.reduce((s,b)=>s+(b.amount||0),0);
+  const totalPaid = bills.filter(b=>b.paid).reduce((s,b)=>s+(b.amount||0),0);
+  document.getElementById('mainArea').innerHTML = `
+    <div class="crumb">Progress Billing</div>
+    <div class="panel">
+      <div class="ph"><h3 style="font-size:18px">Progress Billing & Milestones</h3><button class="btn pri" onclick="editProgressBill(null)">+ New Bill</button></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:14px">
+        <div style="padding:14px;background:var(--bg2);border-radius:var(--r);border:1px solid var(--line)"><div class="mut" style="font-size:11px">Total Billed</div><div style="font-size:18px;font-weight:800">${money(totalBilled)}</div></div>
+        <div style="padding:14px;background:var(--bg2);border-radius:var(--r);border:1px solid var(--line)"><div class="mut" style="font-size:11px">Total Paid</div><div style="font-size:18px;font-weight:800;color:#22c55e">${money(totalPaid)}</div></div>
+        <div style="padding:14px;background:var(--bg2);border-radius:var(--r);border:1px solid var(--line)"><div class="mut" style="font-size:11px">Outstanding</div><div style="font-size:18px;font-weight:800;color:#f59e0b">${money(totalBilled-totalPaid)}</div></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+        <select onchange="sub.pbProjFilter=this.value;renderProgressBilling()" style="padding:6px 10px;border-radius:var(--r);border:1px solid var(--line);background:var(--bg2);color:var(--text)">
+          <option value="">All Projects</option>
+          ${projs.map(p=>`<option value="${p.id}" ${projFilter==String(p.id)?'selected':''}>${esc(p.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="twrap"><table>
+        <tr><th>Bill #</th><th>Project</th><th>Milestone</th><th>% Complete</th><th>Amount</th><th>Date</th><th>Status</th><th></th></tr>
+        ${bills.map(b=>{
+          const proj = projs.find(p=>p.id===b.projectId);
+          return `<tr class="click" onclick="editProgressBill(${b.id})">
+            <td class="mono mut">PB-${String(b.id).padStart(3,'0')}</td>
+            <td>${proj?esc(proj.name):'—'}</td>
+            <td><b>${esc(b.milestone||'')}</b></td>
+            <td class="num">${b.completionPct||0}%</td>
+            <td class="num mono">${money(b.amount||0)}</td>
+            <td class="mut">${esc(b.date||'')}</td>
+            <td><span class="badge b-${b.paid?'Completed':'Active'}">${b.paid?'Paid':'Unpaid'}</span></td>
+            <td><button class="x" aria-label="Close" onclick="event.stopPropagation();deleteProgressBill(${b.id})">&#10005;</button></td>
+          </tr>`;
+        }).join('') || '<tr><td colspan="8" class="empty">No progress bills yet</td></tr>'}
+      </table></div>
+    </div>
+  `;
+}
+function editProgressBill(id){
+  const projs = (DB.customers||[]);
+  const b = id ? DB.progressBills.find(x=>x.id===id) : {id:null,projectId:projs[0]?.id||'',milestone:'',completionPct:0,amount:0,date:todayISO(),paid:false,notes:''};
+  openModal(`
+    <h3>${id?'Edit':'New'} Progress Bill</h3>
+    <div class="grid2">
+      <div class="field"><label class="fl">Project</label><select id="f_pbProj">${projs.map(p=>`<option value="${p.id}" ${b.projectId==p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select></div>
+      <div class="field"><label class="fl">Date</label><input id="f_pbDate" type="date" value="${b.date}"></div>
+    </div>
+    <div class="field"><label class="fl">Milestone Description *</label><input id="f_pbMilestone" value="${esc(b.milestone||'')}"></div>
+    <div class="grid2">
+      <div class="field"><label class="fl">Completion %</label><input id="f_pbPct" type="number" min="0" max="100" value="${b.completionPct||0}"></div>
+      <div class="field"><label class="fl">Bill Amount (&#8369;)</label><input id="f_pbAmt" type="number" step="0.01" value="${b.amount||0}"></div>
+    </div>
+    <div class="field"><label class="fl"><input type="checkbox" id="f_pbPaid" ${b.paid?'checked':''}> Marked as Paid</label></div>
+    <div class="field"><label class="fl">Notes</label><textarea id="f_pbNotes" rows="2" style="width:100%;resize:vertical">${esc(b.notes||'')}</textarea></div>
+    <div class="btnrow">
+      <button class="btn save" onclick="saveProgressBill(${id})">Save</button>
+      ${id?`<button class="btn del" onclick="deleteProgressBill(${id})">Delete</button>`:''}
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+    </div>
+  `);
+}
+function saveProgressBill(id){
+  const milestone = document.getElementById('f_pbMilestone').value.trim();
+  if(!milestone){ toast('Please enter a milestone description'); return; }
+  const vals = {
+    projectId: Number(document.getElementById('f_pbProj').value),
+    date: document.getElementById('f_pbDate').value || todayISO(),
+    milestone, completionPct: Number(document.getElementById('f_pbPct').value)||0,
+    amount: Number(document.getElementById('f_pbAmt').value)||0,
+    paid: document.getElementById('f_pbPaid').checked,
+    notes: document.getElementById('f_pbNotes').value.trim(),
+    _ts: new Date().toISOString()
+  };
+  if(id){ Object.assign(DB.progressBills.find(x=>x.id===id), vals); }
+  else { DB.progressBills.push({id:nextId(DB.progressBills), ...vals}); }
+  saveDB(); closeModal(); toast('Progress bill saved'); renderProgressBilling();
+}
+function deleteProgressBill(id){
+  if(!confirm('Delete this progress bill?')) return;
+  DB.progressBills = DB.progressBills.filter(x=>x.id!==id);
+  saveDB(); closeModal(); toast('Deleted'); renderProgressBilling();
+}
+
+/* ============ 6. PRINT / EXPORT REPORTS ============ */
+function renderReports(){
+  const reportTypes = [
+    {key:'projectSummary', label:'Project Summary Report', icon:'&#127959;', desc:'Overview of all projects with status, budget, and completion'},
+    {key:'financialSummary', label:'Financial Summary', icon:'&#128176;', desc:'Revenue, expenses, profit/loss breakdown'},
+    {key:'payrollSummary', label:'Payroll Summary', icon:'&#128119;', desc:'Employee compensation, deductions, and net pay'},
+    {key:'fleetUtilization', label:'Fleet Utilization', icon:'&#128667;', desc:'Vehicle/equipment usage, maintenance, and costs'},
+    {key:'inventoryValuation', label:'Inventory Valuation', icon:'&#128230;', desc:'Current stock levels and total inventory value'},
+    {key:'bidTracker', label:'Bid Tracker', icon:'&#128203;', desc:'All bids with win/loss rates and pipeline value'},
+    {key:'dailyLogSummary', label:'Daily Log Summary', icon:'&#128221;', desc:'Site activity, crew counts, and weather log'},
+    {key:'timecardSummary', label:'Timecard Summary', icon:'&#9201;', desc:'Employee hours, overtime, and attendance'},
+  ];
+  document.getElementById('mainArea').innerHTML = `
+    <div class="crumb">Reports</div>
+    <div class="panel">
+      <div class="ph"><h3 style="font-size:18px">Print / Export Reports</h3></div>
+      <div class="mut" style="margin-bottom:16px">Select a report to generate. Reports open in a print-friendly format.</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+        ${reportTypes.map(r=>`
+          <div class="click" onclick="generateReport('${r.key}')" style="padding:18px;background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);transition:all .2s;cursor:pointer" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--line)'">
+            <div style="font-size:24px;margin-bottom:8px">${r.icon}</div>
+            <div style="font-weight:700;margin-bottom:4px">${r.label}</div>
+            <div class="mut" style="font-size:12px">${r.desc}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+function generateReport(type){
+  let title='', content='';
+  const today = todayISO();
+  const m = money;
+  if(type==='projectSummary'){
+    title = 'Project Summary Report';
+    const projs = (DB.customers||[]);
+    content = '<table><tr><th>Project</th><th>Client</th><th>Status</th><th>Budget</th><th>Completion</th></tr>'+
+      projs.map(p=>'<tr><td>'+esc(p.name)+'</td><td>'+esc(p.client||'—')+'</td><td>'+esc(p.status||'Active')+'</td><td style="text-align:right">'+m(p.budget||0)+'</td><td style="text-align:right">'+(p.completion||0)+'%</td></tr>').join('')+
+    '</table>';
+  } else if(type==='financialSummary'){
+    title = 'Financial Summary';
+    const inv = (DB.orders||[]).filter(o=>o.type==='INVOICE');
+    const rev = inv.reduce((s,o)=>s+orderTotal(o),0);
+    const paid = inv.reduce((s,o)=>s+orderTotalPaid(o),0);
+    content = '<table><tr><th>Metric</th><th style="text-align:right">Amount</th></tr>'+
+      '<tr><td>Total Revenue (Invoices)</td><td style="text-align:right">'+m(rev)+'</td></tr>'+
+      '<tr><td>Total Collected</td><td style="text-align:right">'+m(paid)+'</td></tr>'+
+      '<tr><td>Outstanding Receivables</td><td style="text-align:right">'+m(rev-paid)+'</td></tr>'+
+      '<tr><td>Total Orders</td><td style="text-align:right">'+(DB.orders||[]).length+'</td></tr></table>';
+  } else if(type==='payrollSummary'){
+    title = 'Payroll Summary';
+    const emps = (DB.employees||[]);
+    content = '<table><tr><th>Employee</th><th>Position</th><th>Type</th><th style="text-align:right">Rate</th></tr>'+
+      emps.map(e=>'<tr><td>'+esc(e.name)+'</td><td>'+esc(e.position||'—')+'</td><td>'+esc(e.payType||'—')+'</td><td style="text-align:right">'+m(e.rate||0)+'</td></tr>').join('')+'</table>';
+  } else if(type==='fleetUtilization'){
+    title = 'Fleet Utilization Report';
+    const fleet = (DB.fleet||[]);
+    content = '<table><tr><th>Vehicle/Equipment</th><th>Type</th><th>Status</th><th>Plate/Serial</th></tr>'+
+      fleet.map(f=>'<tr><td>'+esc(f.name||f.description||'')+'</td><td>'+esc(f.type||'—')+'</td><td>'+esc(f.status||'Active')+'</td><td>'+esc(f.plateNumber||f.serial||'—')+'</td></tr>').join('')+'</table>';
+  } else if(type==='inventoryValuation'){
+    title = 'Inventory Valuation Report';
+    const items = (DB.inventory||[]);
+    const totalVal = items.reduce((s,i)=>s+(i.qty||0)*(i.unitCost||0),0);
+    content = '<p><strong>Total Inventory Value: '+m(totalVal)+'</strong></p>'+
+    '<table><tr><th>Item</th><th>Location</th><th style="text-align:right">Qty</th><th style="text-align:right">Unit Cost</th><th style="text-align:right">Total</th></tr>'+
+      items.map(i=>'<tr><td>'+esc(i.name||i.description||'')+'</td><td>'+esc(i.location||'—')+'</td><td style="text-align:right">'+(i.qty||0)+'</td><td style="text-align:right">'+m(i.unitCost||0)+'</td><td style="text-align:right">'+m((i.qty||0)*(i.unitCost||0))+'</td></tr>').join('')+'</table>';
+  } else if(type==='bidTracker'){
+    title = 'Bid Tracker Report';
+    const bids = (DB.bids||[]);
+    const won = bids.filter(b=>b.status==='Won').length;
+    const lost = bids.filter(b=>b.status==='Lost').length;
+    content = '<p>Total Bids: '+bids.length+' | Won: '+won+' | Lost: '+lost+' | Win Rate: '+(bids.length?(won/bids.length*100).toFixed(0):0)+'%</p>'+
+    '<table><tr><th>Bid</th><th>Client</th><th style="text-align:right">Amount</th><th>Due</th><th>Status</th></tr>'+
+      bids.map(b=>'<tr><td>'+esc(b.projectName||'')+'</td><td>'+esc(b.client||'—')+'</td><td style="text-align:right">'+m(b.amount||0)+'</td><td>'+esc(b.dueDate||'—')+'</td><td>'+esc(b.status)+'</td></tr>').join('')+'</table>';
+  } else if(type==='dailyLogSummary'){
+    title = 'Daily Log Summary';
+    const logs = (DB.dailyLogs||[]).slice(-30);
+    content = '<table><tr><th>Date</th><th>Project</th><th>Weather</th><th>Crew</th><th>Equipment Hrs</th><th>Notes</th></tr>'+
+      logs.map(function(l){var p=(DB.customers||[]).find(function(x){return x.id===l.projectId}); return '<tr><td>'+esc(l.date)+'</td><td>'+(p?esc(p.name):'—')+'</td><td>'+esc(l.weather||'')+'</td><td style="text-align:right">'+(l.crewCount||0)+'</td><td style="text-align:right">'+(l.equipmentHours||0)+'</td><td>'+esc(l.notes||'')+'</td></tr>';}).join('')+'</table>';
+  } else if(type==='timecardSummary'){
+    title = 'Timecard Summary';
+    const cards = (DB.timecards||[]).slice(-50);
+    content = '<table><tr><th>Date</th><th>Employee</th><th>In</th><th>Out</th><th>Hours</th><th>Location</th></tr>'+
+      cards.map(function(c){var e=(DB.employees||[]).find(function(x){return x.id===c.employeeId}); var hrs=c.clockIn&&c.clockOut?((new Date('2000-01-01T'+c.clockOut)-new Date('2000-01-01T'+c.clockIn))/3600000).toFixed(1):'—'; return '<tr><td>'+esc(c.date)+'</td><td>'+(e?esc(e.name):'—')+'</td><td>'+esc(c.clockIn||'')+'</td><td>'+esc(c.clockOut||'')+'</td><td style="text-align:right">'+hrs+'</td><td>'+esc(c.location||'')+'</td></tr>';}).join('')+'</table>';
+  }
+  const printWin = window.open('','_blank');
+  if(!printWin){ toast('Please allow popups to print reports'); return; }
+  printWin.document.write('<!DOCTYPE html><html><head><title>'+title+' — BuildSuite</title><style>'+
+    'body{font-family:system-ui,-apple-system,sans-serif;padding:40px;color:#1a1a1a;max-width:900px;margin:0 auto}'+
+    'h1{font-size:22px;margin-bottom:4px} .meta{color:#666;font-size:13px;margin-bottom:24px}'+
+    'table{width:100%;border-collapse:collapse;font-size:13px} th,td{padding:8px 10px;border-bottom:1px solid #ddd;text-align:left}'+
+    'th{background:#f5f5f5;font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em}'+
+    '@media print{body{padding:20px} .no-print{display:none}}'+
+  '</style></head><body>'+
+    '<h1>'+title+'</h1>'+
+    '<div class="meta">BuildSuite — Generated '+today+'</div>'+
+    content+
+    '<div class="no-print" style="margin-top:30px"><button onclick="window.print()" style="padding:10px 24px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px">Print Report</button></div>'+
+  '</body></html>');
+  printWin.document.close();
+}
+
+/* ============ 7. CLIENT PORTAL (Read-Only Project View) ============ */
+function renderClientPortal(){
+  const projs = (DB.customers||[]);
+  const selId = sub.cpProjectId || (projs[0]?.id||'');
+  const proj = projs.find(p=>p.id==selId);
+  const projOrders = (DB.orders||[]).filter(o=>o.projectId==selId);
+  const projLogs = (DB.dailyLogs||[]).filter(l=>l.projectId==selId).sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,10);
+  const projBills = (DB.progressBills||[]).filter(b=>b.projectId==selId);
+  const projDocs = (DB.documents||[]).filter(d=>d.projectId==selId);
+  const activities = (proj && proj.activities) || [];
+  const totalBudget = activities.reduce((s,a)=>s+(Number(a.cost)||0),0);
+  const weightedPct = totalBudget > 0 ? activities.reduce((s,a)=>s+((Number(a.pct)||0)*(Number(a.cost)||0)),0)/totalBudget : 0;
+
+  document.getElementById('mainArea').innerHTML = `
+    <div class="crumb">Client Portal</div>
+    <div class="panel">
+      <div class="ph"><h3 style="font-size:18px">Client / Homeowner Portal</h3></div>
+      <div class="mut" style="margin-bottom:12px">Share this view with your clients to give them read-only access to project progress.</div>
+      <div style="margin-bottom:16px">
+        <select onchange="sub.cpProjectId=Number(this.value);renderClientPortal()" style="padding:8px 12px;border-radius:var(--r);border:1px solid var(--line);background:var(--bg2);color:var(--text);font-size:14px">
+          ${projs.map(p=>`<option value="${p.id}" ${selId==p.id?'selected':''}>${esc(p.name)}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    ${proj ? `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:16px">
+      <div class="dash-kpi" style="animation:none"><div class="mut" style="font-size:11px">Status</div><div style="font-size:16px;font-weight:700">${esc(proj.status||'Active')}</div></div>
+      <div class="dash-kpi" style="animation:none"><div class="mut" style="font-size:11px">Completion</div><div style="font-size:16px;font-weight:700">${weightedPct.toFixed(0)}%</div></div>
+      <div class="dash-kpi" style="animation:none"><div class="mut" style="font-size:11px">Budget</div><div style="font-size:16px;font-weight:700">${money(totalBudget)}</div></div>
+      <div class="dash-kpi" style="animation:none"><div class="mut" style="font-size:11px">Change Orders</div><div style="font-size:16px;font-weight:700">${projOrders.filter(o=>o.type==='CHANGE ORDER').length}</div></div>
+    </div>
+    ${activities.length ? `
+    <div class="panel">
+      <div class="ph"><h3>Project Activities</h3></div>
+      <div class="twrap"><table>
+        <tr><th>Activity</th><th>Progress</th><th>Status</th></tr>
+        ${activities.map(a=>`<tr>
+          <td>${esc(a.name)}</td>
+          <td><div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:8px;background:var(--chip);border-radius:4px;overflow:hidden"><div style="width:${a.pct||0}%;height:100%;background:var(--accent);border-radius:4px"></div></div><span class="mono" style="font-size:12px">${a.pct||0}%</span></div></td>
+          <td><span class="badge b-${(a.pct||0)>=100?'Completed':(a.pct||0)>0?'Active':'Pending'}">${(a.pct||0)>=100?'Done':(a.pct||0)>0?'In Progress':'Not Started'}</span></td>
+        </tr>`).join('')}
+      </table></div>
+    </div>` : ''}
+    ${projBills.length ? `
+    <div class="panel">
+      <div class="ph"><h3>Billing History</h3></div>
+      <div class="twrap"><table>
+        <tr><th>Date</th><th>Milestone</th><th>Amount</th><th>Status</th></tr>
+        ${projBills.map(b=>`<tr><td>${esc(b.date)}</td><td>${esc(b.milestone)}</td><td class="num mono">${money(b.amount||0)}</td><td><span class="badge b-${b.paid?'Completed':'Active'}">${b.paid?'Paid':'Pending'}</span></td></tr>`).join('')}
+      </table></div>
+    </div>` : ''}
+    ${projLogs.length ? `
+    <div class="panel">
+      <div class="ph"><h3>Recent Site Activity</h3></div>
+      <div class="twrap"><table>
+        <tr><th>Date</th><th>Weather</th><th>Crew</th><th>Work Performed</th></tr>
+        ${projLogs.map(l=>`<tr><td>${esc(l.date)}</td><td>${esc(l.weather||'')}</td><td class="num">${l.crewCount||0}</td><td>${esc(l.workPerformed||l.notes||'')}</td></tr>`).join('')}
+      </table></div>
+    </div>` : ''}
+    ${projDocs.length ? `
+    <div class="panel">
+      <div class="ph"><h3>Project Documents</h3></div>
+      <div class="twrap"><table>
+        <tr><th>Document</th><th>Category</th><th>Version</th><th>Date</th></tr>
+        ${projDocs.map(d=>`<tr><td>${esc(d.name)}</td><td><span class="badge b-status">${esc(d.category)}</span></td><td>v${d.version||1}</td><td>${esc(d.uploadDate||'')}</td></tr>`).join('')}
+      </table></div>
+    </div>` : ''}
+    ` : '<div class="panel"><div class="empty">No projects found</div></div>'}
+  `;
+}
+
+/* ============ 8. SUBCONTRACTOR PORTAL ============ */
+function renderSubPortal(){
+  if(!DB.subReports) DB.subReports = [];
+  const projs = (DB.customers||[]);
+  const projFilter = sub.spProjFilter || '';
+  let reports = [...DB.subReports].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  if(projFilter) reports = reports.filter(r=>String(r.projectId)===projFilter);
+  document.getElementById('mainArea').innerHTML = `
+    <div class="crumb">Subcontractor Portal</div>
+    <div class="panel">
+      <div class="ph"><h3 style="font-size:18px">Subcontractor Portal</h3><button class="btn pri" onclick="editSubReport(null)">+ Submit Report</button></div>
+      <div class="mut" style="margin-bottom:12px">Subcontractors can submit daily reports, track payments, and view assigned work.</div>
+      <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+        <select onchange="sub.spProjFilter=this.value;renderSubPortal()" style="padding:6px 10px;border-radius:var(--r);border:1px solid var(--line);background:var(--bg2);color:var(--text)">
+          <option value="">All Projects</option>
+          ${projs.map(p=>`<option value="${p.id}" ${projFilter==String(p.id)?'selected':''}>${esc(p.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="twrap"><table>
+        <tr><th>Date</th><th>Subcontractor</th><th>Project</th><th>Trade</th><th>Workers</th><th>Hours</th><th>Status</th><th></th></tr>
+        ${reports.map(r=>{
+          const proj = projs.find(p=>p.id===r.projectId);
+          return `<tr class="click" onclick="editSubReport(${r.id})">
+            <td><b>${esc(r.date)}</b></td>
+            <td>${esc(r.subName||'—')}</td>
+            <td>${proj?esc(proj.name):'—'}</td>
+            <td class="mut">${esc(r.trade||'—')}</td>
+            <td class="num">${r.workerCount||0}</td>
+            <td class="num">${r.hoursWorked||0}</td>
+            <td><span class="badge b-${r.approved?'Completed':'Pending'}">${r.approved?'Approved':'Pending'}</span></td>
+            <td><button class="x" aria-label="Close" onclick="event.stopPropagation();deleteSubReport(${r.id})">&#10005;</button></td>
+          </tr>`;
+        }).join('') || '<tr><td colspan="8" class="empty">No reports yet</td></tr>'}
+      </table></div>
+    </div>
+  `;
+}
+function editSubReport(id){
+  const projs = (DB.customers||[]);
+  const r = id ? DB.subReports.find(x=>x.id===id) : {id:null,subName:'',projectId:projs[0]?.id||'',date:todayISO(),trade:'',workerCount:0,hoursWorked:0,workDescription:'',materialsUsed:'',issues:'',approved:false};
+  openModal(`
+    <h3>${id?'Edit':'New'} Subcontractor Report</h3>
+    <div class="grid2">
+      <div class="field"><label class="fl">Subcontractor Name *</label><input id="f_srName" value="${esc(r.subName)}"></div>
+      <div class="field"><label class="fl">Trade</label><input id="f_srTrade" value="${esc(r.trade||'')}" placeholder="e.g. Electrical, Plumbing"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label class="fl">Project</label><select id="f_srProj">${projs.map(p=>`<option value="${p.id}" ${r.projectId==p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select></div>
+      <div class="field"><label class="fl">Date</label><input id="f_srDate" type="date" value="${r.date}"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label class="fl">Workers on Site</label><input id="f_srWorkers" type="number" value="${r.workerCount||0}"></div>
+      <div class="field"><label class="fl">Hours Worked</label><input id="f_srHours" type="number" step="0.5" value="${r.hoursWorked||0}"></div>
+    </div>
+    <div class="field"><label class="fl">Work Description</label><textarea id="f_srWork" rows="3" style="width:100%;resize:vertical">${esc(r.workDescription||'')}</textarea></div>
+    <div class="field"><label class="fl">Materials Used</label><textarea id="f_srMats" rows="2" style="width:100%;resize:vertical">${esc(r.materialsUsed||'')}</textarea></div>
+    <div class="field"><label class="fl">Issues / Delays</label><textarea id="f_srIssues" rows="2" style="width:100%;resize:vertical">${esc(r.issues||'')}</textarea></div>
+    ${canEdit() ? `<div class="field"><label class="fl"><input type="checkbox" id="f_srApproved" ${r.approved?'checked':''}> Approved</label></div>` : ''}
+    <div class="btnrow">
+      <button class="btn save" onclick="saveSubReport(${id})">Save</button>
+      ${id?`<button class="btn del" onclick="deleteSubReport(${id})">Delete</button>`:''}
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+    </div>
+  `);
+}
+function saveSubReport(id){
+  const subName = document.getElementById('f_srName').value.trim();
+  if(!subName){ toast('Please enter subcontractor name'); return; }
+  const vals = {
+    subName, trade: document.getElementById('f_srTrade').value.trim(),
+    projectId: Number(document.getElementById('f_srProj').value),
+    date: document.getElementById('f_srDate').value || todayISO(),
+    workerCount: Number(document.getElementById('f_srWorkers').value)||0,
+    hoursWorked: Number(document.getElementById('f_srHours').value)||0,
+    workDescription: document.getElementById('f_srWork').value.trim(),
+    materialsUsed: document.getElementById('f_srMats').value.trim(),
+    issues: document.getElementById('f_srIssues').value.trim(),
+    approved: document.getElementById('f_srApproved')?.checked || false,
+    _ts: new Date().toISOString()
+  };
+  if(id){ Object.assign(DB.subReports.find(x=>x.id===id), vals); }
+  else { DB.subReports.push({id:nextId(DB.subReports), ...vals}); }
+  saveDB(); closeModal(); toast('Report saved'); renderSubPortal();
+}
+function deleteSubReport(id){
+  if(!confirm('Delete this report?')) return;
+  DB.subReports = DB.subReports.filter(x=>x.id!==id);
+  saveDB(); closeModal(); toast('Deleted'); renderSubPortal();
+}
+
+/* ============ 9. AI COST VARIANCE DETECTION ============ */
+function renderCostVariance(){
+  const projs = (DB.customers||[]).filter(p=>p.activities && p.activities.length);
+  const alerts = [];
+  projs.forEach(p=>{
+    const acts = p.activities || [];
+    acts.forEach(a=>{
+      const budgeted = Number(a.cost) || 0;
+      if(budgeted <= 0) return;
+      const actualSpend = (DB.orders||[])
+        .filter(o=>o.projectId===p.id && (o.items||[]).some(it=>(it.description||'').toLowerCase().includes((a.name||'').toLowerCase().split(' ')[0])))
+        .reduce((s,o)=>s+orderTotal(o),0);
+      if(actualSpend > 0){
+        const variance = ((actualSpend - budgeted) / budgeted * 100);
+        if(Math.abs(variance) > 10){
+          alerts.push({project:p.name, activity:a.name, budgeted:budgeted, actual:actualSpend, variance:variance, pct:a.pct||0});
+        }
+      }
+    });
+  });
+  const overBudget = alerts.filter(a=>a.variance>0);
+  const underBudget = alerts.filter(a=>a.variance<0);
+
+  document.getElementById('mainArea').innerHTML = `
+    <div class="crumb">Cost Variance Detection</div>
+    <div class="panel">
+      <div class="ph"><h3 style="font-size:18px">AI Cost Variance Detection</h3></div>
+      <div class="mut" style="margin-bottom:16px">Automatically compares budgeted vs. actual costs per activity and flags variances exceeding 10%.</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:16px">
+        <div style="padding:14px;background:var(--bg2);border-radius:var(--r);border:1px solid var(--line)"><div class="mut" style="font-size:11px">Projects Analyzed</div><div style="font-size:20px;font-weight:800">${projs.length}</div></div>
+        <div style="padding:14px;background:var(--bg2);border-radius:var(--r);border:1px solid var(--line)"><div class="mut" style="font-size:11px">Over Budget Alerts</div><div style="font-size:20px;font-weight:800;color:#ef4444">${overBudget.length}</div></div>
+        <div style="padding:14px;background:var(--bg2);border-radius:var(--r);border:1px solid var(--line)"><div class="mut" style="font-size:11px">Under Budget</div><div style="font-size:20px;font-weight:800;color:#22c55e">${underBudget.length}</div></div>
+        <div style="padding:14px;background:var(--bg2);border-radius:var(--r);border:1px solid var(--line)"><div class="mut" style="font-size:11px">Total Variance</div><div style="font-size:20px;font-weight:800">${money(alerts.reduce((s,a)=>s+(a.actual-a.budgeted),0))}</div></div>
+      </div>
+    </div>
+    ${overBudget.length ? `
+    <div class="panel" style="border-left:3px solid #ef4444">
+      <div class="ph"><h3 style="color:#ef4444">Over Budget Alerts</h3></div>
+      <div class="twrap"><table>
+        <tr><th>Project</th><th>Activity</th><th>Budgeted</th><th>Actual</th><th>Variance</th><th>Progress</th></tr>
+        ${overBudget.sort((a,b)=>b.variance-a.variance).map(a=>`<tr>
+          <td><b>${esc(a.project)}</b></td>
+          <td>${esc(a.activity)}</td>
+          <td class="num mono">${money(a.budgeted)}</td>
+          <td class="num mono" style="color:#ef4444">${money(a.actual)}</td>
+          <td style="color:#ef4444;font-weight:700">+${a.variance.toFixed(1)}%</td>
+          <td class="num">${a.pct}%</td>
+        </tr>`).join('')}
+      </table></div>
+    </div>` : ''}
+    ${underBudget.length ? `
+    <div class="panel" style="border-left:3px solid #22c55e">
+      <div class="ph"><h3 style="color:#22c55e">Under Budget</h3></div>
+      <div class="twrap"><table>
+        <tr><th>Project</th><th>Activity</th><th>Budgeted</th><th>Actual</th><th>Variance</th><th>Progress</th></tr>
+        ${underBudget.sort((a,b)=>a.variance-b.variance).map(a=>`<tr>
+          <td><b>${esc(a.project)}</b></td>
+          <td>${esc(a.activity)}</td>
+          <td class="num mono">${money(a.budgeted)}</td>
+          <td class="num mono" style="color:#22c55e">${money(a.actual)}</td>
+          <td style="color:#22c55e;font-weight:700">${a.variance.toFixed(1)}%</td>
+          <td class="num">${a.pct}%</td>
+        </tr>`).join('')}
+      </table></div>
+    </div>` : ''}
+    ${!alerts.length ? `
+    <div class="panel">
+      <div class="empty" style="padding:40px">
+        <div style="font-size:32px;margin-bottom:12px">&#128202;</div>
+        <div style="font-weight:600;margin-bottom:8px">No Variances Detected</div>
+        <div class="mut">All project activities are within 10% of their budgets, or no matching order data was found for comparison. Add orders with item descriptions that match activity names to enable variance detection.</div>
+      </div>
+    </div>` : ''}
+  `;
+}
+
+/* ============ 10. QUANTITY TAKEOFFS ============ */
+function renderTakeoffs(){
+  if(!DB.takeoffs) DB.takeoffs = [];
+  const projs = (DB.customers||[]);
+  const projFilter = sub.toFilter || '';
+  let items = [...DB.takeoffs].sort((a,b)=>(a.category||'').localeCompare(b.category||''));
+  if(projFilter) items = items.filter(i=>String(i.projectId)===projFilter);
+  const totalCost = items.reduce((s,i)=>s+(i.qty||0)*(i.unitCost||0),0);
+  document.getElementById('mainArea').innerHTML = `
+    <div class="crumb">Quantity Takeoffs</div>
+    <div class="panel">
+      <div class="ph"><h3 style="font-size:18px">Estimating — Quantity Takeoffs</h3><button class="btn pri" onclick="editTakeoffItem(null)">+ Add Line Item</button></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:14px">
+        <div style="padding:14px;background:var(--bg2);border-radius:var(--r);border:1px solid var(--line)"><div class="mut" style="font-size:11px">Line Items</div><div style="font-size:20px;font-weight:800">${items.length}</div></div>
+        <div style="padding:14px;background:var(--bg2);border-radius:var(--r);border:1px solid var(--line)"><div class="mut" style="font-size:11px">Total Estimated Cost</div><div style="font-size:20px;font-weight:800">${money(totalCost)}</div></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+        <select onchange="sub.toFilter=this.value;renderTakeoffs()" style="padding:6px 10px;border-radius:var(--r);border:1px solid var(--line);background:var(--bg2);color:var(--text)">
+          <option value="">All Projects</option>
+          ${projs.map(p=>`<option value="${p.id}" ${projFilter==String(p.id)?'selected':''}>${esc(p.name)}</option>`).join('')}
+        </select>
+        <button class="btn sec" onclick="convertTakeoffToBid()">Convert to Bid</button>
+      </div>
+      <div class="twrap"><table>
+        <tr><th>Category</th><th>Description</th><th>Unit</th><th class="right">Qty</th><th class="right">Unit Cost</th><th class="right">Total</th><th></th></tr>
+        ${items.map(i=>`<tr class="click" onclick="editTakeoffItem(${i.id})">
+          <td class="mut">${esc(i.category||'General')}</td>
+          <td><b>${esc(i.description)}</b></td>
+          <td class="mut">${esc(i.unit||'unit')}</td>
+          <td class="num mono">${i.qty||0}</td>
+          <td class="num mono">${money(i.unitCost||0)}</td>
+          <td class="num mono" style="font-weight:700">${money((i.qty||0)*(i.unitCost||0))}</td>
+          <td><button class="x" aria-label="Close" onclick="event.stopPropagation();deleteTakeoffItem(${i.id})">&#10005;</button></td>
+        </tr>`).join('') || '<tr><td colspan="7" class="empty">No takeoff items yet</td></tr>'}
+        ${items.length ? `<tr style="font-weight:800;background:var(--bg2)"><td colspan="5" style="text-align:right">TOTAL</td><td class="num mono">${money(totalCost)}</td><td></td></tr>` : ''}
+      </table></div>
+    </div>
+  `;
+}
+function editTakeoffItem(id){
+  const projs = (DB.customers||[]);
+  const cats = ['Concrete','Steel','Lumber','Electrical','Plumbing','Finishing','Labor','Equipment','Permits','Other'];
+  const i = id ? DB.takeoffs.find(x=>x.id===id) : {id:null,projectId:projs[0]?.id||'',category:'General',description:'',unit:'',qty:0,unitCost:0,notes:''};
+  openModal(`
+    <h3>${id?'Edit':'Add'} Takeoff Item</h3>
+    <div class="grid2">
+      <div class="field"><label class="fl">Project</label><select id="f_toProj"><option value="">General</option>${projs.map(p=>`<option value="${p.id}" ${i.projectId==p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select></div>
+      <div class="field"><label class="fl">Category</label><select id="f_toCat">${cats.map(c=>`<option ${i.category===c?'selected':''}>${c}</option>`).join('')}</select></div>
+    </div>
+    <div class="field"><label class="fl">Description *</label><input id="f_toDesc" value="${esc(i.description)}"></div>
+    <div class="grid2">
+      <div class="field"><label class="fl">Unit</label><input id="f_toUnit" value="${esc(i.unit||'')}" placeholder="e.g. m2, bags, pcs"></div>
+      <div class="field"><label class="fl">Quantity</label><input id="f_toQty" type="number" step="0.01" value="${i.qty||0}"></div>
+    </div>
+    <div class="field"><label class="fl">Unit Cost (&#8369;)</label><input id="f_toUC" type="number" step="0.01" value="${i.unitCost||0}"></div>
+    <div class="field"><label class="fl">Notes</label><textarea id="f_toNotes" rows="2" style="width:100%;resize:vertical">${esc(i.notes||'')}</textarea></div>
+    <div class="btnrow">
+      <button class="btn save" onclick="saveTakeoffItem(${id})">Save</button>
+      ${id?`<button class="btn del" onclick="deleteTakeoffItem(${id})">Delete</button>`:''}
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+    </div>
+  `);
+}
+function saveTakeoffItem(id){
+  const description = document.getElementById('f_toDesc').value.trim();
+  if(!description){ toast('Please enter a description'); return; }
+  const vals = {
+    projectId: Number(document.getElementById('f_toProj').value)||null,
+    category: document.getElementById('f_toCat').value,
+    description:description, unit: document.getElementById('f_toUnit').value.trim()||'unit',
+    qty: Number(document.getElementById('f_toQty').value)||0,
+    unitCost: Number(document.getElementById('f_toUC').value)||0,
+    notes: document.getElementById('f_toNotes').value.trim(),
+    _ts: new Date().toISOString()
+  };
+  if(id){ Object.assign(DB.takeoffs.find(x=>x.id===id), vals); }
+  else { DB.takeoffs.push({id:nextId(DB.takeoffs), ...vals}); }
+  saveDB(); closeModal(); toast('Saved'); renderTakeoffs();
+}
+function deleteTakeoffItem(id){
+  if(!confirm('Delete this item?')) return;
+  DB.takeoffs = DB.takeoffs.filter(x=>x.id!==id);
+  saveDB(); closeModal(); toast('Deleted'); renderTakeoffs();
+}
+function convertTakeoffToBid(){
+  const projFilter = sub.toFilter || '';
+  let items = DB.takeoffs || [];
+  if(projFilter) items = items.filter(i=>String(i.projectId)===projFilter);
+  const total = items.reduce((s,i)=>s+(i.qty||0)*(i.unitCost||0),0);
+  if(!items.length){ toast('No takeoff items to convert'); return; }
+  const proj = projFilter ? (DB.customers||[]).find(p=>p.id==projFilter) : null;
+  if(!DB.bids) DB.bids = [];
+  DB.bids.push({
+    id: nextId(DB.bids),
+    projectName: proj ? proj.name : 'Takeoff Estimate',
+    client: proj?.client || '',
+    amount: total,
+    dueDate: '',
+    status: 'Draft',
+    scope: items.map(i=>i.description+': '+i.qty+' '+i.unit+' x '+money(i.unitCost)+' = '+money((i.qty||0)*(i.unitCost||0))).join('\n'),
+    notes: 'Generated from Quantity Takeoffs',
+    _ts: new Date().toISOString()
+  });
+  saveDB(); toast('Bid created from takeoff data'); go('bids');
+}
+
 /* ============================================================ USERS ============================================================ */
 const USER_TYPES = ['Admin','Manager','Sales','Clerk','Employee'];
 function renderUsers(){
@@ -9697,7 +10644,7 @@ function dismissReview(id){
   u.reviewed = true;
   saveDB(); toast('Marked as reviewed'); renderUsers();
 }
-const CUSTOM_TAB_LIST = [['dashboard','Dashboard'],['orders','Orders'],['products','Products'],['leads','Leads'],['customers','Projects'],['vendors','Suppliers'],['employees','Employees'],['fleet','Fleet'],['inventory','Inventory'],['payroll','Payroll'],['transactions','Transactions'],['calculator','Calculator'],['costEstimator','Cost Estimator'],['schedule','Schedule']];
+const CUSTOM_TAB_LIST = [['dashboard','Dashboard'],['orders','Orders'],['products','Products'],['leads','Leads'],['customers','Projects'],['vendors','Suppliers'],['employees','Employees'],['fleet','Fleet'],['inventory','Inventory'],['payroll','Payroll'],['transactions','Transactions'],['calculator','Calculator'],['costEstimator','Cost Estimator'],['schedule','Schedule'],['dailyLogs','Daily Logs'],['documents','Documents'],['timecards','Timecards'],['bids','Bids'],['progressBilling','Progress Billing'],['reports','Reports'],['clientPortal','Client Portal'],['subPortal','Sub Portal'],['costVariance','Cost Variance'],['takeoffs','Takeoffs']];
 function editUser(id){
   if(session.type !== 'Admin'){ toast('Only an Admin can edit user accounts.'); return; }
   const u = id ? DB.users.find(x=>x.id===id) : {id:null,name:'',username:'',password:'',type:'Clerk',position:'',canRequestForSite:false,customTabs:[]};
@@ -10249,6 +11196,20 @@ function runMigrationV34(){
   saveDB();
 }
 
+const MIGRATION_V35_KEY = 'buildsuite_migration_v35';
+function runMigrationV35(){
+  if(localStorage.getItem(MIGRATION_V35_KEY)) return;
+  if(!DB.dailyLogs) DB.dailyLogs = [];
+  if(!DB.documents) DB.documents = [];
+  if(!DB.timecards) DB.timecards = [];
+  if(!DB.bids) DB.bids = [];
+  if(!DB.progressBills) DB.progressBills = [];
+  if(!DB.subReports) DB.subReports = [];
+  if(!DB.takeoffs) DB.takeoffs = [];
+  localStorage.setItem(MIGRATION_V35_KEY, '1');
+  saveDB();
+}
+
 /* ---------- browser notifications (client-side, requires the app tab to be open/running) ---------- */
 let notifyCheckTimer = null;
 function browserNotificationsEnabled(){ return localStorage.getItem('buildsuite_notify_enabled') === '1'; }
@@ -10336,6 +11297,7 @@ async function boot(){
   runMigrationV32();
   runMigrationV33();
   runMigrationV34();
+  runMigrationV35();
   applyTheme(localStorage.getItem('buildsuite_theme') || (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
   const savedSession = sessionStorage.getItem('buildsuite_session');
   if(savedSession){
