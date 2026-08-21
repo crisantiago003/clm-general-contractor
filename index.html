@@ -1931,18 +1931,21 @@ const TRASH_TYPE_ARRAYS = {
   vendor:'vendors', order:'orders', transaction:'transactions', product:'products', user:'users',
   siteDiary:'siteDiaries', purchaseRequest:'purchaseRequests', vehicle:'vehicles',
   rfi:'rfis', submittal:'submittals', changeOrder:'changeOrders', incident:'incidents', inspection:'inspections',
-  punchItem:'punchItems', dailyLog:'dailyLogs',
+  punchItem:'punchItems', dailyLog:'dailyLogs', document:'documents', timecard:'timecards',
+  bid:'bids', progressBill:'progressBills', subReport:'subReports', takeoff:'takeoffs',
 };
 const TRASH_TYPE_LABELS = {
   customer:'Project', material:'Material', equipment:'Equipment', employee:'Employee',
   vendor:'Supplier', order:'Order', transaction:'Transaction', product:'Product', user:'User', payrollRun:'Payroll Run',
   siteDiary:'Site Diary', purchaseRequest:'Purchase Request', vehicle:'Vehicle',
   rfi:'RFI', submittal:'Submittal', changeOrder:'Change Order', incident:'Incident', inspection:'Inspection',
-  punchItem:'Punch Item', dailyLog:'Daily Log',
+  punchItem:'Punch Item', dailyLog:'Daily Log', document:'Document', timecard:'Timecard',
+  bid:'Bid', progressBill:'Progress Bill', subReport:'Sub Report', takeoff:'Takeoff',
 };
 function trashLabel(t){
   if(t.type==='payrollRun') return t.data.run.site ? `Payroll — ${t.data.run.site} (${fmtDate(t.data.run.payDate)})` : `Payroll run`;
-  return t.data.name || t.data.description || 'Item';
+  if(t.type==='timecard') return `Timecard — ${t.data.date||''}`;
+  return t.data.name || t.data.title || t.data.description || 'Item';
 }
 function moveToTrash(type, record){
   DB.trash.push({ id: uid(), type, data: JSON.parse(JSON.stringify(record)), deletedAt: new Date().toISOString(), deletedBy: (session&&session.name)||'System' });
@@ -10247,6 +10250,8 @@ function saveDailyLog(id){
 }
 function deleteDailyLog(id){
   if(!confirm('Delete this daily log entry?')) return;
+  const rec = DB.dailyLogs.find(x=>x.id===id);
+  if(rec) moveToTrash('dailyLog', rec);
   DB.dailyLogs = DB.dailyLogs.filter(x=>x.id!==id);
   saveDB(); closeModal(); toast('Deleted'); renderDailyLogs();
 }
@@ -10335,6 +10340,8 @@ function saveDocument(id){
 }
 function deleteDocument(id){
   if(!confirm('Delete this document?')) return;
+  const rec = DB.documents.find(x=>x.id===id);
+  if(rec) moveToTrash('document', rec);
   DB.documents = DB.documents.filter(x=>x.id!==id);
   saveDB(); closeModal(); toast('Deleted'); renderDocuments();
 }
@@ -10448,6 +10455,8 @@ function saveTimecard(id){
 }
 function deleteTimecard(id){
   if(!confirm('Delete this timecard?')) return;
+  const rec = DB.timecards.find(x=>x.id===id);
+  if(rec) moveToTrash('timecard', rec);
   DB.timecards = DB.timecards.filter(x=>x.id!==id);
   saveDB(); closeModal(); toast('Deleted'); renderTimecards();
 }
@@ -10532,6 +10541,8 @@ function saveBid(id){
 }
 function deleteBid(id){
   if(!confirm('Delete this bid?')) return;
+  const rec = DB.bids.find(x=>x.id===id);
+  if(rec) moveToTrash('bid', rec);
   DB.bids = DB.bids.filter(x=>x.id!==id);
   saveDB(); closeModal(); toast('Deleted'); renderBids();
 }
@@ -10620,6 +10631,8 @@ function saveProgressBill(id){
 }
 function deleteProgressBill(id){
   if(!confirm('Delete this progress bill?')) return;
+  const rec = DB.progressBills.find(x=>x.id===id);
+  if(rec) moveToTrash('progressBill', rec);
   DB.progressBills = DB.progressBills.filter(x=>x.id!==id);
   saveDB(); closeModal(); toast('Deleted'); renderProgressBilling();
 }
@@ -10883,6 +10896,8 @@ function saveSubReport(id){
 }
 function deleteSubReport(id){
   if(!confirm('Delete this report?')) return;
+  const rec = DB.subReports.find(x=>x.id===id);
+  if(rec) moveToTrash('subReport', rec);
   DB.subReports = DB.subReports.filter(x=>x.id!==id);
   saveDB(); closeModal(); toast('Deleted'); renderSubPortal();
 }
@@ -11044,6 +11059,8 @@ function saveTakeoffItem(id){
 }
 function deleteTakeoffItem(id){
   if(!confirm('Delete this item?')) return;
+  const rec = DB.takeoffs.find(x=>x.id===id);
+  if(rec) moveToTrash('takeoff', rec);
   DB.takeoffs = DB.takeoffs.filter(x=>x.id!==id);
   saveDB(); closeModal(); toast('Deleted'); renderTakeoffs();
 }
