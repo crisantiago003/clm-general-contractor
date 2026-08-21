@@ -490,6 +490,43 @@ let SEED;
 try { SEED = JSON.parse(document.getElementById('seed-data').textContent); }
 catch(e) { console.error('Failed to parse seed data:', e); SEED = {}; }
 const STORAGE_KEY = 'buildsuite_local_v1';
+const IDB_NAME = 'buildsuite_local';
+const IDB_STORE = 'appdata';
+const IDB_KEY = 'db';
+let _idb = null;
+function openIDB(){
+  if(_idb) return Promise.resolve(_idb);
+  return new Promise((resolve, reject)=>{
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = ()=>{ req.result.createObjectStore(IDB_STORE); };
+    req.onsuccess = ()=>{ _idb = req.result; resolve(_idb); };
+    req.onerror = ()=>reject(req.error);
+  });
+}
+function idbGet(){
+  return openIDB().then(db=>new Promise((resolve, reject)=>{
+    const tx = db.transaction(IDB_STORE, 'readonly');
+    const req = tx.objectStore(IDB_STORE).get(IDB_KEY);
+    req.onsuccess = ()=>resolve(req.result || null);
+    req.onerror = ()=>reject(req.error);
+  }));
+}
+function idbSet(data){
+  return openIDB().then(db=>new Promise((resolve, reject)=>{
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    const req = tx.objectStore(IDB_STORE).put(data, IDB_KEY);
+    req.onsuccess = ()=>resolve();
+    req.onerror = ()=>reject(req.error);
+  }));
+}
+function idbClear(){
+  return openIDB().then(db=>new Promise((resolve, reject)=>{
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    const req = tx.objectStore(IDB_STORE).clear();
+    req.onsuccess = ()=>resolve();
+    req.onerror = ()=>reject(req.error);
+  }));
+}
 
 let DB = null;
 let _dbSnap = null;      // snapshot for change-detection stamping
@@ -528,18 +565,23 @@ function recordLoginAttempt(username, success){
   _loginAttempts[key].count++;
   _loginAttempts[key].lastAttempt = Date.now();
 }
-function getStorageUsage(){
+async function getStorageUsage(){
+  if(navigator.storage && navigator.storage.estimate){
+    const est = await navigator.storage.estimate();
+    return { used: est.usage || 0, quota: est.quota || 0 };
+  }
   let total = 0;
   for(let i=0; i<localStorage.length; i++){
     const k = localStorage.key(i);
     total += (k.length + localStorage.getItem(k).length) * 2;
   }
-  return total;
+  return { used: total, quota: 5*1024*1024 };
 }
 function formatBytes(b){
   if(b < 1024) return b + ' B';
   if(b < 1048576) return (b/1024).toFixed(1) + ' KB';
-  return (b/1048576).toFixed(2) + ' MB';
+  if(b < 1073741824) return (b/1048576).toFixed(1) + ' MB';
+  return (b/1073741824).toFixed(1) + ' GB';
 }
 function exportBackup(){
   const data = JSON.stringify(DB, null, 2);
@@ -566,7 +608,7 @@ function importBackup(){
       if(!confirm(`Restore from "${file.name}"? This will REPLACE all current data. Make sure you have a backup of your current data first.`)) return;
       DB = data;
       backfillMissingKeys(DB);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
+      await idbSet(DB).catch(()=>{});
       takeSnapshot();
       toast('Data restored from backup — reloading...');
       setTimeout(()=>location.reload(), 1000);
@@ -594,9 +636,10 @@ function showBackupReminder(){
     </div>
   `);
 }
-function resetAllData(){
+async function resetAllData(){
   if(!confirm('DANGER: This will permanently delete ALL data and reset the app to a fresh state. This cannot be undone. Are you absolutely sure?')) return;
   if(!confirm('Last chance — type your admin password to confirm this action, or press Cancel.')) return;
+  await idbClear().catch(()=>{});
   localStorage.removeItem(STORAGE_KEY);
   localStorage.removeItem('buildsuite_last_backup');
   localStorage.removeItem('buildsuite_theme');
@@ -625,14 +668,23 @@ function backfillMissingKeys(target){
   });
   return migrated;
 }
-function loadDB(){
+async function loadDB(){
+  try{
+    const data = await idbGet();
+    if(data){
+      DB = data;
+      const migrated = backfillMissingKeys(DB);
+      if(migrated) saveDB();
+      return;
+    }
+  }catch(e){ console.warn('IndexedDB load failed, trying localStorage', e); }
   const raw = localStorage.getItem(STORAGE_KEY);
   if(raw){
     try {
       DB = JSON.parse(raw);
-      // Migration: if this browser saved data from before a feature (e.g. Fleet) was added,
-      // backfill any missing top-level collections/settings from the seed so the app doesn't break.
       const migrated = backfillMissingKeys(DB);
+      await idbSet(DB).catch(()=>{});
+      localStorage.removeItem(STORAGE_KEY);
       if(migrated) saveDB();
       return;
     } catch(e){}
@@ -661,19 +713,19 @@ function stampChangedRecords(){
 function takeSnapshot(){ _dbSnap = JSON.parse(JSON.stringify(DB)); }
 function saveDB(){
   stampChangedRecords();
-  try{
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
+  idbSet(DB).then(()=>{
     localStorage.setItem('buildsuite_updated_at', new Date().toISOString());
-  }catch(e){
-    console.error('saveDB: localStorage write failed', e);
-    toast('Storage full — your data may not be saved locally. Try clearing old photos or exporting a backup.');
-  }
+  }).catch(e=>{
+    console.error('saveDB: IndexedDB write failed', e);
+    toast('Storage write failed — try exporting a backup.');
+  });
   takeSnapshot();
 }
-function resetAll(){
+async function resetAll(){
   if(!confirm('Reset all data back to the original sample data? This cannot be undone.')) return;
+  await idbClear().catch(()=>{});
   localStorage.removeItem(STORAGE_KEY);
-  loadDB();
+  await loadDB();
   toast('Data reset');
   render();
 }
@@ -709,8 +761,8 @@ function runPrepareForResale(){
       companyShortName: '', companyDescription: '', companyAddress: '', companyPhone: '', companyEmail: '', companyTIN: '', sheetsWebhookUrl: '' },
   };
   DB = blank;
+  idbSet(DB).catch(()=>{});
   localStorage.removeItem(STORAGE_KEY);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
   cloud = { connected: false, syncing: false, lastError: '' };
   session = null;
   sessionStorage.removeItem('buildsuite_session');
@@ -2003,26 +2055,9 @@ function openSettings(){
     <div class="field" style="border-top:1px solid var(--line);padding-top:14px">
       <label class="fl">Local Data Management</label>
       <div class="mut" style="font-size:12.5px;margin-bottom:10px">Your data is stored in this browser's local storage. Download backups regularly to protect against data loss.</div>
-      ${(()=>{
-        const sizeBytes = getStorageUsage();
-        const limitBytes = 5 * 1024 * 1024;
-        const pct = Math.min(100, (sizeBytes / limitBytes) * 100);
-        const color = pct > 80 ? 'var(--danger)' : pct > 50 ? 'var(--warn)' : 'var(--green)';
-        const lastBackup = localStorage.getItem('buildsuite_last_backup');
-        const lastBackupStr = lastBackup ? fmtDate(lastBackup.slice(0,10)) : 'Never';
-        return `
-          <div style="margin-bottom:12px">
-            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
-              <span>Storage used: <b>${formatBytes(sizeBytes)}</b> / ~5 MB</span>
-              <span style="color:${color}">${pct.toFixed(1)}%</span>
-            </div>
-            <div style="background:var(--chip);border-radius:4px;height:8px;overflow:hidden">
-              <div style="width:${pct}%;height:100%;background:${color};border-radius:4px;transition:width .3s"></div>
-            </div>
-            <div class="mut" style="font-size:11px;margin-top:4px">Last backup: <b>${lastBackupStr}</b></div>
-          </div>
-        `;
-      })()}
+      <div id="storageBar" style="margin-bottom:12px">
+        <div style="font-size:12px;color:var(--muted)">Calculating storage...</div>
+      </div>
       <div class="btnrow" style="margin-top:0;flex-wrap:wrap">
         <button class="btn pri sm" onclick="exportBackup()">⬇ Download Backup</button>
         <button class="btn ghost sm" onclick="importBackup()">⬆ Restore from Backup</button>
@@ -2066,6 +2101,24 @@ function openSettings(){
       <button class="btn ghost" onclick="closeModal()">Close</button>
     </div>
   `);
+  getStorageUsage().then(({used, quota})=>{
+    const el = document.getElementById('storageBar');
+    if(!el) return;
+    const pct = Math.min(100, (used / quota) * 100);
+    const color = pct > 80 ? 'var(--danger)' : pct > 50 ? 'var(--warn)' : 'var(--green)';
+    const lastBackup = localStorage.getItem('buildsuite_last_backup');
+    const lastBackupStr = lastBackup ? fmtDate(lastBackup.slice(0,10)) : 'Never';
+    el.innerHTML = `
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+        <span>Storage used: <b>${formatBytes(used)}</b> / ${formatBytes(quota)}</span>
+        <span style="color:${color}">${pct.toFixed(1)}%</span>
+      </div>
+      <div style="background:var(--chip);border-radius:4px;height:8px;overflow:hidden">
+        <div style="width:${pct}%;height:100%;background:${color};border-radius:4px;transition:width .3s"></div>
+      </div>
+      <div class="mut" style="font-size:11px;margin-top:4px">Last backup: <b>${lastBackupStr}</b></div>
+    `;
+  });
 }
 function saveSignupCode(){
   DB.settings.signupCode = document.getElementById('signupCodeInput').value.trim();
@@ -11406,7 +11459,10 @@ function dbFingerprint(){
   return h;
 }
 async function boot(){
-  loadDB();
+  await loadDB();
+  if(navigator.storage && navigator.storage.persist){
+    navigator.storage.persist().catch(()=>{});
+  }
   runMigrationV3();
   runMigrationV4();
   runMigrationV5();
