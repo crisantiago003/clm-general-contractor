@@ -1792,8 +1792,10 @@ function renderHeader(){
     </div>`;
   }).join('');
 
-  const isCollapsed = document.getElementById('sidebar').classList.contains('collapsed');
-  document.getElementById('sidebar').innerHTML = `
+  const sidebarEl = document.getElementById('sidebar');
+  const isCollapsed = sidebarEl.classList.contains('collapsed');
+  const _sidebarScrollTop = sidebarEl.scrollTop;
+  sidebarEl.innerHTML = `
     <div class="brand" onclick="go('dashboard');closeSidebar()" title="Go to Dashboard">
       <div class="mark">${companyMark()}</div>
       <div class="name">${esc(companyDisplayName())}</div>
@@ -1812,6 +1814,7 @@ function renderHeader(){
       <button class="sidebar-logout" onclick="logout()">🚪 <span>Log out</span></button>
     </div>
   `;
+  sidebarEl.scrollTop = _sidebarScrollTop;
 
   const alerts = getAlerts();
   document.getElementById('topBar').innerHTML = `
