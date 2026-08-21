@@ -1794,7 +1794,8 @@ function renderHeader(){
 
   const sidebarEl = document.getElementById('sidebar');
   const isCollapsed = sidebarEl.classList.contains('collapsed');
-  const _sidebarScrollTop = sidebarEl.scrollTop;
+  const sidebarNavEl = sidebarEl.querySelector('.sidebar-nav');
+  const _navScroll = sidebarNavEl ? sidebarNavEl.scrollTop : 0;
   sidebarEl.innerHTML = `
     <div class="brand" onclick="go('dashboard');closeSidebar()" title="Go to Dashboard">
       <div class="mark">${companyMark()}</div>
@@ -1814,7 +1815,8 @@ function renderHeader(){
       <button class="sidebar-logout" onclick="logout()">🚪 <span>Log out</span></button>
     </div>
   `;
-  sidebarEl.scrollTop = _sidebarScrollTop;
+  const newNavEl = sidebarEl.querySelector('.sidebar-nav');
+  if(newNavEl) newNavEl.scrollTop = _navScroll;
 
   const alerts = getAlerts();
   document.getElementById('topBar').innerHTML = `
