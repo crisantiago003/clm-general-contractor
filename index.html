@@ -273,6 +273,10 @@ tr.click td{transition:background .1s}
 [data-theme="light"] .b-danger{background:#fbdedd;color:#a4302c}
 [data-theme="light"] .b-paid,[data-theme="light"] .b-Paid,[data-theme="light"] .b-Completed,[data-theme="light"] .b-Closed,[data-theme="light"] .b-Delivered{background:#dcf3e3;color:#137a3d}
 [data-theme="light"] .b-Pending,[data-theme="light"] .b-Ordered,[data-theme="light"] .b-Scheduled{background:#faedd2;color:#8a5c0d}
+.b-Active,.b-Open,.b-In.Progress,.b-Draft{background:#1a2a3d;color:#79b8ff}
+.b-Cancelled,.b-Rejected,.b-Expired{background:#3a1414;color:#ff8f8c}
+[data-theme="light"] .b-Active,[data-theme="light"] .b-Open,[data-theme="light"] .b-In.Progress,[data-theme="light"] .b-Draft{background:#dceafd;color:#155694}
+[data-theme="light"] .b-Cancelled,[data-theme="light"] .b-Rejected,[data-theme="light"] .b-Expired{background:#fbdedd;color:#a4302c}
 .lowstock{color:var(--danger);font-weight:800}
 .btn{border:none;border-radius:8px;padding:9px 15px;font-weight:700;font-size:13px;display:inline-flex;align-items:center;gap:6px;transition:background .15s,color .15s,filter .15s,border-color .15s,opacity .15s}
 .btn.pri{background:var(--accent);color:var(--accent-ink)}
@@ -282,6 +286,10 @@ tr.click td{transition:background .1s}
 .btn.del:hover{background:rgba(224,82,79,.1)}
 .btn.ghost{background:var(--chip);color:var(--text);border:1px solid var(--line)}
 .btn.ghost:hover{background:var(--line)}
+.btn.sec{background:var(--accent2);color:#04222a}
+.btn.sec:hover{filter:brightness(1.08)}
+.btn.warn{background:var(--warn);color:#1c1204}
+.btn.warn:hover{filter:brightness(1.08)}
 .btn.sm{padding:6px 11px;font-size:12px}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 .btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
@@ -434,6 +442,27 @@ td,th,.stat-value,.kpi-val,.money{font-variant-numeric:tabular-nums}
 .landing-footer a{color:var(--accent2);text-decoration:none}
 .hamburger{display:none;background:none;border:none;color:var(--text);font-size:22px;padding:6px;cursor:pointer;line-height:1}
 @media(max-width:820px){.svc-grid,.proj-grid,.process-grid{grid-template-columns:1fr 1fr}.stat-strip{grid-template-columns:1fr 1fr}.landing-contact{grid-template-columns:1fr}.landing-hero h1{font-size:40px}.landing-section h2{font-size:30px}.landing-nav nav{display:none;position:absolute;top:64px;left:0;right:0;background:var(--panel);border-bottom:1px solid var(--line);flex-direction:column;padding:12px 24px;gap:8px;box-shadow:var(--shadow)}.landing-nav nav.open{display:flex}.hamburger{display:block}.cta-banner{flex-direction:column;text-align:center}}
+input,select,textarea{transition:border-color .2s,box-shadow .2s}
+kbd{background:var(--chip);border:1px solid var(--line);padding:2px 7px;border-radius:4px;font-family:var(--mono);font-size:11.5px;font-weight:600;white-space:nowrap;box-shadow:0 1px 0 var(--line)}
+@keyframes fieldShake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-4px)}40%,80%{transform:translateX(4px)}}
+.field-shake{animation:fieldShake .35s ease-in-out}
+.save-guard{position:relative}
+.save-guard::after{content:'';position:absolute;inset:0;pointer-events:none;opacity:0}
+.save-guard.saving{pointer-events:none;opacity:.7}
+.autosave-indicator{position:fixed;bottom:20px;right:20px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;color:var(--green);box-shadow:var(--shadow);opacity:0;transform:translateY(8px);transition:opacity .25s,transform .25s;z-index:90;pointer-events:none}
+.autosave-indicator.show{opacity:1;transform:translateY(0)}
+.hamburger-bar{display:block;width:20px;height:2px;background:var(--text);border-radius:1px;transition:transform .25s,opacity .2s}
+.hamburger-bar+.hamburger-bar{margin-top:5px}
+.hamburger.active .hamburger-bar:nth-child(1){transform:rotate(45deg) translate(5px,5px)}
+.hamburger.active .hamburger-bar:nth-child(2){opacity:0}
+.hamburger.active .hamburger-bar:nth-child(3){transform:rotate(-45deg) translate(5px,-5px)}
+tr.highlight-row td{animation:rowHighlight 1.5s ease-out}
+@keyframes rowHighlight{0%{background:rgba(240,165,55,.15)}100%{background:transparent}}
+.tooltip{position:relative}
+.tooltip[data-tip]::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%) scale(.9);background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:5px 10px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .15s,transform .15s;z-index:60;box-shadow:var(--shadow)}
+.tooltip[data-tip]:hover::after{opacity:1;transform:translateX(-50%) scale(1)}
+.sidebar-toggle .hamburger-bar{display:block;width:18px;height:2px;background:currentColor;border-radius:1px;transition:transform .25s,opacity .2s}
+.sidebar-toggle .hamburger-bar+.hamburger-bar{margin-top:4px}
 </style>
 </head>
 <body>
@@ -1232,10 +1261,67 @@ function paginationHtml(pg, onPage){
   return `<div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;flex-wrap:wrap">${btns.join('')}</div>`;
 }
 
-/* ---------- debounce ---------- */
+/* ---------- debounce & throttle ---------- */
 function debounce(fn, ms){
   let timer;
   return function(...args){ clearTimeout(timer); timer = setTimeout(()=>fn.apply(this,args), ms); };
+}
+function throttle(fn, ms){
+  let last = 0;
+  return function(...args){ const now = Date.now(); if(now - last >= ms){ last = now; fn.apply(this, args); } };
+}
+
+/* ---------- form validation helpers ---------- */
+function validateRequired(fieldId, msg){
+  const el = document.getElementById(fieldId);
+  if(!el) return false;
+  const val = el.value.trim();
+  if(!val){
+    el.style.borderColor = 'var(--danger)';
+    el.closest('.field')?.classList.add('field-shake');
+    setTimeout(()=>{ el.style.borderColor=''; el.closest('.field')?.classList.remove('field-shake'); }, 1500);
+    toast(msg || 'This field is required');
+    el.focus();
+    return false;
+  }
+  return val;
+}
+function validateNumber(fieldId, opts){
+  const el = document.getElementById(fieldId);
+  if(!el) return false;
+  const val = Number(el.value);
+  if(isNaN(val) || (opts?.min !== undefined && val < opts.min) || (opts?.max !== undefined && val > opts.max)){
+    el.style.borderColor = 'var(--danger)';
+    el.closest('.field')?.classList.add('field-shake');
+    setTimeout(()=>{ el.style.borderColor=''; el.closest('.field')?.classList.remove('field-shake'); }, 1500);
+    toast(opts?.msg || 'Please enter a valid number');
+    el.focus();
+    return false;
+  }
+  return val;
+}
+
+/* ---------- double-click guard ---------- */
+function guardClick(btn, fn){
+  if(btn._saving) return;
+  btn._saving = true;
+  btn.classList.add('loading');
+  try{ fn(); } finally {
+    setTimeout(()=>{ btn._saving = false; btn.classList.remove('loading'); }, 600);
+  }
+}
+
+/* ---------- autosave flash ---------- */
+let _autoSaveEl = null;
+function flashAutoSave(){
+  if(!_autoSaveEl){
+    _autoSaveEl = document.createElement('div');
+    _autoSaveEl.className = 'autosave-indicator';
+    _autoSaveEl.textContent = 'Saved';
+    document.body.appendChild(_autoSaveEl);
+  }
+  _autoSaveEl.classList.add('show');
+  setTimeout(()=> _autoSaveEl.classList.remove('show'), 1200);
 }
 
 /* ---------- keyboard shortcuts ---------- */
@@ -1245,6 +1331,7 @@ document.addEventListener('keydown', function(e){
   if(e.key === 'Escape'){
     const modal = document.getElementById('modalBg');
     if(modal){ closeModal(); e.preventDefault(); return; }
+    if(document.querySelector('.sidebar.open')){ closeSidebar(); e.preventDefault(); return; }
   }
   if((e.ctrlKey || e.metaKey) && e.key === 'k'){
     e.preventDefault();
@@ -1253,15 +1340,46 @@ document.addEventListener('keydown', function(e){
     const searchBox = document.querySelector('.searchbar input');
     if(searchBox) searchBox.focus();
   }
-  if(e.key === '?' && !inInput && !e.ctrlKey && !e.metaKey){
-    e.preventDefault();
-    openModal(`<h3>Keyboard Shortcuts</h3>
-      <div style="display:grid;grid-template-columns:auto 1fr;gap:8px 16px;font-size:13px;margin-top:12px">
-        <kbd style="background:var(--chip);padding:2px 8px;border-radius:4px;font-family:monospace">Ctrl+K</kbd><span>Search everything</span>
-        <kbd style="background:var(--chip);padding:2px 8px;border-radius:4px;font-family:monospace">Esc</kbd><span>Close modal / dialog</span>
-        <kbd style="background:var(--chip);padding:2px 8px;border-radius:4px;font-family:monospace">?</kbd><span>Show this help</span>
-      </div>
-      <div class="btnrow" style="margin-top:16px"><button class="btn ghost" onclick="closeModal()">Close</button></div>`);
+  if(!inInput && !e.ctrlKey && !e.metaKey && !e.altKey){
+    if(e.key === '?'){
+      e.preventDefault();
+      openModal(`<h3>Keyboard Shortcuts</h3>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:8px 16px;font-size:13px;margin-top:12px">
+          <kbd>Ctrl+K</kbd><span>Search everything</span>
+          <kbd>Esc</kbd><span>Close modal / sidebar</span>
+          <kbd>N</kbd><span>New item (context-dependent)</span>
+          <kbd>/</kbd><span>Focus search bar</span>
+          <kbd>G then D</kbd><span>Go to Dashboard</span>
+          <kbd>G then P</kbd><span>Go to Projects</span>
+          <kbd>G then O</kbd><span>Go to Orders</span>
+          <kbd>?</kbd><span>Show this help</span>
+        </div>
+        <div class="btnrow" style="margin-top:16px"><button class="btn ghost" onclick="closeModal()">Close</button></div>`);
+      return;
+    }
+    if(e.key === '/'){
+      e.preventDefault();
+      const searchBox = document.querySelector('.searchbar input');
+      if(searchBox) searchBox.focus();
+      return;
+    }
+    if(e.key === 'n' || e.key === 'N'){
+      const addBtn = document.querySelector('.ph .btn.pri');
+      if(addBtn){ e.preventDefault(); addBtn.click(); }
+      return;
+    }
+    if(e.key === 'g' || e.key === 'G'){
+      window._goPending = true;
+      setTimeout(()=>{ window._goPending = false; }, 800);
+      return;
+    }
+    if(window._goPending){
+      window._goPending = false;
+      const goMap = {d:'dashboard',p:'customers',o:'orders',e:'employees',f:'fleet',i:'inventory',t:'transactions',s:'schedule',b:'bids',l:'dailyLogs',r:'reports'};
+      const target = goMap[e.key.toLowerCase()];
+      if(target && typeof go === 'function'){ e.preventDefault(); go(target); }
+      return;
+    }
   }
 });
 
