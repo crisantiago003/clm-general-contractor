@@ -338,7 +338,18 @@ td,th,.stat-value,.kpi-val,.money{font-variant-numeric:tabular-nums}
 .jobcard:hover{border-color:var(--accent2)}
 .itemsedit input,.itemsedit select{padding:7px 8px;font-size:12.8px}
 .itemsedit td{padding:6px}
-@media print{.sidebar,.sidebar-overlay,.sidebar-toggle,.topbar,.noprint,.toast,.toast-container,.modal-bg,.searchbar,.btnrow,.pillnav,.hamburger,.offline-banner,.skip-link,.app-loading,.dash-quick-actions{display:none!important}.app-main{margin-left:0!important}body{background:#fff;color:#000;font-size:12px}main{max-width:none;padding:0}.panel,.kpi,.kpi-hero,.kpi-sec,.dash-kpi{border:1px solid #ccc;box-shadow:none;break-inside:avoid}table{font-size:11px;break-inside:auto}tr{break-inside:avoid}th{background:#f0f0f0!important;color:#000!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}.progress>div{print-color-adjust:exact;-webkit-print-color-adjust:exact}.progress{border:1px solid #ccc}.badge{border:1px solid #999;print-color-adjust:exact;-webkit-print-color-adjust:exact}canvas{max-width:100%!important}a{color:inherit;text-decoration:none}h1,h2,h3{page-break-after:avoid}.hero-cards,.dash-grid6,.dash-grid3,.grid2,.grid3,.cards{display:block}.hero-cards>*,.dash-grid6>*,.dash-grid3>*,.grid2>*,.grid3>*,.cards>*{margin-bottom:8px;break-inside:avoid}@page{margin:1.5cm;size:A4}}
+@media print{.sidebar,.sidebar-overlay,.sidebar-toggle,.topbar,.noprint,.toast,.toast-container,.modal-bg,.searchbar,.btnrow,.pillnav,.hamburger,.offline-banner,.skip-link,.app-loading,.dash-quick-actions,.crumb,.toggle{display:none!important}.app-main{margin-left:0!important}body{background:#fff;color:#000;font-size:12px}main{max-width:none;padding:0}.panel,.kpi,.kpi-hero,.kpi-sec,.dash-kpi{border:1px solid #ccc;box-shadow:none;break-inside:avoid}table{font-size:11px;break-inside:auto}tr{break-inside:avoid}th{background:#f0f0f0!important;color:#000!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}.progress>div{print-color-adjust:exact;-webkit-print-color-adjust:exact}.progress{border:1px solid #ccc}.badge{border:1px solid #999;print-color-adjust:exact;-webkit-print-color-adjust:exact}canvas{max-width:100%!important}a{color:inherit;text-decoration:none}h1,h2,h3{page-break-after:avoid}.hero-cards,.dash-grid6,.dash-grid3,.grid2,.grid3,.cards{display:block}.hero-cards>*,.dash-grid6>*,.dash-grid3>*,.grid2>*,.grid3>*,.cards>*{margin-bottom:8px;break-inside:avoid}@page{margin:1.5cm;size:A4}
+.print-header{display:flex!important;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #222;padding-bottom:12px;margin-bottom:16px}
+.print-header .ph-company{font-size:18px;font-weight:800;letter-spacing:.5px}.print-header .ph-detail{font-size:11px;color:#444;line-height:1.6}
+.print-header .ph-doc{text-align:right}.print-header .ph-doc .ph-type{font-size:20px;font-weight:800;text-transform:uppercase}.print-header .ph-doc .ph-num{font-size:13px;color:#444}
+.print-party{display:flex!important;justify-content:space-between;margin-bottom:16px;gap:40px}.print-party>div{flex:1}.print-party .pp-label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:4px}.print-party .pp-name{font-size:14px;font-weight:700}
+.print-footer{display:flex!important;border-top:1px solid #ccc;margin-top:24px;padding-top:12px;font-size:10px;color:#666;justify-content:space-between}
+.print-items th{background:#f0f0f0!important;color:#000!important;print-color-adjust:exact;-webkit-print-color-adjust:exact;padding:8px 10px;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+.print-items td{padding:8px 10px;border-bottom:1px solid #eee;font-size:12px}
+.print-items .num{text-align:right;font-variant-numeric:tabular-nums}
+.print-totals{display:flex;justify-content:flex-end;margin-top:12px}.print-totals table{border-collapse:collapse}.print-totals td{padding:4px 12px;font-size:12px}.print-totals .grand{font-weight:800;font-size:15px;border-top:2px solid #222}
+}
+.print-header,.print-party,.print-footer{display:none}
 .btn:active:not(:disabled){transform:scale(.97)}
 .sidebar-item:active{transform:scale(.98)}
 .view-enter{animation:viewFade .2s ease-out}
@@ -370,7 +381,17 @@ td,th,.stat-value,.kpi-val,.money{font-variant-numeric:tabular-nums}
 .loading-overlay{position:absolute;inset:0;background:color-mix(in srgb,var(--bg) 70%,transparent);display:flex;align-items:center;justify-content:center;z-index:10;border-radius:inherit}
 .btn.loading{position:relative;color:transparent;pointer-events:none}
 .btn.loading::after{content:'';position:absolute;width:16px;height:16px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite;left:calc(50% - 8px);top:calc(50% - 8px);color:var(--accent-ink)}
-@media(max-width:480px){.dash-welcome h1{font-size:18px}.dash-welcome{flex-direction:column;align-items:flex-start}.dash-grid6{grid-template-columns:1fr!important}.hero-cards{grid-template-columns:1fr}.stat-strip{grid-template-columns:1fr 1fr}.svc-grid,.proj-grid{grid-template-columns:1fr}.process-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:480px){.dash-welcome h1{font-size:18px}.dash-welcome{flex-direction:column;align-items:flex-start}.dash-grid6{grid-template-columns:1fr!important}.hero-cards{grid-template-columns:1fr}.stat-strip{grid-template-columns:1fr 1fr}.svc-grid,.proj-grid{grid-template-columns:1fr}.process-grid{grid-template-columns:1fr 1fr}
+.btn,.sidebar-item{min-height:44px}
+input,select,textarea{font-size:16px!important}
+.panel{padding:14px 10px}
+.grid3{grid-template-columns:1fr!important}
+.ph{flex-direction:column;align-items:flex-start;gap:8px}
+.modal{padding:16px 12px;max-width:calc(100vw - 24px)}
+table{font-size:12px}
+th,td{padding:8px 6px}
+.twrap{margin:0 -10px;padding:0 10px}
+}
 
 /* ===== Public Landing Page ===== */
 .landing{min-height:100vh;background:var(--bg)}
@@ -480,7 +501,7 @@ tr.highlight-row td{animation:rowHighlight 1.5s ease-out}
 <div class="offline-banner" id="offlineBanner">⚠ You are offline — changes are saved locally and will sync when you reconnect</div>
 <div class="toast-container" id="toastContainer"></div>
 
-<script id="seed-data" type="application/json">{"customers":[],"vendors":[],"jobs":[],"products":[],"orders":[],"employees":[],"timesheets":[],"transactions":[],"users":[],"payrolls":[],"paidEmployees":[],"payItems":[],"vehicles":[],"vehicleExpenses":[],"fuelLogs":[],"meterLogs":[],"vehicleReminders":[],"materials":[],"equipment":[],"cashAdvances":[],"purchaseRequests":[],"equipmentReminders":[],"settings":{"salesTaxRate":0.08,"poTaxRate":0.1,"signupCode":"BUILD2026","companyName":"","companyDescription":"","companyAddress":"","companyPhone":"","companyEmail":"","companyTIN":"","sheetsWebhookUrl":"","companyShortName":""},"siteAssignments":[],"announcements":[],"notificationLog":[],"galleryPhotos":[],"trash":[],"testimonials":[],"materialTransfers":[],"siteDiaries":[],"defects":[],"leads":[],"scheduleActivities":[],"costMaterials":[],"laborRates":[],"costEstimates":[],"dailyLogs":[],"documents":[],"timecards":[],"bids":[],"progressBills":[],"subReports":[],"takeoffs":[]}</script>
+<script id="seed-data" type="application/json">{"customers":[],"vendors":[],"jobs":[],"products":[],"orders":[],"employees":[],"timesheets":[],"transactions":[],"users":[],"payrolls":[],"paidEmployees":[],"payItems":[],"vehicles":[],"vehicleExpenses":[],"fuelLogs":[],"meterLogs":[],"vehicleReminders":[],"materials":[],"equipment":[],"cashAdvances":[],"purchaseRequests":[],"equipmentReminders":[],"settings":{"salesTaxRate":0.08,"poTaxRate":0.1,"signupCode":"BUILD2026","companyName":"","companyDescription":"","companyAddress":"","companyPhone":"","companyEmail":"","companyTIN":"","sheetsWebhookUrl":"","companyShortName":""},"siteAssignments":[],"announcements":[],"notificationLog":[],"galleryPhotos":[],"trash":[],"testimonials":[],"materialTransfers":[],"siteDiaries":[],"defects":[],"leads":[],"scheduleActivities":[],"costMaterials":[],"laborRates":[],"costEstimates":[],"dailyLogs":[],"documents":[],"timecards":[],"bids":[],"progressBills":[],"subReports":[],"takeoffs":[],"auditLog":[]}</script>
 <script>
 /* ============================================================
    CLM General Contractor & Services, Inc. — Construction Management System
@@ -1366,7 +1387,7 @@ const NAV_ICONS = {
   dailyLogs:'📝', documents:'📁', timecards:'⏱️', bids:'📑',
   progressBilling:'💲', reports:'🖨️', clientPortal:'🏠',
   subPortal:'🔧', costVariance:'📉', takeoffs:'📏',
-  calculator:'🧮', costEstimator:'💵', schedule:'📐'
+  calculator:'🧮', costEstimator:'💵', schedule:'📐', auditLog:'📜'
 };
 const NAV = [
   { key:'orders', label:'Orders' },
@@ -1426,6 +1447,7 @@ const SIDEBAR_GROUPS = [
   ]},
   { section:'ADMIN', items:[
     { key:'users', label:'Users' },
+    { key:'auditLog', label:'Audit Log' },
   ]},
 ];
 function navGroupForView(v){
@@ -1523,6 +1545,7 @@ function render(){
     myProfile: renderMyProfile,
     notificationLog: renderNotificationLog,
     trash: renderTrash,
+    auditLog: renderAuditLog,
     help: renderHelp,
   };
   (renderers[view] || renderDashboard)();
@@ -1700,6 +1723,15 @@ function trashLabel(t){
 }
 function moveToTrash(type, record){
   DB.trash.push({ id: uid(), type, data: JSON.parse(JSON.stringify(record)), deletedAt: new Date().toISOString(), deletedBy: (session&&session.name)||'System' });
+  logAudit('delete', type, record.id||record.name||'', record.name||record.title||record.description||'');
+}
+function logAudit(action, entity, entityId, label, details){
+  if(!DB.auditLog) DB.auditLog = [];
+  DB.auditLog.push({
+    id: uid(), action, entity, entityId: String(entityId), label: String(label||''),
+    details: details||'', user: (session&&session.name)||'System', date: new Date().toISOString()
+  });
+  if(DB.auditLog.length > 5000) DB.auditLog = DB.auditLog.slice(-4000);
 }
 function purgeOldTrash(){
   const cutoff = Date.now() - 30*24*60*60*1000;
@@ -1891,6 +1923,49 @@ function renderTrash(){
             </td>
           </tr>`).join('') || `<tr><td colspan="7" class="empty">Trash is empty</td></tr>`}
       </table></div>
+    </div>
+  `;
+}
+function renderAuditLog(){
+  if(session.type !== 'Admin'){ toast("Only admins can view the audit log."); go('dashboard'); return; }
+  if(!DB.auditLog) DB.auditLog = [];
+  const q = (sub.auditQ||'').toLowerCase();
+  const filterAction = sub.auditAction||'';
+  let logs = [...DB.auditLog].reverse();
+  if(q) logs = logs.filter(l=>(l.label||'').toLowerCase().includes(q)||(l.entity||'').toLowerCase().includes(q)||(l.user||'').toLowerCase().includes(q));
+  if(filterAction) logs = logs.filter(l=>l.action===filterAction);
+  const page = sub.auditPage||1;
+  const perPage = 50;
+  const total = logs.length;
+  const pages = Math.ceil(total/perPage);
+  const slice = logs.slice((page-1)*perPage, page*perPage);
+  const actionIcon = {create:'🟢',update:'🔵',delete:'🔴'};
+  document.getElementById('mainArea').innerHTML = `
+    <div class="crumb">AUDIT LOG</div>
+    <div class="panel">
+      <div class="ph"><h2>Audit Log</h2><span class="mut">${total} entries</span></div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap" class="noprint">
+        <input placeholder="Search user, entity, label..." value="${esc(sub.auditQ||'')}" style="flex:1;min-width:200px" oninput="sub.auditQ=this.value;sub.auditPage=1;renderAuditLog()">
+        <select onchange="sub.auditAction=this.value;sub.auditPage=1;renderAuditLog()">
+          <option value="">All actions</option>
+          <option value="create" ${filterAction==='create'?'selected':''}>Created</option>
+          <option value="update" ${filterAction==='update'?'selected':''}>Updated</option>
+          <option value="delete" ${filterAction==='delete'?'selected':''}>Deleted</option>
+        </select>
+        <button class="btn ghost sm" onclick="if(confirm('Clear entire audit log?')){DB.auditLog=[];saveDB();renderAuditLog();}">Clear Log</button>
+      </div>
+      <div class="twrap"><table>
+        <tr><th style="width:40px"></th><th>Action</th><th>Type</th><th>Name</th><th>User</th><th>Date</th></tr>
+        ${slice.map(l=>`<tr>
+          <td>${actionIcon[l.action]||'⚪'}</td>
+          <td style="text-transform:capitalize">${esc(l.action)}</td>
+          <td>${esc(TRASH_TYPE_LABELS[l.entity]||l.entity)}</td>
+          <td><b>${esc(l.label||'—')}</b>${l.details?`<div class="mut" style="font-size:11px">${esc(l.details)}</div>`:''}</td>
+          <td class="mut">${esc(l.user)}</td>
+          <td class="mut" style="white-space:nowrap">${fmtDate((l.date||'').slice(0,10))} ${(l.date||'').slice(11,16)}</td>
+        </tr>`).join('') || `<tr><td colspan="6" class="empty">No audit entries yet</td></tr>`}
+      </table></div>
+      ${pages>1?`<div class="pagination">${Array.from({length:pages},(_,i)=>`<button class="btn ghost sm${page===i+1?' on':''}" onclick="sub.auditPage=${i+1};renderAuditLog()">${i+1}</button>`).join('')}</div>`:''}
     </div>
   `;
 }
@@ -3791,6 +3866,7 @@ function ordersPage(p){ sub.page=p; renderOrders(); }
 function newOrder(type){
   const order = { id: nextId(DB.orders), type, partyId:'', partyName:'', jobId:'', jobName:'', date: todayISO(), status: defaultStatus(type), account: defaultAccount(type), payment:'', payments: [], items: [], laborCosts: [] };
   DB.orders.push(order);
+  logAudit('create', 'order', order.id, orderTypeLabel(type)+' #'+order.id);
   go('orders', {editId: order.id, isNew:true});
 }
 function defaultStatus(type){ return type==='INVOICE' ? 'Ordered' : type==='PURCHASE' ? 'Pending' : 'Scheduled'; }
@@ -3811,7 +3887,36 @@ function renderOrderDetail(id){
   const profit = orderProfit(o);
   const tax = total * taxRateFor(o.type);
 
+  const compName = DB.settings.companyName || 'BuildSuite';
+  const compAddr = DB.settings.companyAddress || '';
+  const compPhone = DB.settings.companyPhone || '';
+  const compEmail = DB.settings.companyEmail || '';
+  const compTIN = DB.settings.companyTIN || '';
+  const partyRec = partyList.find(p=>p.id==o.partyId);
+  const partyAddr = partyRec ? (partyRec.address||partyRec.city||'') : '';
+  const docType = o.type==='PURCHASE' ? 'Purchase Order' : o.type==='WORK ORDER' ? 'Work Order' : 'Invoice';
+
   document.getElementById('mainArea').innerHTML = `
+    <div class="print-header">
+      <div>
+        <div class="ph-company">${esc(compName)}</div>
+        <div class="ph-detail">
+          ${compAddr ? esc(compAddr)+'<br>' : ''}${compPhone ? esc(compPhone) : ''}${compEmail ? ' · '+esc(compEmail) : ''}
+          ${compTIN ? '<br>TIN: '+esc(compTIN) : ''}
+        </div>
+      </div>
+      <div class="ph-doc">
+        <div class="ph-type">${docType}</div>
+        <div class="ph-num">#${o.id} · ${fmtDate(o.date)}</div>
+        <div class="ph-num">Status: ${esc(o.status)}</div>
+        ${o.type==='INVOICE' && o.orNumber ? `<div class="ph-num">OR# ${esc(o.orNumber)}</div>` : ''}
+        ${o.dueDate ? `<div class="ph-num">Due: ${fmtDate(o.dueDate)}</div>` : ''}
+      </div>
+    </div>
+    <div class="print-party">
+      <div><div class="pp-label">${partyLabel}</div><div class="pp-name">${esc(partyRec?partyRec.name:'—')}</div><div class="ph-detail">${esc(partyAddr)}</div></div>
+      ${o.jobName ? `<div><div class="pp-label">Job / Project</div><div class="pp-name">${esc(o.jobName)}</div></div>` : ''}
+    </div>
     <div class="crumb"><a onclick="go('orders',{type:sub.type||'ALL'})" style="color:var(--muted);text-decoration:none">Orders</a> &nbsp;/&nbsp; <b>${o.id ? '#'+o.id : 'New'}</b></div>
     <div class="panel">
       <div class="ph">
@@ -3949,6 +4054,10 @@ function renderOrderDetail(id){
       <div class="stat-row"><span class="mut">Labor Cost</span><span class="mono">-${money(labor)}</span></div>
       <div class="stat-row" style="font-weight:800;font-size:15px"><span>Estimated Profit${total ? ` (${((profit/total)*100).toFixed(1)}%)` : ''}</span><span class="mono" style="color:${profit>=0?'var(--green)':'var(--danger)'}">${money(profit)}</span></div>
     </div>` : ''}
+    <div class="print-footer">
+      <span>${esc(compName)}${compTIN ? ' · TIN: '+esc(compTIN) : ''}</span>
+      <span>${docType} #${o.id} · Printed ${new Date().toLocaleDateString()}</span>
+    </div>
   `;
 }
 function duplicateOrder(id){
@@ -4498,16 +4607,20 @@ function onProjectStatusChange(){
 function saveCustomer(id){
   const name = document.getElementById('f_name').value.trim();
   if(!name){ toast('Please add a customer name before saving'); return; }
-  const vals = { name, address:document.getElementById('f_addr').value, city:document.getElementById('f_city').value, state:document.getElementById('f_state').value, zip:document.getElementById('f_zip').value, phone:document.getElementById('f_phone').value, email:document.getElementById('f_email').value,
-    budget: document.getElementById('f_budget').value===''?'':Number(document.getElementById('f_budget').value), projectStatus: document.getElementById('f_pstatus').value, completedDate: document.getElementById('f_completed').value, completionPct: Number(document.getElementById('f_completion').value)||0 };
-  if(id){ Object.assign(customerById(id), vals); }
+  const email = document.getElementById('f_email').value.trim();
+  if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ toast('Please enter a valid email address'); return; }
+  const budgetRaw = document.getElementById('f_budget').value;
+  const budget = budgetRaw===''?'':Number(budgetRaw);
+  if(budgetRaw!=='' && (isNaN(budget) || budget < 0)){ toast('Budget must be a valid positive number'); return; }
+  const vals = { name, address:document.getElementById('f_addr').value, city:document.getElementById('f_city').value, state:document.getElementById('f_state').value, zip:document.getElementById('f_zip').value, phone:document.getElementById('f_phone').value, email,
+    budget, projectStatus: document.getElementById('f_pstatus').value, completedDate: document.getElementById('f_completed').value, completionPct: Number(document.getElementById('f_completion').value)||0 };
+  if(id){ Object.assign(customerById(id), vals); logAudit('update','customer',id,name); }
   else {
     const nc = { id: nextId(DB.customers), ...vals };
     DB.customers.push(nc);
     id = nc.id;
-    // every project needs a matching Job record — this is what Transactions/Orders/Fuel Logs actually link to.
-    // marked isAutoJob so it doesn't clutter the visible Jobs panel as if it were something the user added.
     DB.jobs.push({ id: nextId(DB.jobs), customerId: id, name: nc.name, address: nc.address, city: nc.city, state: nc.state, zip: nc.zip, contactName: '', phone: nc.phone, email: nc.email, isAutoJob: true });
+    logAudit('create','customer',id,name);
   }
   saveDB(); closeModal(); toast('Customer saved');
   if(view === 'projectReport' && sub.projectId === id){
@@ -7028,11 +7141,13 @@ function editVendor(id){
 function saveVendor(id){
   const name = document.getElementById('f_name').value.trim();
   if(!name){ toast('Please add a vendor name before saving'); return; }
-  const vals = { name, address:document.getElementById('f_addr').value, city:document.getElementById('f_city').value, state:document.getElementById('f_state').value, zip:document.getElementById('f_zip').value, phone:document.getElementById('f_phone').value, email:document.getElementById('f_email').value,
+  const email = document.getElementById('f_email').value.trim();
+  if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ toast('Please enter a valid email address'); return; }
+  const vals = { name, address:document.getElementById('f_addr').value, city:document.getElementById('f_city').value, state:document.getElementById('f_state').value, zip:document.getElementById('f_zip').value, phone:document.getElementById('f_phone').value, email,
     contactPerson: document.getElementById('f_contact').value, item: document.getElementById('f_item').value, classification: document.getElementById('f_class').value, paymentDetails: document.getElementById('f_paydetails').value,
     pcabNumber: document.getElementById('f_pcabnum').value, pcabCategory: document.getElementById('f_pcabcat').value, pcabExpiry: document.getElementById('f_pcabexp').value };
-  if(id){ Object.assign(vendorById(id), vals); }
-  else { DB.vendors.push({ id: nextId(DB.vendors), purchaseNotes: [], ...vals }); }
+  if(id){ Object.assign(vendorById(id), vals); logAudit('update','vendor',id,name); }
+  else { const nv={id:nextId(DB.vendors),purchaseNotes:[],...vals}; DB.vendors.push(nv); logAudit('create','vendor',nv.id,name); }
   saveDB(); closeModal(); toast('Supplier saved'); renderVendors();
 }
 async function deleteVendor(id){
@@ -7206,12 +7321,14 @@ function saveEmployee(id){
   const rawOt = Number(document.getElementById('f_ot').value);
   if(isNaN(rawReg) || rawReg < 0){ toast('Regular rate must be a valid positive number'); return; }
   if(isNaN(rawOt) || rawOt < 0){ toast('OT rate must be a valid positive number'); return; }
+  const empEmail = document.getElementById('f_email').value.trim();
+  if(empEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(empEmail)){ toast('Please enter a valid email address'); return; }
   const vals = {
     name, type: document.getElementById('f_type').value, payType: document.getElementById('f_paytype').value,
     foremanName: document.getElementById('f_foreman').value,
     regAmount: rawReg||0, otRate: rawOt||0,
     hourlyCost: Number(document.getElementById('f_hc').value)||0, phone: document.getElementById('f_phone').value,
-    email: document.getElementById('f_email').value, address: document.getElementById('f_addr').value,
+    email: empEmail, address: document.getElementById('f_addr').value,
     city: document.getElementById('f_city').value, state: document.getElementById('f_state').value, zip: document.getElementById('f_zip').value,
     active: document.getElementById('f_active').checked, govDeductions: document.getElementById('f_govded').checked,
     tin: document.getElementById('f_tin').value, sssNo: document.getElementById('f_sss').value, philhealthNo: document.getElementById('f_philhealth').value, pagibigNo: document.getElementById('f_pagibig').value,
@@ -7226,8 +7343,9 @@ function saveEmployee(id){
       existing.rateHistory.push({ id: uid(), date: todayISO(), oldRate, newRate, changedBy: session.name });
     }
     Object.assign(existing, vals);
+    logAudit('update','employee',id,name);
   }
-  else { const ne = { id: nextId(DB.employees), rateHistory: [], ...vals }; DB.employees.push(ne); id = ne.id; }
+  else { const ne = { id: nextId(DB.employees), rateHistory: [], ...vals }; DB.employees.push(ne); id = ne.id; logAudit('create','employee',id,name); }
   window.__pendingForeman = '';
   saveDB(); closeModal(); toast('Employee saved'); go('employees',{empId:id});
 }
@@ -9747,8 +9865,8 @@ function saveTransaction(id){
   const vals = { name, amount: rawAmt, date: document.getElementById('f_date').value,
     account: document.getElementById('f_acct').value, accountType: document.getElementById('f_type').value,
     jobId, jobName: job?job.name:'', notes: document.getElementById('f_notes').value };
-  if(id){ Object.assign(DB.transactions.find(x=>x.id===id), vals); }
-  else { DB.transactions.push({ id: nextId(DB.transactions), ...vals }); }
+  if(id){ Object.assign(DB.transactions.find(x=>x.id===id), vals); logAudit('update','transaction',id,name); }
+  else { const nt={id:nextId(DB.transactions),...vals}; DB.transactions.push(nt); logAudit('create','transaction',nt.id,name); }
   saveDB(); closeModal(); toast('Transaction saved'); renderTransactions();
 }
 async function deleteTransaction(id){
