@@ -689,6 +689,24 @@ function backfillMissingKeys(target){
   });
   return migrated;
 }
+function sanitizeDB(){
+  let fixed = false;
+  (DB.orders||[]).forEach(o => {
+    if(o.partyId && o.type !== 'PURCHASE' && !DB.customers.some(c=>c.id==o.partyId)){ o.partyId=''; o.partyName=''; fixed=true; }
+    if(o.partyId && o.type === 'PURCHASE' && !DB.vendors.some(v=>v.id==o.partyId)){ o.partyId=''; o.partyName=''; fixed=true; }
+    if(o.jobId && !DB.jobs.some(j=>j.id==o.jobId)){ o.jobId=''; o.jobName=''; fixed=true; }
+    if(!Array.isArray(o.items)){ o.items=[]; fixed=true; }
+    if(!Array.isArray(o.payments)){ o.payments=[]; fixed=true; }
+    if(!Array.isArray(o.laborCosts)){ o.laborCosts=[]; fixed=true; }
+  });
+  (DB.transactions||[]).forEach(t => {
+    if(t.jobId && !DB.jobs.some(j=>j.id==t.jobId)){ t.jobId=''; t.jobName=''; fixed=true; }
+  });
+  (DB.timecards||[]).forEach(tc => {
+    if(tc.employeeId && !DB.employees.some(e=>e.id==tc.employeeId)){ tc.employeeName='(deleted employee)'; fixed=true; }
+  });
+  if(fixed) saveDB();
+}
 async function loadDB(){
   try{
     const data = await idbGet();
@@ -1655,6 +1673,29 @@ function globalSearchResults(q){
     });
   }
   if(roleCanAccessTab('rfis')){
+    (DB.rfis||[]).filter(r=>(r.subject||'').toLowerCase().includes(q)||(r.description||'').toLowerCase().includes(q)).slice(0,4).forEach(r=>{
+      results.push({ group:'RFIs', label:r.subject||'RFI-'+r.id, sub:r.status||'', action:()=>go('rfis') });
+    });
+  }
+  if(roleCanAccessTab('submittals')){
+    (DB.submittals||[]).filter(s=>(s.title||'').toLowerCase().includes(q)||(s.description||'').toLowerCase().includes(q)).slice(0,4).forEach(s=>{
+      results.push({ group:'Submittals', label:s.title||'SUB-'+s.id, sub:s.status||'', action:()=>go('submittals') });
+    });
+  }
+  if(roleCanAccessTab('changeOrders')){
+    (DB.changeOrders||[]).filter(c=>(c.title||'').toLowerCase().includes(q)||(c.reason||'').toLowerCase().includes(q)).slice(0,4).forEach(c=>{
+      results.push({ group:'Change Orders', label:c.title||'CO-'+c.id, sub:c.status||'', action:()=>go('changeOrders') });
+    });
+  }
+  if(roleCanAccessTab('timecards')){
+    (DB.timecards||[]).filter(t=>(t.employeeName||'').toLowerCase().includes(q)||(t.notes||'').toLowerCase().includes(q)).slice(0,4).forEach(t=>{
+      results.push({ group:'Timecards', label:t.employeeName||t.date||'Timecard', sub:t.date||'', action:()=>go('timecards') });
+    });
+  }
+  if(roleCanAccessTab('inspections')){
+    (DB.inspections||[]).filter(i=>(i.title||'').toLowerCase().includes(q)||(i.area||'').toLowerCase().includes(q)).slice(0,4).forEach(i=>{
+      results.push({ group:'Inspections', label:i.title||'INSP-'+i.id, sub:i.status||'', action:()=>go('inspections') });
+    });
   }
   if(roleCanAccessTab('bids')){
     (DB.bids||[]).filter(b=>(b.projectName||'').toLowerCase().includes(q)||(b.client||'').toLowerCase().includes(q)).slice(0,6).forEach(b=>{
@@ -2597,15 +2638,33 @@ function renderFirstTimeSetup(){
   document.getElementById('appRoot').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('loginScreen').innerHTML = `
-  <div class="loginCard" style="max-width:440px">
+  <div class="loginCard" style="max-width:520px">
     <div class="mark">${companyMark()}</div>
     <h1>Welcome — let's set this up</h1>
-    <div class="sub">This looks like a brand new workspace. Set your company name and create the first Admin account — this is the only login that exists until you create more.</div>
-    <div class="field"><label class="fl" for="fts_company">Company Name</label><input id="fts_company" placeholder="e.g. ABC Builders Corporation"></div>
-    <div class="field"><label class="fl" for="fts_name">Your Full Name</label><input id="fts_name" placeholder="e.g. Juan Dela Cruz"></div>
-    <div class="field"><label class="fl" for="fts_username">Choose a Username</label><input id="fts_username" placeholder="e.g. admin" autocomplete="username"></div>
-    ${pwField('fts_pw','Choose a Password','At least 6 characters','new-password')}
-    ${pwField('fts_pw2','Confirm Password','Re-enter password','new-password')}
+    <div class="sub">Brand new workspace. Fill in your company details and create the first Admin account.</div>
+    <div style="border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:14px">
+      <div style="font-weight:700;font-size:13px;margin-bottom:10px">Company Profile</div>
+      <div class="field"><label class="fl" for="fts_company">Company Name *</label><input id="fts_company" placeholder="e.g. ABC Builders Corporation"></div>
+      <div class="grid2" style="gap:10px">
+        <div class="field"><label class="fl" for="fts_addr">Address</label><input id="fts_addr" placeholder="e.g. 123 Rizal St, Makati City"></div>
+        <div class="field"><label class="fl" for="fts_phone">Phone</label><input id="fts_phone" placeholder="e.g. 0917-123-4567"></div>
+      </div>
+      <div class="grid2" style="gap:10px">
+        <div class="field"><label class="fl" for="fts_email">Email</label><input id="fts_email" placeholder="e.g. info@abcbuilders.ph" type="email"></div>
+        <div class="field"><label class="fl" for="fts_tin">TIN</label><input id="fts_tin" placeholder="e.g. 123-456-789-000"></div>
+      </div>
+      <div class="grid2" style="gap:10px">
+        <div class="field"><label class="fl" for="fts_stax">Sales Tax Rate</label><input id="fts_stax" type="number" step="0.01" value="0.08" min="0" max="1"></div>
+        <div class="field"><label class="fl" for="fts_ptax">PO Tax Rate</label><input id="fts_ptax" type="number" step="0.01" value="0.10" min="0" max="1"></div>
+      </div>
+    </div>
+    <div style="border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:14px">
+      <div style="font-weight:700;font-size:13px;margin-bottom:10px">Admin Account</div>
+      <div class="field"><label class="fl" for="fts_name">Your Full Name *</label><input id="fts_name" placeholder="e.g. Juan Dela Cruz"></div>
+      <div class="field"><label class="fl" for="fts_username">Choose a Username *</label><input id="fts_username" placeholder="e.g. admin" autocomplete="username"></div>
+      ${pwField('fts_pw','Choose a Password','At least 6 characters','new-password')}
+      ${pwField('fts_pw2','Confirm Password','Re-enter password','new-password')}
+    </div>
     <div id="ftsErr" style="color:var(--danger);font-size:13px;min-height:18px"></div>
     <button class="btn pri" onclick="saveFirstTimeSetup()" style="width:100%;justify-content:center;margin-top:6px">Create Admin Account & Continue</button>
   </div>
@@ -2618,11 +2677,21 @@ async function saveFirstTimeSetup(){
   const pw = document.getElementById('fts_pw').value;
   const pw2 = document.getElementById('fts_pw2').value;
   const err = document.getElementById('ftsErr');
-  if(!company || !name || !username){ err.textContent = 'Please fill in every field.'; return; }
+  if(!company || !name || !username){ err.textContent = 'Please fill in all required fields (*).'; return; }
+  const ftsEmail = (document.getElementById('fts_email').value||'').trim();
+  if(ftsEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ftsEmail)){ err.textContent = 'Please enter a valid email address.'; return; }
   if(pw.length < 6){ err.textContent = 'Password must be at least 6 characters.'; return; }
   if(pw !== pw2){ err.textContent = "Passwords don't match."; return; }
   if(DB.users.some(u=>(u.username||u.name).toLowerCase()===username.toLowerCase())){ err.textContent = 'That username is already taken.'; return; }
   DB.settings.companyName = company;
+  DB.settings.companyAddress = (document.getElementById('fts_addr').value||'').trim();
+  DB.settings.companyPhone = (document.getElementById('fts_phone').value||'').trim();
+  DB.settings.companyEmail = ftsEmail;
+  DB.settings.companyTIN = (document.getElementById('fts_tin').value||'').trim();
+  const stax = parseFloat(document.getElementById('fts_stax').value);
+  const ptax = parseFloat(document.getElementById('fts_ptax').value);
+  if(!isNaN(stax) && stax >= 0 && stax <= 1) DB.settings.salesTaxRate = stax;
+  if(!isNaN(ptax) && ptax >= 0 && ptax <= 1) DB.settings.poTaxRate = ptax;
   const hashedPw = await hashPassword(pw);
   const newAdmin = {
     id: nextId(DB.users), name, username, password: hashedPw, type: 'Admin', position: '', email: '', phone: '', address: '',
@@ -3187,6 +3256,25 @@ function renderDashboard(){
       </div>
     </div>
 
+    ${(() => {
+      if(session.type !== 'Admin') return '';
+      const missing = [];
+      if(!DB.settings.companyName) missing.push('Company Name');
+      if(!DB.settings.companyAddress) missing.push('Address');
+      if(!DB.settings.companyPhone) missing.push('Phone');
+      if(!DB.settings.companyEmail) missing.push('Email');
+      if(!DB.settings.companyTIN) missing.push('TIN');
+      if(!missing.length) return '';
+      return `<div class="panel" style="border-left:3px solid var(--accent);margin-bottom:14px;padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <span style="font-size:18px">⚙️</span>
+        <div style="flex:1;min-width:200px">
+          <div style="font-weight:700;font-size:13px">Complete your company profile</div>
+          <div class="mut" style="font-size:12px">Missing: ${missing.join(', ')}. These appear on printed invoices and POs.</div>
+        </div>
+        <button class="btn ghost sm" onclick="openSettings()">Open Settings</button>
+      </div>`;
+    })()}
+
     <div class="dash-period-bar">
       <button class="period-btn${dashPeriod==='month'?' active':''}" onclick="sub.dashPeriod='month';renderDashboard()">This Month</button>
       <button class="period-btn${dashPeriod==='quarter'?' active':''}" onclick="sub.dashPeriod='quarter';renderDashboard()">Quarter</button>
@@ -3400,9 +3488,18 @@ function renderDashboard(){
       <div class="panel">
         <div class="ph"><h3>Recent Activity</h3><button class="btn ghost sm" onclick="go('notificationLog')">Full Log</button></div>
         ${(() => {
-          const recent = [...DB.notificationLog].sort((a,b)=>(b.time||'').localeCompare(a.time||'')).slice(0,8);
-          if(!recent.length) return '<div class="empty">No activity yet</div>';
-          return `<div class="dash-timeline">${recent.map(n=>{
+          const notifs = [...DB.notificationLog].map(n=>({...n, _sort:n.time||n.date||'', _src:'notif'}));
+          const audits = (DB.auditLog||[]).slice(-12).map(a=>({...a, _sort:a.date||'', _src:'audit'}));
+          const merged = [...notifs,...audits].sort((a,b)=>(b._sort||'').localeCompare(a._sort||'')).slice(0,10);
+          if(!merged.length) return '<div class="empty">No activity yet</div>';
+          const auditIcon = {create:'🟢',update:'🔵',delete:'🔴'};
+          return `<div class="dash-timeline">${merged.map(n=>{
+            if(n._src==='audit'){
+              return `<div class="dash-tl-item click" onclick="go('auditLog')">
+                <div>${auditIcon[n.action]||'⚪'} <b style="text-transform:capitalize">${esc(n.action)}</b> ${esc(TRASH_TYPE_LABELS[n.entity]||n.entity)}: ${esc(n.label||'—')}</div>
+                <div class="tl-time">${fmtDate((n.date||'').slice(0,10))} ${(n.date||'').slice(11,16)} · ${esc(n.user||'')}</div>
+              </div>`;
+            }
             const cls = n.type==='Alert'||n.type==='Overdue'?'tl-danger':n.type==='Completed'?'tl-green':n.type==='Warning'?'tl-warn':'';
             return `<div class="dash-tl-item ${cls} click" onclick="markLogRead(${n.id});${n.actionView?`go('${n.actionView}'${n.actionSub?`,${JSON.stringify(n.actionSub)}`:''})`:''}">
               <div style="${n.read?'':'font-weight:600'}">${!n.read?'<span style="color:var(--accent)">● </span>':''}${esc(n.message)}</div>
@@ -11614,6 +11711,7 @@ async function boot(){
   runMigrationV33();
   runMigrationV34();
   runMigrationV35();
+  sanitizeDB();
   applyTheme(localStorage.getItem('buildsuite_theme') || (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
   const savedSession = sessionStorage.getItem('buildsuite_session');
   if(savedSession){
