@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BuildSuite Local — Construction Management</title>
+<title>Konstrukt Local — Construction Management</title>
 <meta name="description" content="CLM General Contractor & Services, Inc. — full-service general contractor handling residential, commercial, and institutional construction projects. Licensed, experienced, and trusted.">
 <meta name="keywords" content="general contractor, construction company, residential construction, commercial construction, institutional construction, contractor Philippines, CLM General Contractor">
 <meta property="og:type" content="website">
@@ -610,7 +610,7 @@ function exportBackup(){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `buildsuite-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.download = `konstrukt-backup-${new Date().toISOString().slice(0,10)}.json`;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
   localStorage.setItem('buildsuite_last_backup', new Date().toISOString());
@@ -634,7 +634,7 @@ function importBackup(){
       toast('Data restored from backup — reloading...');
       setTimeout(()=>location.reload(), 1000);
     }catch(err){
-      toast('Could not read backup file — make sure it is a valid BuildSuite JSON backup');
+      toast('Could not read backup file — make sure it is a valid Konstrukt JSON backup');
     }
   };
   inp.click();
@@ -759,7 +759,7 @@ function downloadCorruptBackup(){
   const blob = new Blob([window._corruptData], {type:'text/plain'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'buildsuite-corrupt-'+window._corruptTs+'.txt';
+  a.download = 'konstrukt-corrupt-'+window._corruptTs+'.txt';
   a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
   toast('Corrupt data downloaded for manual inspection.');
@@ -896,7 +896,7 @@ function exportJSON(){
   const a = document.createElement('a');
   const url = URL.createObjectURL(blob);
   a.href = url;
-  a.download = 'buildsuite-backup-'+ts+'.json';
+  a.download = 'konstrukt-backup-'+ts+'.json';
   a.click();
   setTimeout(()=>URL.revokeObjectURL(url), 1000);
 }
@@ -908,7 +908,7 @@ function exportPDF(){
   const styles = document.querySelectorAll('style');
   let css = '';
   styles.forEach(s=>{ css += s.textContent; });
-  w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>BuildSuite Export</title>');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Konstrukt Export</title>');
   w.document.write('<style>'+css+'</style>');
   w.document.write('<style>body{background:#fff;color:#111;padding:20px;font-family:-apple-system,system-ui,sans-serif}');
   w.document.write('.no-print,nav,.brand,.hamburger,.topbar,.fab,.toaster,.loginCard,.modal-backdrop{display:none !important}');
@@ -970,12 +970,12 @@ const uid = () => Date.now().toString(36) + (++_uidCounter).toString(36) + Math.
 function nextId(arr){ return arr.length ? arr.reduce((max, x) => Math.max(max, Number(x.id)||0), 0) + 1 : 1; }
 function companyMark(){
   if(DB.settings.companyShortName) return DB.settings.companyShortName.toUpperCase();
-  const name = DB.settings.companyName || 'BuildSuite';
+  const name = DB.settings.companyName || 'Konstrukt';
   const words = name.replace(/[^a-zA-Z ]/g,'').trim().split(/\s+/).filter(Boolean);
   const initials = words.slice(0,3).map(w=>w[0]).join('').toUpperCase();
   return initials || 'BS';
 }
-function companyDisplayName(){ return DB.settings.companyName || 'BuildSuite'; }
+function companyDisplayName(){ return DB.settings.companyName || 'Konstrukt'; }
 function money(n){ n = Number(n)||0; return '₱' + n.toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function money0(n){ n = Number(n)||0; return '₱' + n.toLocaleString('en-PH',{maximumFractionDigits:0}); }
 function esc(s){ return (s==null?'':String(s)).replace(/[&<>"'`]/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'}[m])); }
@@ -1057,7 +1057,7 @@ function exportTimestampedJSON(){
   const a = document.createElement('a');
   const url = URL.createObjectURL(blob);
   a.href = url;
-  a.download = `buildsuite-backup-${ts}.json`;
+  a.download = `konstrukt-backup-${ts}.json`;
   a.click();
   setTimeout(()=>URL.revokeObjectURL(url), 1000);
   toast('Backup exported');
@@ -1995,12 +1995,12 @@ function renderHelp(){
   document.getElementById('mainArea').innerHTML = `
     <div class="crumb">Help</div>
     <div class="panel">
-      <h3 style="font-size:19px;margin-bottom:6px">👋 Getting Started with BuildSuite</h3>
+      <h3 style="font-size:19px;margin-bottom:6px">👋 Getting Started with Konstrukt</h3>
       <p class="mut" style="font-size:13px;margin-bottom:20px">A quick reference for what you can do here, based on your role (${esc(session.type)}${isSiteLead && session.type==='Employee' ? ' — Site Lead access' : ''}). Click any section to expand it.</p>
       <div class="faq-list" style="max-width:none">
-        <details class="faq-item" open><summary>What is BuildSuite?</summary><p>One system for the whole operation — projects, payroll, materials, suppliers, and your team, instead of scattered spreadsheets. Everything you do here saves automatically to your browser's local storage.</p></details>
+        <details class="faq-item" open><summary>What is Konstrukt?</summary><p>One system for the whole operation — projects, payroll, materials, suppliers, and your team, instead of scattered spreadsheets. Everything you do here saves automatically to your browser's local storage.</p></details>
         <details class="faq-item"><summary>Getting around</summary><p>The tabs across the top take you to each section. Related tabs are grouped — hover over <b>Documents</b>, <b>Resources</b>, or <b>Finance</b> to see sub-sections. The <b>🔍 search icon</b> in the header finds anything — an employee, an order, a supplier — instantly, without hunting through tabs. The <b>🔔 bell</b> shows anything that needs attention right now (low stock, overdue reminders, pending approvals). Click your name/photo in the top-right anytime to get to <b>My Profile</b>.</p></details>
-        <details class="faq-item"><summary>Your profile & payslip</summary><p>Click your name in the header to open My Profile. You can update your contact info, upload a photo, and change your password there — no need to ask an Admin. If you're paid through BuildSuite, your payroll history and printable payslips are there too, under "My Payroll."</p></details>
+        <details class="faq-item"><summary>Your profile & payslip</summary><p>Click your name in the header to open My Profile. You can update your contact info, upload a photo, and change your password there — no need to ask an Admin. If you're paid through Konstrukt, your payroll history and printable payslips are there too, under "My Payroll."</p></details>
         ${isSiteLead ? `
         <details class="faq-item"><summary>Requesting materials & tools for your site</summary><p>Go to <b>Orders</b> or <b>Inventory → Purchase Requests</b> — your site is pre-filled automatically, and you won't see other sites' financial numbers. This keeps requests fast without giving you access to things outside your project.</p></details>
         <details class="faq-item"><summary>Logging real project progress</summary><p>Open your project under <b>Projects</b> — if your Admin has broken it into activities (Foundation, Framing, etc.), click <b>"Log Update"</b> on the relevant one, write a quick note on what got done, and set the new percentage. This is what actually drives the progress bar — the more often it's updated, the more useful it is for everyone checking the project's status.</p></details>
@@ -2026,13 +2026,13 @@ function renderHelp(){
           <p style="margin-bottom:8px"><b>6. Communication:</b> Keep formal records of all questions and decisions between stakeholders. Keep all parties informed of schedule changes.</p>
           <p><b>7. Quality Control:</b> Inspect work before covering it up. Track deficiencies and follow up until they're resolved. Don't accept "good enough" — rework costs more later.</p>
         </details>
-        <details class="faq-item"><summary>Something feels off, or a number looks wrong?</summary><p>Real people update this system every day, and honest mistakes happen. If something looks incorrect, it's always safe to ask whoever manages BuildSuite for your company rather than guessing — nothing here is permanent (see Trash, above, if you're an Admin) and it's always fixable.</p></details>
+        <details class="faq-item"><summary>Something feels off, or a number looks wrong?</summary><p>Real people update this system every day, and honest mistakes happen. If something looks incorrect, it's always safe to ask whoever manages Konstrukt for your company rather than guessing — nothing here is permanent (see Trash, above, if you're an Admin) and it's always fixable.</p></details>
       </div>
     </div>
   `;
 }
 function renderTerms(){
-  const companyName = (DB && DB.settings && DB.settings.companyName) || 'BuildSuite';
+  const companyName = (DB && DB.settings && DB.settings.companyName) || 'Konstrukt';
   const el = document.getElementById('mainArea') || document.getElementById('loginScreen');
   const isLoggedIn = !!session;
   el.innerHTML = `
@@ -2042,13 +2042,13 @@ function renderTerms(){
       <p class="mut" style="font-size:12px;margin-bottom:16px">Last updated: ${new Date().toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'})}</p>
       <div style="font-size:13.5px;line-height:1.7">
         <h4>1. Acceptance</h4>
-        <p>By accessing or using BuildSuite provided by ${esc(companyName)} ("Company"), you agree to these Terms of Service. If you do not agree, do not use the platform.</p>
+        <p>By accessing or using Konstrukt provided by ${esc(companyName)} ("Company"), you agree to these Terms of Service. If you do not agree, do not use the platform.</p>
         <h4>2. Description of Service</h4>
-        <p>BuildSuite is a construction management platform that provides project tracking, financial management, payroll, inventory, and related tools. The service is provided "as is" for business use.</p>
+        <p>Konstrukt is a construction management platform that provides project tracking, financial management, payroll, inventory, and related tools. The service is provided "as is" for business use.</p>
         <h4>3. User Accounts</h4>
         <p>You are responsible for maintaining the security of your account credentials. All activity under your account is your responsibility. Notify your administrator immediately of any unauthorized access.</p>
         <h4>4. Data Ownership</h4>
-        <p>All data you enter into BuildSuite remains your property. The Company does not claim ownership of your business data, documents, or records.</p>
+        <p>All data you enter into Konstrukt remains your property. The Company does not claim ownership of your business data, documents, or records.</p>
         <h4>5. Acceptable Use</h4>
         <p>You agree not to: (a) use the platform for unlawful purposes; (b) attempt to access other users' accounts; (c) interfere with the platform's operation; (d) upload malicious content.</p>
         <h4>6. Data Storage</h4>
@@ -2065,7 +2065,7 @@ function renderTerms(){
   `;
 }
 function renderPrivacy(){
-  const companyName = (DB && DB.settings && DB.settings.companyName) || 'BuildSuite';
+  const companyName = (DB && DB.settings && DB.settings.companyName) || 'Konstrukt';
   const companyEmail = (DB && DB.settings && DB.settings.companyEmail) || '';
   const isLoggedIn = !!session;
   const el = document.getElementById('mainArea') || document.getElementById('loginScreen');
@@ -2076,22 +2076,22 @@ function renderPrivacy(){
       <p class="mut" style="font-size:12px;margin-bottom:16px">Last updated: ${new Date().toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'})}</p>
       <div style="font-size:13.5px;line-height:1.7">
         <h4>1. Information We Collect</h4>
-        <p>BuildSuite collects information you provide directly: account details (name, email, password hash), business data (projects, orders, employees, financial records), and usage data (audit logs of actions taken within the platform).</p>
+        <p>Konstrukt collects information you provide directly: account details (name, email, password hash), business data (projects, orders, employees, financial records), and usage data (audit logs of actions taken within the platform).</p>
         <h4>2. How We Use Your Data</h4>
         <p>Your data is used exclusively to: (a) provide the construction management services you signed up for; (b) maintain audit trails for accountability; (c) generate reports and analytics within your workspace.</p>
         <h4>3. Data Storage & Security</h4>
         <p><b>This is a local-only application.</b> All data is stored in your browser's IndexedDB on this device. Your data never leaves your device unless you manually export it. No cloud sync, no remote servers, no external data transmission.</p>
         <p>Passwords are hashed using SHA-256 before storage. We recommend using strong, unique passwords.</p>
         <h4>4. Data Sharing</h4>
-        <p>We do not and cannot share your data — it exists only on your device. No third parties have access to your BuildSuite data.</p>
+        <p>We do not and cannot share your data — it exists only on your device. No third parties have access to your Konstrukt data.</p>
         <h4>5. Data Retention</h4>
-        <p>Your data is retained as long as it remains in your browser. Deleted items are moved to Trash and permanently removed after 30 days. You may export all data at any time using the JSON export feature. Clearing browser data will permanently delete all BuildSuite data.</p>
+        <p>Your data is retained as long as it remains in your browser. Deleted items are moved to Trash and permanently removed after 30 days. You may export all data at any time using the JSON export feature. Clearing browser data will permanently delete all Konstrukt data.</p>
         <h4>6. Your Rights</h4>
         <p>You have full control: (a) access all data stored about you; (b) export your data in JSON format; (c) delete your data by clearing browser storage; (d) correct inaccurate information via your profile.</p>
         <h4>7. Cookies & Local Storage</h4>
-        <p>BuildSuite uses browser IndexedDB, localStorage, and sessionStorage for application data. No third-party tracking cookies are used. No analytics are collected.</p>
+        <p>Konstrukt uses browser IndexedDB, localStorage, and sessionStorage for application data. No third-party tracking cookies are used. No analytics are collected.</p>
         <h4>8. Contact</h4>
-        <p>For privacy-related inquiries, contact your BuildSuite administrator${companyEmail ? ' or reach us at <b>'+esc(companyEmail)+'</b>' : ''}.</p>
+        <p>For privacy-related inquiries, contact your Konstrukt administrator${companyEmail ? ' or reach us at <b>'+esc(companyEmail)+'</b>' : ''}.</p>
       </div>
       ${!isLoggedIn ? '<div style="margin-top:20px;text-align:center"><a onclick="renderLanding()" style="color:var(--accent2);cursor:pointer;font-size:13px">&larr; Back to Home</a></div>' : ''}
     </div>
@@ -2329,7 +2329,7 @@ function openSettings(){
     </div>
     <div class="field" style="border-top:1px solid var(--line);padding-top:14px">
       <label class="fl">Google Sheets Mirror <span class="mut" style="font-weight:400">(one-way — pushes a live view-only copy out, doesn't read anything back in)</span></label>
-      <div class="mut" style="font-size:12px;margin-bottom:8px">Good for handing your boss or accountant a familiar spreadsheet view of live numbers. Editing the Sheet itself does nothing back in BuildSuite — this is one-way on purpose.</div>
+      <div class="mut" style="font-size:12px;margin-bottom:8px">Good for handing your boss or accountant a familiar spreadsheet view of live numbers. Editing the Sheet itself does nothing back in Konstrukt — this is one-way on purpose.</div>
       <input id="sheetsUrl" value="${esc(DB.settings.sheetsWebhookUrl)}" placeholder="Paste your Apps Script Web App URL here" style="margin-bottom:8px">
       <div class="btnrow" style="margin-top:0">
         <button class="btn ghost sm" onclick="saveSheetsUrl()">Save URL</button>
@@ -2526,16 +2526,16 @@ function openSheetsGuide(){
 }
 
 function doGet(e) {
-  return ContentService.createTextOutput('This endpoint is working. It only accepts data sent from BuildSuite (POST requests) — visiting it directly like this is normal and expected, there is nothing to see here.');
+  return ContentService.createTextOutput('This endpoint is working. It only accepts data sent from Konstrukt (POST requests) — visiting it directly like this is normal and expected, there is nothing to see here.');
 }</div>
-      <div class="mut" style="font-size:11.5px;margin:6px 0">The <code>doGet</code> part is optional — it just makes visiting the link directly in a browser show a friendly message instead of an error. The real test is always clicking "Sync Now" in BuildSuite, not opening the link.</div>
+      <div class="mut" style="font-size:11.5px;margin:6px 0">The <code>doGet</code> part is optional — it just makes visiting the link directly in a browser show a friendly message instead of an error. The real test is always clicking "Sync Now" in Konstrukt, not opening the link.</div>
       <b>4.</b> Click <b>Deploy → New deployment</b>. Click the gear icon, choose <b>Web app</b>.<br>
       <b>5.</b> Set <b>Execute as: Me</b>, and <b>Who has access: Anyone</b>. Click <b>Deploy</b>.<br>
       <b>6.</b> Google will ask you to authorize it — click through (it's your own script, running on your own Sheet).<br>
       <b>7.</b> Copy the <b>Web app URL</b> it gives you (ends in <code>/exec</code>).<br>
-      <b>8.</b> Paste that URL into BuildSuite Settings → Google Sheets Mirror → Save → Sync Now.
+      <b>8.</b> Paste that URL into Konstrukt Settings → Google Sheets Mirror → Save → Sync Now.
     </div>
-    <div class="mut" style="font-size:11.5px;margin-top:10px">This only pushes data out — nothing you type in the Sheet ever changes anything in BuildSuite. Re-run "Sync Now" any time you want a fresh snapshot.</div>
+    <div class="mut" style="font-size:11.5px;margin-top:10px">This only pushes data out — nothing you type in the Sheet ever changes anything in Konstrukt. Re-run "Sync Now" any time you want a fresh snapshot.</div>
     <div class="btnrow"><button class="btn ghost" onclick="closeModal();openSettings()">Back to Settings</button></div>
   `);
 }
@@ -2880,7 +2880,7 @@ async function saveFirstTimeSetup(){
   saveDB();
   session = { id: newAdmin.id, name: newAdmin.name, type: newAdmin.type };
   sessionStorage.setItem('buildsuite_session', JSON.stringify(session));
-  toast(`Welcome to BuildSuite, ${company}!`);
+  toast(`Welcome to Konstrukt, ${company}!`);
   enterApp();
 }
 function renderLogin(){
@@ -4177,7 +4177,7 @@ function renderOrderDetail(id){
   const profit = orderProfit(o);
   const tax = total * taxRateFor(o.type);
 
-  const compName = DB.settings.companyName || 'BuildSuite';
+  const compName = DB.settings.companyName || 'Konstrukt';
   const compAddr = DB.settings.companyAddress || '';
   const compPhone = DB.settings.companyPhone || '';
   const compEmail = DB.settings.companyEmail || '';
@@ -10726,7 +10726,7 @@ function generateReport(type){
   }
   const printWin = window.open('','_blank');
   if(!printWin){ toast('Please allow popups to print reports'); return; }
-  printWin.document.write('<!DOCTYPE html><html><head><title>'+title+' — BuildSuite</title><style>'+
+  printWin.document.write('<!DOCTYPE html><html><head><title>'+title+' — Konstrukt</title><style>'+
     'body{font-family:system-ui,-apple-system,sans-serif;padding:40px;color:#1a1a1a;max-width:900px;margin:0 auto}'+
     'h1{font-size:22px;margin-bottom:4px} .meta{color:#666;font-size:13px;margin-bottom:24px}'+
     'table{width:100%;border-collapse:collapse;font-size:13px} th,td{padding:8px 10px;border-bottom:1px solid #ddd;text-align:left}'+
@@ -10734,7 +10734,7 @@ function generateReport(type){
     '@media print{body{padding:20px} .no-print{display:none}}'+
   '</style></head><body>'+
     '<h1>'+title+'</h1>'+
-    '<div class="meta">BuildSuite — Generated '+today+'</div>'+
+    '<div class="meta">Konstrukt — Generated '+today+'</div>'+
     content+
     '<div class="no-print" style="margin-top:30px"><button onclick="window.print()" style="padding:10px 24px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px">Print Report</button></div>'+
   '</body></html>');
@@ -11850,7 +11850,7 @@ function checkForNewAlerts(){
   const currentLabels = current.map(a=>a.label);
   const freshOnes = current.filter(a=>!seen.includes(a.label));
   freshOnes.slice(0,5).forEach(a=>{ // cap at 5 per check so a bad backlog doesn't spam a wall of popups
-    try{ new Notification('BuildSuite — ' + a.type, { body: a.label, tag: a.label }); }catch(e){}
+    try{ new Notification('Konstrukt — ' + a.type, { body: a.label, tag: a.label }); }catch(e){}
   });
   localStorage.setItem('buildsuite_notified_alerts', JSON.stringify(currentLabels));
 }
@@ -11974,14 +11974,14 @@ function showInstallBanner(){
   const b = document.createElement('div');
   b.id = 'pwaInstallBanner';
   b.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--accent);color:var(--accent-ink);padding:12px 24px;border-radius:12px;display:flex;align-items:center;gap:12px;z-index:99999;box-shadow:0 4px 20px rgba(0,0,0,.4);font-size:14px;font-weight:600;max-width:90vw';
-  b.innerHTML = '<span>📲 Install BuildSuite as an app on your device</span><button onclick="installPWA()" style="background:#fff;color:#000;border:none;padding:6px 16px;border-radius:8px;font-weight:700;cursor:pointer;white-space:nowrap">Install</button><button onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--accent-ink);font-size:18px;cursor:pointer;padding:0 4px">✕</button>';
+  b.innerHTML = '<span>📲 Install Konstrukt as an app on your device</span><button onclick="installPWA()" style="background:#fff;color:#000;border:none;padding:6px 16px;border-radius:8px;font-weight:700;cursor:pointer;white-space:nowrap">Install</button><button onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--accent-ink);font-size:18px;cursor:pointer;padding:0 4px">✕</button>';
   document.body.appendChild(b);
 }
 async function installPWA(){
   if(!_deferredInstall) return;
   _deferredInstall.prompt();
   const result = await _deferredInstall.userChoice;
-  if(result.outcome === 'accepted') toast('BuildSuite installed! You can now open it from your home screen.');
+  if(result.outcome === 'accepted') toast('Konstrukt installed! You can now open it from your home screen.');
   _deferredInstall = null;
   const banner = document.getElementById('pwaInstallBanner');
   if(banner) banner.remove();

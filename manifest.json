@@ -1,6 +1,6 @@
 {
-  "name": "BuildSuite Local — Construction Management",
-  "short_name": "BuildSuite",
+  "name": "Konstrukt Local — Construction Management",
+  "short_name": "Konstrukt",
   "description": "Offline construction management: projects, payroll, materials, suppliers, fleet, and team — all stored on your device.",
   "start_url": "./local.html",
   "scope": "./",

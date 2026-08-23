@@ -1,5 +1,5 @@
 /**
- * BuildSuite Regression Test Suite
+ * Konstrukt Regression Test Suite
  * ----------------------------------
  * HOW TO RUN:
  *   npm install
@@ -1473,7 +1473,7 @@ async function testInactivityLogout() {
 // ═══════════════════════════════════════════════════════════
 
 (async () => {
-  console.log('Running BuildSuite regression suite against:', APP_PATH);
+  console.log('Running Konstrukt regression suite against:', APP_PATH);
   console.log('═'.repeat(55));
   console.log('ORIGINAL TESTS');
   console.log('═'.repeat(55));
@@ -1563,9 +1563,9 @@ async function testExportTimestamp() {
   await withApp(async (page) => {
     const filename = await page.evaluate(() => {
       const ts = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
-      return 'buildsuite-backup-'+ts+'.json';
+      return 'konstrukt-backup-'+ts+'.json';
     });
-    check('Export filename includes timestamp', /buildsuite-backup-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.json/.test(filename));
+    check('Export filename includes timestamp', /konstrukt-backup-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.json/.test(filename));
     const hasExportFn = await page.evaluate(() => typeof exportJSON === 'function');
     check('exportJSON() function exists', hasExportFn);
   });

@@ -1,7 +1,7 @@
 {
-  "name": "buildsuite",
+  "name": "konstrukt",
   "version": "1.0.0",
-  "description": "BuildSuite — Construction Management System for CLM General Contractor & Services, Inc.",
+  "description": "Konstrukt — Construction Management System for CLM General Contractor & Services, Inc.",
   "private": true,
   "scripts": {
     "test": "node tests/regression.test.js"
