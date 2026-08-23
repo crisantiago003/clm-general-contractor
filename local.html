@@ -801,15 +801,46 @@ function stampChangedRecords(){
   });
 }
 function takeSnapshot(){ _dbSnap = JSON.parse(JSON.stringify(DB)); }
+let _lastSaveTime = null;
+let _autoSaveInterval = null;
+let _dbDirty = false;
 function saveDB(){
   stampChangedRecords();
+  _lastSaveTime = new Date();
+  _dbDirty = false;
   idbSet(DB).then(()=>{
-    localStorage.setItem('buildsuite_updated_at', new Date().toISOString());
+    localStorage.setItem('buildsuite_updated_at', _lastSaveTime.toISOString());
+    updateSaveIndicator('saved');
   }).catch(e=>{
     console.error('saveDB: IndexedDB write failed', e);
+    updateSaveIndicator('error');
     toast('Storage write failed — try exporting a backup.');
   });
   takeSnapshot();
+}
+function updateSaveIndicator(state){
+  const el = document.getElementById('saveStatus');
+  if(!el) return;
+  if(state === 'saving'){
+    el.innerHTML = '💾 <span style="color:var(--accent2)">Saving...</span>';
+  } else if(state === 'saved'){
+    const timeStr = _lastSaveTime ? _lastSaveTime.toLocaleTimeString(undefined, {hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '';
+    el.innerHTML = '✅ <span>Saved</span>' + (timeStr ? ' <span style="opacity:.5;font-size:11px">'+timeStr+'</span>' : '');
+    el.title = 'All changes saved to this device' + (_lastSaveTime ? ' at ' + timeStr : '');
+  } else if(state === 'error'){
+    el.innerHTML = '⚠️ <span style="color:var(--danger)">Save failed</span>';
+    el.title = 'Data could not be saved — export a backup immediately';
+  }
+}
+function startAutoSave(){
+  if(_autoSaveInterval) return;
+  _autoSaveInterval = setInterval(()=>{
+    if(!DB || !session) return;
+    saveDB();
+  }, 60000);
+}
+function stopAutoSave(){
+  if(_autoSaveInterval){ clearInterval(_autoSaveInterval); _autoSaveInterval = null; }
 }
 async function resetAll(){
   if(!confirm('Reset all data back to the original sample data? This cannot be undone.')) return;
@@ -1387,11 +1418,13 @@ function stopInactivityWatch(){
 }
 function logout(skipConfirm){
   if(!skipConfirm && !confirm('Are you sure you want to log out?')) return;
+  saveDB();
   session = null;
   sessionStorage.removeItem('buildsuite_session');
   sub.authMode = 'signin';
   stopInactivityWatch();
   stopNotifyChecks();
+  stopAutoSave();
   renderLogin();
 }
 
@@ -1688,7 +1721,7 @@ function renderHeader(){
   const alerts = getAlerts();
   document.getElementById('topBar').innerHTML = `
     <button class="sidebar-toggle" onclick="toggleSidebar()" title="Menu" aria-label="Toggle sidebar menu">☰</button>
-    <span class="mut syncstatus" style="font-size:12px;display:flex;align-items:center;white-space:nowrap">💾 Saved locally</span>
+    <span class="mut syncstatus" id="saveStatus" style="font-size:12px;display:flex;align-items:center;gap:4px;white-space:nowrap;cursor:default" title="All changes auto-saved to this device">✅ <span>Saved</span></span>
     <div class="spacer"></div>
     <div style="position:relative">
       <button class="iconbtn" onclick="toggleNotifications()" title="Notifications" aria-label="Notifications">🔔${alerts.length?`<span style="position:absolute;top:-3px;right:-3px;background:var(--danger);color:#fff;font-size:10px;font-weight:800;border-radius:999px;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 3px">${alerts.length}</span>`:''}</button>
@@ -3010,6 +3043,7 @@ function enterApp(){
   startInactivityWatch();
   startNotifyChecks();
   showBackupReminder();
+  startAutoSave();
 }
 function renderPendingScreen(){
   document.getElementById('sidebar').innerHTML = `
@@ -11917,6 +11951,12 @@ function updateOfflineStatus(){
 }
 window.addEventListener('online', ()=>{ updateOfflineStatus(); });
 window.addEventListener('offline', updateOfflineStatus);
+window.addEventListener('beforeunload', () => {
+  if(DB && session) saveDB();
+});
+document.addEventListener('visibilitychange', () => {
+  if(document.hidden && DB && session) saveDB();
+});
 window.addEventListener('error', e => {
   console.error('Uncaught error:', e.error);
   if(typeof toastError === 'function') toastError('Something went wrong. Try refreshing.');
