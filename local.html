@@ -726,10 +726,61 @@ async function loadDB(){
       localStorage.removeItem(STORAGE_KEY);
       if(migrated) saveDB();
       return;
-    } catch(e){}
+    } catch(e){
+      console.error('loadDB: corrupt data in localStorage', e);
+      showDataRecoveryModal(raw);
+      DB = JSON.parse(JSON.stringify(SEED));
+      saveDB();
+      return;
+    }
   }
   DB = JSON.parse(JSON.stringify(SEED));
   saveDB();
+}
+function showDataRecoveryModal(corruptData){
+  setTimeout(()=>{
+    const ts = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
+    openModal('Data Recovery','<div style="text-align:center;padding:10px">'+
+      '<div style="font-size:40px;margin-bottom:12px">⚠️</div>'+
+      '<h3 style="margin:0 0 10px;color:var(--danger)">Your saved data could not be loaded</h3>'+
+      '<p style="font-size:13.5px;color:var(--muted);margin-bottom:18px">The stored data appears to be corrupted and could not be read. A fresh workspace has been started. You can download the raw data below to attempt manual recovery, or restore from a previous JSON backup.</p>'+
+      '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">'+
+      '<button class="btn ghost sm" onclick="downloadCorruptBackup()">Download Raw Data</button>'+
+      '<button class="btn pri sm" onclick="document.getElementById(\'recoveryFileInput\').click()">Restore from Backup</button>'+
+      '</div>'+
+      '<input type="file" id="recoveryFileInput" accept=".json" style="display:none" onchange="restoreFromBackupFile(this)">'+
+      '</div>');
+    window._corruptData = corruptData;
+    window._corruptTs = ts;
+  }, 500);
+}
+function downloadCorruptBackup(){
+  if(!window._corruptData) return;
+  const blob = new Blob([window._corruptData], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'buildsuite-corrupt-'+window._corruptTs+'.txt';
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+  toast('Corrupt data downloaded for manual inspection.');
+}
+function restoreFromBackupFile(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try {
+      const parsed = JSON.parse(e.target.result);
+      if(!parsed.users || !parsed.settings){ toastError('Invalid backup file — missing required data.'); return; }
+      DB = parsed;
+      backfillMissingKeys(DB);
+      saveDB();
+      closeModal();
+      toast('Data restored from backup! Reloading...');
+      setTimeout(()=>location.reload(), 1500);
+    } catch(err){ toastError('Could not parse backup file: ' + err.message); }
+  };
+  reader.readAsText(file);
 }
 function stampChangedRecords(){
   const now = Date.now();
@@ -809,13 +860,38 @@ function runPrepareForResale(){
   location.reload();
 }
 function exportJSON(){
+  const ts = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
   const blob = new Blob([JSON.stringify(DB,null,2)], {type:'application/json'});
   const a = document.createElement('a');
   const url = URL.createObjectURL(blob);
   a.href = url;
-  a.download = 'buildsuite-export.json';
+  a.download = 'buildsuite-backup-'+ts+'.json';
   a.click();
   setTimeout(()=>URL.revokeObjectURL(url), 1000);
+}
+function exportPDF(){
+  const mainArea = document.getElementById('mainArea');
+  if(!mainArea){ toastError('Nothing to export.'); return; }
+  const w = window.open('','_blank','width=900,height=700');
+  if(!w){ toastError('Pop-up blocked — please allow pop-ups for this site.'); return; }
+  const styles = document.querySelectorAll('style');
+  let css = '';
+  styles.forEach(s=>{ css += s.textContent; });
+  w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>BuildSuite Export</title>');
+  w.document.write('<style>'+css+'</style>');
+  w.document.write('<style>body{background:#fff;color:#111;padding:20px;font-family:-apple-system,system-ui,sans-serif}');
+  w.document.write('.no-print,nav,.brand,.hamburger,.topbar,.fab,.toaster,.loginCard,.modal-backdrop{display:none !important}');
+  w.document.write('.panel{box-shadow:none;border:1px solid #ddd} .twrap{overflow:visible}');
+  w.document.write('@media print{@page{margin:12mm} body{padding:0}}</style>');
+  w.document.write('</head><body>');
+  const printHeader = document.querySelector('.print-header');
+  if(printHeader) w.document.write(printHeader.outerHTML);
+  w.document.write(mainArea.innerHTML);
+  const printFooter = document.querySelector('.print-footer');
+  if(printFooter) w.document.write(printFooter.outerHTML);
+  w.document.write('<script>setTimeout(function(){window.print();},400);<\/script>');
+  w.document.write('</body></html>');
+  w.document.close();
 }
 function csvCell(v){
   const s = (v==null?'':String(v));
@@ -1922,6 +1998,72 @@ function renderHelp(){
     </div>
   `;
 }
+function renderTerms(){
+  const companyName = (DB && DB.settings && DB.settings.companyName) || 'BuildSuite';
+  const el = document.getElementById('mainArea') || document.getElementById('loginScreen');
+  const isLoggedIn = !!session;
+  el.innerHTML = `
+    ${isLoggedIn ? '<div class="crumb"><a onclick="history.back()" style="color:var(--muted);text-decoration:none;cursor:pointer">&larr; Back</a> &nbsp;/&nbsp; Terms of Service</div>' : ''}
+    <div class="${isLoggedIn ? 'panel' : 'loginCard'}" style="max-width:760px;${isLoggedIn?'':'margin:40px auto;padding:32px'}">
+      <h2 style="margin:0 0 16px">Terms of Service</h2>
+      <p class="mut" style="font-size:12px;margin-bottom:16px">Last updated: ${new Date().toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'})}</p>
+      <div style="font-size:13.5px;line-height:1.7">
+        <h4>1. Acceptance</h4>
+        <p>By accessing or using BuildSuite provided by ${esc(companyName)} ("Company"), you agree to these Terms of Service. If you do not agree, do not use the platform.</p>
+        <h4>2. Description of Service</h4>
+        <p>BuildSuite is a construction management platform that provides project tracking, financial management, payroll, inventory, and related tools. The service is provided "as is" for business use.</p>
+        <h4>3. User Accounts</h4>
+        <p>You are responsible for maintaining the security of your account credentials. All activity under your account is your responsibility. Notify your administrator immediately of any unauthorized access.</p>
+        <h4>4. Data Ownership</h4>
+        <p>All data you enter into BuildSuite remains your property. The Company does not claim ownership of your business data, documents, or records.</p>
+        <h4>5. Acceptable Use</h4>
+        <p>You agree not to: (a) use the platform for unlawful purposes; (b) attempt to access other users' accounts; (c) interfere with the platform's operation; (d) upload malicious content.</p>
+        <h4>6. Data Storage</h4>
+        <p>Data is stored locally in your browser's IndexedDB. This data exists solely on your device — the Company is not responsible for data loss from browser clearing, device failure, or migration. Regular backups via JSON export are strongly recommended.</p>
+        <h4>7. Limitation of Liability</h4>
+        <p>To the maximum extent permitted by law, the Company shall not be liable for any indirect, incidental, or consequential damages arising from use of the platform, including but not limited to data loss, financial miscalculations, or service interruptions.</p>
+        <h4>8. Modifications</h4>
+        <p>The Company reserves the right to modify these terms at any time. Continued use after changes constitutes acceptance. Users will be notified of material changes.</p>
+        <h4>9. Termination</h4>
+        <p>The Company may suspend or terminate access for violations of these terms. You may export your data at any time before account closure.</p>
+      </div>
+      ${!isLoggedIn ? '<div style="margin-top:20px;text-align:center"><a onclick="renderLanding()" style="color:var(--accent2);cursor:pointer;font-size:13px">&larr; Back to Home</a></div>' : ''}
+    </div>
+  `;
+}
+function renderPrivacy(){
+  const companyName = (DB && DB.settings && DB.settings.companyName) || 'BuildSuite';
+  const companyEmail = (DB && DB.settings && DB.settings.companyEmail) || '';
+  const isLoggedIn = !!session;
+  const el = document.getElementById('mainArea') || document.getElementById('loginScreen');
+  el.innerHTML = `
+    ${isLoggedIn ? '<div class="crumb"><a onclick="history.back()" style="color:var(--muted);text-decoration:none;cursor:pointer">&larr; Back</a> &nbsp;/&nbsp; Privacy Policy</div>' : ''}
+    <div class="${isLoggedIn ? 'panel' : 'loginCard'}" style="max-width:760px;${isLoggedIn?'':'margin:40px auto;padding:32px'}">
+      <h2 style="margin:0 0 16px">Privacy Policy</h2>
+      <p class="mut" style="font-size:12px;margin-bottom:16px">Last updated: ${new Date().toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'})}</p>
+      <div style="font-size:13.5px;line-height:1.7">
+        <h4>1. Information We Collect</h4>
+        <p>BuildSuite collects information you provide directly: account details (name, email, password hash), business data (projects, orders, employees, financial records), and usage data (audit logs of actions taken within the platform).</p>
+        <h4>2. How We Use Your Data</h4>
+        <p>Your data is used exclusively to: (a) provide the construction management services you signed up for; (b) maintain audit trails for accountability; (c) generate reports and analytics within your workspace.</p>
+        <h4>3. Data Storage & Security</h4>
+        <p><b>This is a local-only application.</b> All data is stored in your browser's IndexedDB on this device. Your data never leaves your device unless you manually export it. No cloud sync, no remote servers, no external data transmission.</p>
+        <p>Passwords are hashed using SHA-256 before storage. We recommend using strong, unique passwords.</p>
+        <h4>4. Data Sharing</h4>
+        <p>We do not and cannot share your data — it exists only on your device. No third parties have access to your BuildSuite data.</p>
+        <h4>5. Data Retention</h4>
+        <p>Your data is retained as long as it remains in your browser. Deleted items are moved to Trash and permanently removed after 30 days. You may export all data at any time using the JSON export feature. Clearing browser data will permanently delete all BuildSuite data.</p>
+        <h4>6. Your Rights</h4>
+        <p>You have full control: (a) access all data stored about you; (b) export your data in JSON format; (c) delete your data by clearing browser storage; (d) correct inaccurate information via your profile.</p>
+        <h4>7. Cookies & Local Storage</h4>
+        <p>BuildSuite uses browser IndexedDB, localStorage, and sessionStorage for application data. No third-party tracking cookies are used. No analytics are collected.</p>
+        <h4>8. Contact</h4>
+        <p>For privacy-related inquiries, contact your BuildSuite administrator${companyEmail ? ' or reach us at <b>'+esc(companyEmail)+'</b>' : ''}.</p>
+      </div>
+      ${!isLoggedIn ? '<div style="margin-top:20px;text-align:center"><a onclick="renderLanding()" style="color:var(--accent2);cursor:pointer;font-size:13px">&larr; Back to Home</a></div>' : ''}
+    </div>
+  `;
+}
 function renderTrash(){
   if(session.type !== 'Admin'){ go('dashboard'); return; }
   purgeOldTrash();
@@ -2630,7 +2772,10 @@ function renderLanding(){
     </div>
 
     <div class="landing-footer">
-      © ${new Date().getFullYear()} ${esc(companyName)}. All rights reserved. &nbsp;·&nbsp; <a onclick="sub.authMode='signin';renderLogin()">LOGIN</a>
+      © ${new Date().getFullYear()} ${esc(companyName)}. All rights reserved. &nbsp;·&nbsp;
+      <a onclick="renderTerms()" style="cursor:pointer">Terms</a> &nbsp;·&nbsp;
+      <a onclick="renderPrivacy()" style="cursor:pointer">Privacy</a> &nbsp;·&nbsp;
+      <a onclick="sub.authMode='signin';renderLogin()">LOGIN</a>
     </div>
   </div>`;
 }
@@ -3275,6 +3420,19 @@ function renderDashboard(){
       </div>`;
     })()}
 
+    ${!localStorage.getItem('buildsuite_sync_warning_dismissed') ? `
+    <div class="panel" id="syncWarningBanner" style="border-left:3px solid #f59e0b;margin-bottom:14px;padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:rgba(245,158,11,.06)">
+      <span style="font-size:18px">📱</span>
+      <div style="flex:1;min-width:200px">
+        <div style="font-weight:700;font-size:13px">Single-Device Storage</div>
+        <div class="mut" style="font-size:12px">This is the offline version — all data lives only in this browser on this device. Clearing browser data, switching devices, or reinstalling will erase everything. Export regular JSON backups from Settings to stay safe.</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn ghost sm" onclick="exportJSON()">Export Backup</button>
+        <button class="btn ghost sm" onclick="localStorage.setItem('buildsuite_sync_warning_dismissed','1');document.getElementById('syncWarningBanner').remove()">Dismiss</button>
+      </div>
+    </div>` : ''}
+
     <div class="dash-period-bar">
       <button class="period-btn${dashPeriod==='month'?' active':''}" onclick="sub.dashPeriod='month';renderDashboard()">This Month</button>
       <button class="period-btn${dashPeriod==='quarter'?' active':''}" onclick="sub.dashPeriod='quarter';renderDashboard()">Quarter</button>
@@ -3796,6 +3954,7 @@ function renderProjectReport(projectId, from, to){
         <div class="btnrow" style="margin:0">
           <button class="btn ghost sm" onclick="go('customers',{custId:${projectId}})">View Project</button>
           <button class="btn ghost sm" onclick="window.print()">🖨 Print</button>
+          <button class="btn ghost sm" onclick="exportPDF()">📄 PDF</button>
         </div>
       </div>
       <div class="cards" style="margin-bottom:0">
@@ -4023,6 +4182,7 @@ function renderOrderDetail(id){
         <div class="btnrow" style="margin:0">
           <button class="btn ghost sm" onclick="duplicateOrder(${o.id})">Duplicate</button>
           <button class="btn ghost sm" onclick="window.print()">🖨 Print</button>
+          <button class="btn ghost sm" onclick="exportPDF()">📄 PDF</button>
           <button class="btn del sm" onclick="deleteOrder(${o.id})">Delete</button>
         </div>
       </div>

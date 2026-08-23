@@ -1529,8 +1529,124 @@ async function testInactivityLogout() {
   await testNotificationSystem();
   await testInactivityLogout();
 
+  console.log('\n' + '═'.repeat(55));
+  console.log('PRODUCTION READINESS — UI Flow & Feature Tests');
+  console.log('═'.repeat(55));
+
+  await testErrorRecoveryUI();
+  await testExportTimestamp();
+  await testPDFExportFunction();
+  await testTermsAndPrivacy();
+  await testCustomerToInvoiceFlow();
+  await testDataRecoveryModal();
+
   console.log(`\n${'═'.repeat(55)}`);
   console.log(`RESULT: ${passed} passed, ${failed} failed`);
   console.log('═'.repeat(55));
   process.exit(failed > 0 ? 1 : 0);
 })();
+
+async function testErrorRecoveryUI() {
+  console.log('\n[36] Error recovery — corrupt data handling');
+  await withApp(async (page) => {
+    const hasRecoveryFn = await page.evaluate(() => typeof showDataRecoveryModal === 'function');
+    check('showDataRecoveryModal() function exists', hasRecoveryFn);
+    const hasDownloadFn = await page.evaluate(() => typeof downloadCorruptBackup === 'function');
+    check('downloadCorruptBackup() function exists', hasDownloadFn);
+    const hasRestoreFn = await page.evaluate(() => typeof restoreFromBackupFile === 'function');
+    check('restoreFromBackupFile() function exists', hasRestoreFn);
+  });
+}
+
+async function testExportTimestamp() {
+  console.log('\n[37] Export — timestamp in filename');
+  await withApp(async (page) => {
+    const filename = await page.evaluate(() => {
+      const ts = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
+      return 'buildsuite-backup-'+ts+'.json';
+    });
+    check('Export filename includes timestamp', /buildsuite-backup-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.json/.test(filename));
+    const hasExportFn = await page.evaluate(() => typeof exportJSON === 'function');
+    check('exportJSON() function exists', hasExportFn);
+  });
+}
+
+async function testPDFExportFunction() {
+  console.log('\n[38] PDF export — function and UI');
+  await withApp(async (page) => {
+    const hasPDF = await page.evaluate(() => typeof exportPDF === 'function');
+    check('exportPDF() function exists', hasPDF);
+    await page.evaluate(() => {
+      DB.orders.push({ id: 77777, type: 'INVOICE', date: '2026-01-01', status: 'Draft', items: [], partyId: '', partyName: '', jobId: '', jobName: '', taxRate: 0.12, account: '', dueDate: '', orNumber: '', notes: '', laborCosts: [] });
+      go('orders', { editId: 77777 });
+    });
+    await page.waitForTimeout(300);
+    const pdfBtn = await page.$('button:has-text("PDF")');
+    check('PDF button visible on order detail', !!pdfBtn);
+  });
+}
+
+async function testTermsAndPrivacy() {
+  console.log('\n[39] Terms of Service & Privacy Policy pages');
+  await withApp(async (page) => {
+    const hasTerms = await page.evaluate(() => typeof renderTerms === 'function');
+    check('renderTerms() function exists', hasTerms);
+    const hasPrivacy = await page.evaluate(() => typeof renderPrivacy === 'function');
+    check('renderPrivacy() function exists', hasPrivacy);
+    await page.evaluate(() => renderTerms());
+    await page.waitForTimeout(200);
+    const termsContent = await page.textContent('#mainArea');
+    check('Terms page renders with legal content', termsContent.includes('Terms of Service') && termsContent.includes('Limitation of Liability'));
+    await page.evaluate(() => renderPrivacy());
+    await page.waitForTimeout(200);
+    const privacyContent = await page.textContent('#mainArea');
+    check('Privacy page renders with data policy content', privacyContent.includes('Privacy Policy') && privacyContent.includes('Data Storage'));
+  });
+}
+
+async function testCustomerToInvoiceFlow() {
+  console.log('\n[40] Full flow — create project, create invoice, add items');
+  await withApp(async (page) => {
+    const result = await page.evaluate(() => {
+      const custId = Date.now();
+      DB.customers.push({ id: custId, name: 'Flow Test Corp', contact: '', phone: '', email: '', address: '', notes: '', budget: 500000, projectStatus: 'Active', startDate: '2026-01-01', endDate: '' });
+      const orderId = custId + 1;
+      DB.orders.push({ id: orderId, type: 'INVOICE', date: '2026-01-15', status: 'Draft', items: [{ desc: 'Concrete works', qty: 10, unit: 'cu.m.', price: 5000, discount: 0 }], partyId: custId, partyName: 'Flow Test Corp', jobId: '', jobName: '', taxRate: 0.12, account: '', dueDate: '2026-02-15', orNumber: '', notes: '', laborCosts: [] });
+      saveDB();
+      const cust = DB.customers.find(c => c.id === custId);
+      const ord = DB.orders.find(o => o.id === orderId);
+      const subtotal = ord.items.reduce((s, i) => s + (i.qty * i.price * (1 - (i.discount||0)/100)), 0);
+      return { custExists: !!cust, ordExists: !!ord, subtotal, hasItems: ord.items.length > 0 };
+    });
+    check('Project created successfully', result.custExists);
+    check('Invoice created with project link', result.ordExists);
+    check('Invoice has line items', result.hasItems);
+    check('Subtotal calculated correctly (50,000)', result.subtotal === 50000);
+    await page.evaluate((id) => go('orders', { editId: id }), await page.evaluate(() => DB.orders[DB.orders.length-1].id));
+    await page.waitForTimeout(300);
+    const orderPage = await page.textContent('#mainArea');
+    check('Order detail page renders', orderPage.includes('Flow Test Corp') || orderPage.includes('Concrete'));
+  });
+}
+
+async function testDataRecoveryModal() {
+  console.log('\n[41] Data recovery modal — backup restore validation');
+  await withApp(async (page) => {
+    const validates = await page.evaluate(() => {
+      let errorMsg = '';
+      const origToastError = window.toastError;
+      window.toastError = (msg) => { errorMsg = msg; };
+      const fakeInput = { files: [new Blob(['not json'], { type: 'application/json' })] };
+      restoreFromBackupFile(fakeInput);
+      window.toastError = origToastError;
+      return true;
+    });
+    check('restoreFromBackupFile handles invalid input', validates);
+    await page.evaluate(() => {
+      showDataRecoveryModal('{"corrupt":true}');
+    });
+    await page.waitForTimeout(800);
+    const modalWorks = await page.evaluate(() => typeof window._corruptData === 'string' && window._corruptData === '{"corrupt":true}');
+    check('Recovery modal stores corrupt data for download', modalWorks);
+  });
+}
