@@ -8,5 +8,8 @@
   },
   "devDependencies": {
     "playwright": "^1.52.0"
+  },
+  "dependencies": {
+    "docx": "^9.7.1"
   }
 }
