@@ -12378,9 +12378,11 @@ function startCloudPolling(){
         takeSnapshot();
         const after = dbFingerprint();
         const dataChanged = before !== after;
-        if(document.getElementById('headerBar') && session && session.type!=='Pending') renderHeader();
+        if(dataChanged && document.getElementById('headerBar') && session && session.type!=='Pending') renderHeader();
         if(dataChanged && session && session.type!=='Pending' && view){
-          render();
+          const ae = document.activeElement;
+          const userBusy = (ae && (ae.tagName==='INPUT'||ae.tagName==='TEXTAREA'||ae.tagName==='SELECT'||ae.isContentEditable)) || document.querySelector('.modal-bg');
+          if(!userBusy) render();
         }
         if(session && session.type==='Pending' && DB.users.find(u=>u.id===session.id)?.type !== 'Pending'){
           const liveUser = DB.users.find(u=>u.id===session.id);
