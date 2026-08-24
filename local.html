@@ -92,7 +92,7 @@ a{color:var(--accent2);cursor:pointer}
 .sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
 .sidebar .brand{display:flex;align-items:center;gap:10px;padding:18px 16px 14px;white-space:nowrap;cursor:pointer;border-bottom:1px solid var(--line);flex-shrink:0}
 .sidebar .brand .mark{width:34px;height:34px;border-radius:8px;background:var(--accent);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;letter-spacing:-.02em;flex-shrink:0}
-.sidebar .brand .name{font-size:14px;font-weight:800;letter-spacing:-.01em;line-height:1.2}
+.sidebar .brand .name{font-size:14px;font-weight:800;letter-spacing:-.01em;line-height:1.2;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .sidebar .brand .name span{color:var(--accent)}
 .sidebar-nav{flex:1;padding:8px 0;overflow-y:auto}
 .sidebar-section{padding:0 12px;margin-bottom:4px}
@@ -1439,6 +1439,7 @@ function roleCanAccessTab(tabKey){
   if(tabKey==='help') return session.type!=='Pending';
   if(tabKey==='notificationLog') return session.type!=='Employee' && session.type!=='Pending';
   if(tabKey==='trash') return session.type==='Admin';
+  if(tabKey==='settings') return session.type==='Admin';
   const role = session.type;
   if(role==='Admin') return true;
   if(tabKey==='users') return false;
@@ -1514,7 +1515,8 @@ const NAV_ICONS = {
   dailyLogs:'📝', documents:'📁', timecards:'⏱️', bids:'📑',
   progressBilling:'💲', reports:'🖨️', clientPortal:'🏠',
   subPortal:'🔧', costVariance:'📉', takeoffs:'📏',
-  calculator:'🧮', costEstimator:'💵', schedule:'📐', auditLog:'📜'
+  calculator:'🧮', costEstimator:'💵', schedule:'📐', auditLog:'📜',
+  settings:'⚙️'
 };
 const NAV = [
   { key:'orders', label:'Orders' },
@@ -1575,6 +1577,7 @@ const SIDEBAR_GROUPS = [
   { section:'ADMIN', items:[
     { key:'users', label:'Users' },
     { key:'auditLog', label:'Audit Log' },
+    { key:'settings', label:'Settings' },
   ]},
 ];
 function navGroupForView(v){
@@ -1673,6 +1676,7 @@ function render(){
     notificationLog: renderNotificationLog,
     trash: renderTrash,
     auditLog: renderAuditLog,
+    settings: renderSettingsPage,
     help: renderHelp,
   };
   (renderers[view] || renderDashboard)();
@@ -1728,7 +1732,6 @@ function renderHeader(){
     </div>
     ${session.type!=='Pending' ? `<button class="iconbtn" id="globalSearchBtn" onclick="openGlobalSearch()" title="Search everything (Ctrl+K)" aria-label="Search everything">🔍</button>` : ''}
     ${session.type!=='Pending' ? `<button class="iconbtn" onclick="go('help')" title="Help & Getting Started" aria-label="Help">❓</button>` : ''}
-    ${session.type==='Admin' ? `<button class="iconbtn" onclick="openSettings()" title="Settings" aria-label="Settings">⚙️</button>` : ''}
     <button class="iconbtn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle theme">🌙</button>
   `;
 }
@@ -2286,112 +2289,137 @@ function closeModal(){
 
 /* ---------- settings ---------- */
 function openSettings(){
-  if(session.type !== 'Admin'){ toast("Only an Admin can open Settings."); return; }
-  openModal(`
-    <h3>⚙️ Settings</h3>
-    <div class="field" style="border-top:1px solid var(--line);padding-top:14px">
-      <label class="fl">Company Profile <span class="mut" style="font-weight:400">(shown to employees on their home screen)</span></label>
-      <input id="cpName" value="${esc(DB.settings.companyName)}" placeholder="Company Name" style="margin-bottom:8px">
-      <input id="cpShortName" value="${esc(DB.settings.companyShortName)}" placeholder="Short mark for the logo (e.g. CLM) — leave blank to auto-generate from the name above" style="margin-bottom:8px">
-      <textarea id="cpDesc" rows="2" placeholder="Short description" style="margin-bottom:8px">${esc(DB.settings.companyDescription)}</textarea>
-      <div class="grid2" style="margin-bottom:8px">
-        <input id="cpPhone" value="${esc(DB.settings.companyPhone)}" placeholder="Phone">
-        <input id="cpEmail" value="${esc(DB.settings.companyEmail)}" placeholder="Email">
+  go('settings');
+}
+function renderSettingsPage(){
+  if(session.type !== 'Admin'){ toast("Only an Admin can open Settings."); go('dashboard'); return; }
+  document.getElementById('mainArea').innerHTML = `
+    <div style="max-width:820px;margin:0 auto;padding:24px 0 60px">
+      <h2 style="margin-bottom:4px">⚙️ Settings</h2>
+      <p class="mut" style="margin-bottom:24px">Manage your company profile, integrations, and system preferences.</p>
+
+      <div class="settings-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+
+        <div class="panel" style="grid-column:1/3">
+          <h3 style="margin-bottom:12px">🏢 Company Profile</h3>
+          <p class="mut" style="font-size:12px;margin-bottom:12px">Shown to employees on their home screen and on printed documents.</p>
+          <input id="cpName" value="${esc(DB.settings.companyName)}" placeholder="Company Name" style="margin-bottom:8px">
+          <input id="cpShortName" value="${esc(DB.settings.companyShortName)}" placeholder="Short mark for the logo (e.g. CLM) — leave blank to auto-generate" style="margin-bottom:8px">
+          <textarea id="cpDesc" rows="2" placeholder="Short description" style="margin-bottom:8px">${esc(DB.settings.companyDescription)}</textarea>
+          <div class="grid2" style="margin-bottom:8px">
+            <input id="cpPhone" value="${esc(DB.settings.companyPhone)}" placeholder="Phone">
+            <input id="cpEmail" value="${esc(DB.settings.companyEmail)}" placeholder="Email">
+          </div>
+          <input id="cpAddress" value="${esc(DB.settings.companyAddress)}" placeholder="Address" style="margin-bottom:8px">
+          <input id="cpTIN" value="${esc(DB.settings.companyTIN)}" placeholder="Employer TIN (for payslips)" style="margin-bottom:8px">
+          <button class="btn save sm" onclick="saveCompanyProfile()">Save Company Profile</button>
+        </div>
+
+        <div class="panel">
+          <h3 style="margin-bottom:12px">📣 Announcements</h3>
+          <p class="mut" style="font-size:12px;margin-bottom:12px">Messages shown to employees on their home screen.</p>
+          <button class="btn ghost sm" onclick="openManageAnnouncements()">Manage Announcements (${DB.announcements.length})</button>
+        </div>
+
+        <div class="panel">
+          <h3 style="margin-bottom:12px">🖼️ Landing Page</h3>
+          <p class="mut" style="font-size:12px;margin-bottom:12px">Gallery and testimonials shown to potential clients.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn ghost sm" onclick="openManageGallery()">Gallery Photos (${DB.galleryPhotos.length})</button>
+            <button class="btn ghost sm" onclick="openManageTestimonials()">Testimonials (${DB.testimonials.length})</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3 style="margin-bottom:12px">🔔 Browser Notifications</h3>
+          <p class="mut" style="font-size:12px;margin-bottom:12px">Alerts for low stock, overdue items, and pending accounts while the app is open in a tab.</p>
+          ${browserNotificationsEnabled() ? `<button class="btn ghost sm" onclick="disableBrowserNotifications();go('settings')">🔕 Turn Off</button>` : `<button class="btn ghost sm" onclick="enableBrowserNotifications();go('settings')">🔔 Turn On</button>`}
+        </div>
+
+        <div class="panel">
+          <h3 style="margin-bottom:12px">🎨 Appearance</h3>
+          <p class="mut" style="font-size:12px;margin-bottom:12px">Switch between light and dark mode.</p>
+          <div class="toggle" style="width:100%">
+            <button class="${document.documentElement.dataset.theme!=='dark'?'on':''}" style="flex:1" onclick="applyTheme('light');go('settings')">☀️ Light</button>
+            <button class="${document.documentElement.dataset.theme==='dark'?'on':''}" style="flex:1" onclick="applyTheme('dark');go('settings')">🌙 Dark</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3 style="margin-bottom:12px">🔑 Sign-Up Invite Code</h3>
+          <p class="mut" style="font-size:12px;margin-bottom:12px">New employees need this code to create their own account. Share it directly — don't post publicly.</p>
+          <input id="signupCodeInput" value="${esc(DB.settings.signupCode||'')}" style="margin-bottom:8px" placeholder="Leave blank to allow sign-up with no code">
+          <button class="btn ghost sm" onclick="saveSignupCode()">Save Invite Code</button>
+        </div>
+
+        <div class="panel">
+          <h3 style="margin-bottom:12px">💱 Tax Rates</h3>
+          <p class="mut" style="font-size:12px;margin-bottom:12px">Applied automatically on Invoices and Purchase Orders.</p>
+          <div class="grid2" style="margin-bottom:8px">
+            <div class="field"><label class="fl" for="taxSales">Sales Tax (Invoices)</label><input id="taxSales" type="number" step="0.1" value="${((DB.settings.salesTaxRate||0)*100).toFixed(1)}"></div>
+            <div class="field"><label class="fl" for="taxPO">PO Tax (Purchases)</label><input id="taxPO" type="number" step="0.1" value="${((DB.settings.poTaxRate||0)*100).toFixed(1)}"></div>
+          </div>
+          <button class="btn ghost sm" onclick="saveTaxRates()">Save Tax Rates</button>
+        </div>
+
+        <div class="panel" style="grid-column:1/3">
+          <h3 style="margin-bottom:12px">📊 Google Sheets Mirror</h3>
+          <p class="mut" style="font-size:12px;margin-bottom:12px">One-way push — sends a live view-only copy of your data to Google Sheets for your accountant. Editing the Sheet does nothing back in Konstrukt.</p>
+          <input id="sheetsUrl" value="${esc(DB.settings.sheetsWebhookUrl)}" placeholder="Paste your Apps Script Web App URL here" style="margin-bottom:8px">
+          <div class="btnrow" style="margin-top:0">
+            <button class="btn ghost sm" onclick="saveSheetsUrl()">Save URL</button>
+            <button class="btn pri sm" onclick="syncToGoogleSheets()">🔄 Sync Now</button>
+            <a onclick="openSheetsGuide()" style="font-size:12.5px;color:var(--accent2);align-self:center;margin-left:auto;cursor:pointer">Setup steps →</a>
+          </div>
+        </div>
+
+        <div class="panel" style="grid-column:1/3">
+          <h3 style="margin-bottom:12px">💾 Local Data Management</h3>
+          <p class="mut" style="font-size:12.5px;margin-bottom:10px">Your data is stored in this browser's local storage. Download backups regularly to protect against data loss.</p>
+          <div id="storageBar" style="margin-bottom:12px">
+            <div style="font-size:12px;color:var(--muted)">Calculating storage...</div>
+          </div>
+          <div class="btnrow" style="margin-top:0;flex-wrap:wrap">
+            <button class="btn pri sm" onclick="exportBackup()">⬇ Download Backup</button>
+            <button class="btn ghost sm" onclick="importBackup()">⬆ Restore from Backup</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3 style="margin-bottom:12px">🗑️ Trash</h3>
+          <p class="mut" style="font-size:12px;margin-bottom:12px">Deleted items are kept for 30 days before permanent removal.</p>
+          <button class="btn ghost sm" onclick="go('trash')">Open Trash ${DB.trash.length?`(${DB.trash.length})`:''}</button>
+        </div>
+
+        <div class="panel">
+          <h3 style="margin-bottom:12px">📦 Reselling This System</h3>
+          <p class="mut" style="font-size:12px;margin-bottom:12px">Wipe this copy completely to set up for a new client.</p>
+          <button class="btn del sm" onclick="openPrepareForResale()">Prepare for New Client</button>
+        </div>
+
+        <div class="panel" style="grid-column:1/3">
+          <h3 style="margin-bottom:12px">📁 Database</h3>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px;font-size:12px;color:var(--muted);margin-bottom:12px">
+            <span>Projects: <b style="color:var(--text)">${DB.customers.length}</b></span>
+            <span>Orders: <b style="color:var(--text)">${DB.orders.length}</b></span>
+            <span>Employees: <b style="color:var(--text)">${DB.employees.length}</b></span>
+            <span>Products: <b style="color:var(--text)">${DB.products.length}</b></span>
+            <span>Vendors: <b style="color:var(--text)">${DB.vendors.length}</b></span>
+            <span>Materials: <b style="color:var(--text)">${DB.materials.length}</b></span>
+            <span>Vehicles: <b style="color:var(--text)">${DB.vehicles.length}</b></span>
+            <span>Equipment: <b style="color:var(--text)">${DB.equipment.length}</b></span>
+            <span>Transactions: <b style="color:var(--text)">${DB.transactions.length}</b></span>
+          </div>
+          <div class="btnrow" style="margin-top:0;flex-wrap:wrap">
+            <button class="btn ghost sm" onclick="exportJSON()">⬇ Export JSON</button>
+            <button class="btn ghost sm" onclick="exportTimestampedJSON()">💾 Timestamped Backup</button>
+            ${session.type==='Admin'?'<button class="btn del sm" onclick="resetAllData()">⚠ Factory Reset</button>':''}
+          </div>
+        </div>
+
       </div>
-      <input id="cpAddress" value="${esc(DB.settings.companyAddress)}" placeholder="Address" style="margin-bottom:8px">
-      <input id="cpTIN" value="${esc(DB.settings.companyTIN)}" placeholder="Employer TIN (for payslips)" style="margin-bottom:8px">
-      <button class="btn ghost sm" onclick="saveCompanyProfile()">Save Company Profile</button>
     </div>
-    <div class="field" style="border-top:1px solid var(--line);padding-top:14px">
-      <label class="fl">Announcements <span class="mut" style="font-weight:400">(shown to employees on their home screen)</span></label>
-      <button class="btn ghost sm" onclick="closeModal();openManageAnnouncements()">📣 Manage Announcements (${DB.announcements.length})</button>
-    </div>
-    <div class="field" style="border-top:1px solid var(--line);padding-top:14px">
-      <label class="fl">Landing Page Gallery <span class="mut" style="font-weight:400">(shown to potential clients on your public homepage)</span></label>
-      <button class="btn ghost sm" onclick="closeModal();openManageGallery()">🖼️ Manage Gallery Photos (${DB.galleryPhotos.length})</button>
-    </div>
-    <div class="field" style="border-top:1px solid var(--line);padding-top:14px">
-      <label class="fl">Client Testimonials <span class="mut" style="font-weight:400">(shown to potential clients on your public homepage)</span></label>
-      <button class="btn ghost sm" onclick="closeModal();openManageTestimonials()">⭐ Manage Testimonials (${DB.testimonials.length})</button>
-    </div>
-    <div class="field" style="border-top:1px solid var(--line);padding-top:14px">
-      <label class="fl">Browser Notifications <span class="mut" style="font-weight:400">(low stock, overdue reminders, pending accounts)</span></label>
-      <div class="mut" style="font-size:12px;margin-bottom:8px">Pops up a real notification on this device when something needs attention — but only while this app is open in a tab (even in the background). It won't reach you if the tab or browser is fully closed.</div>
-      ${browserNotificationsEnabled() ? `<button class="btn ghost sm" onclick="disableBrowserNotifications()">🔕 Turn Off</button>` : `<button class="btn ghost sm" onclick="enableBrowserNotifications()">🔔 Turn On</button>`}
-    </div>
-    <div class="field" style="border-top:1px solid var(--line);padding-top:14px">
-      <label class="fl">Trash <span class="mut" style="font-weight:400">(deleted items, kept for 30 days)</span></label>
-      <button class="btn ghost sm" onclick="closeModal();go('trash')">🗑️ Open Trash ${DB.trash.length?`(${DB.trash.length})`:''}</button>
-    </div>
-    <div class="field" style="border-top:1px solid var(--line);padding-top:14px">
-      <label class="fl">Reselling This System <span class="mut" style="font-weight:400">(wipe this copy for a new client)</span></label>
-      <button class="btn del sm" onclick="closeModal();openPrepareForResale()">📦 Prepare for New Client</button>
-    </div>
-    <div class="field" style="border-top:1px solid var(--line);padding-top:14px">
-      <label class="fl">Google Sheets Mirror <span class="mut" style="font-weight:400">(one-way — pushes a live view-only copy out, doesn't read anything back in)</span></label>
-      <div class="mut" style="font-size:12px;margin-bottom:8px">Good for handing your boss or accountant a familiar spreadsheet view of live numbers. Editing the Sheet itself does nothing back in Konstrukt — this is one-way on purpose.</div>
-      <input id="sheetsUrl" value="${esc(DB.settings.sheetsWebhookUrl)}" placeholder="Paste your Apps Script Web App URL here" style="margin-bottom:8px">
-      <div class="btnrow" style="margin-top:0">
-        <button class="btn ghost sm" onclick="saveSheetsUrl()">Save URL</button>
-        <button class="btn pri sm" onclick="syncToGoogleSheets()">🔄 Sync Now</button>
-        <a onclick="openSheetsGuide()" style="font-size:12.5px;color:var(--accent2);align-self:center;margin-left:auto">Setup steps →</a>
-      </div>
-    </div>
-    <div class="field"><label class="fl">Appearance</label>
-      <div class="toggle" style="width:100%">
-        <button class="${document.documentElement.dataset.theme!=='dark'?'on':''}" style="flex:1" onclick="applyTheme('light');closeModal();openSettings()">☀️ Light</button>
-        <button class="${document.documentElement.dataset.theme==='dark'?'on':''}" style="flex:1" onclick="applyTheme('dark');closeModal();openSettings()">🌙 Dark</button>
-      </div>
-    </div>
-    <div class="field" style="border-top:1px solid var(--line);padding-top:14px">
-      <label class="fl">Local Data Management</label>
-      <div class="mut" style="font-size:12.5px;margin-bottom:10px">Your data is stored in this browser's local storage. Download backups regularly to protect against data loss.</div>
-      <div id="storageBar" style="margin-bottom:12px">
-        <div style="font-size:12px;color:var(--muted)">Calculating storage...</div>
-      </div>
-      <div class="btnrow" style="margin-top:0;flex-wrap:wrap">
-        <button class="btn pri sm" onclick="exportBackup()">⬇ Download Backup</button>
-        <button class="btn ghost sm" onclick="importBackup()">⬆ Restore from Backup</button>
-      </div>
-    </div>
-    ${session.type==='Admin' ? `
-    <div class="field" style="border-top:1px solid var(--line);padding-top:14px">
-      <label class="fl">Sign-Up Invite Code</label>
-      <div class="mut" style="font-size:12px;margin-bottom:8px">New employees need this code to create their own account. Share it directly with people you trust — don't post it publicly. Changing it blocks anyone using the old code.</div>
-      <input id="signupCodeInput" value="${esc(DB.settings.signupCode||'')}" style="margin-bottom:8px" placeholder="Leave blank to allow sign-up with no code">
-      <button class="btn ghost sm" onclick="saveSignupCode()">Save Invite Code</button>
-    </div>` : ''}
-    <div class="field" style="border-top:1px solid var(--line);padding-top:14px">
-      <label class="fl">Tax Rates</label>
-      <div class="mut" style="font-size:12px;margin-bottom:8px">Applied automatically on Invoices and Purchase Orders. Enter as a percentage.</div>
-      <div class="grid2">
-        <div class="field"><label class="fl" for="taxSales">Sales Tax (Invoices)</label><input id="taxSales" type="number" step="0.1" value="${((DB.settings.salesTaxRate||0)*100).toFixed(1)}"></div>
-        <div class="field"><label class="fl" for="taxPO">PO Tax (Purchases)</label><input id="taxPO" type="number" step="0.1" value="${((DB.settings.poTaxRate||0)*100).toFixed(1)}"></div>
-      </div>
-      <button class="btn ghost sm" onclick="saveTaxRates()">Save Tax Rates</button>
-    </div>
-    <div style="border-top:1px solid var(--line);padding-top:14px;margin-bottom:14px">
-      <label class="fl">Database Stats</label>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:12px;color:var(--muted)">
-        <span>Projects: <b style="color:var(--text)">${DB.customers.length}</b></span>
-        <span>Orders: <b style="color:var(--text)">${DB.orders.length}</b></span>
-        <span>Employees: <b style="color:var(--text)">${DB.employees.length}</b></span>
-        <span>Products: <b style="color:var(--text)">${DB.products.length}</b></span>
-        <span>Vendors: <b style="color:var(--text)">${DB.vendors.length}</b></span>
-        <span>Materials: <b style="color:var(--text)">${DB.materials.length}</b></span>
-        <span>Vehicles: <b style="color:var(--text)">${DB.vehicles.length}</b></span>
-        <span>Equipment: <b style="color:var(--text)">${DB.equipment.length}</b></span>
-        <span>Transactions: <b style="color:var(--text)">${DB.transactions.length}</b></span>
-      </div>
-    </div>
-    <div class="btnrow" style="border-top:1px solid var(--line);padding-top:14px">
-      <button class="btn ghost" onclick="exportJSON()">⬇ Export data (JSON)</button>
-      <button class="btn ghost" onclick="exportTimestampedJSON()">💾 Timestamped Backup</button>
-      ${session.type==='Admin'?'<button class="btn del" onclick="resetAllData()">⚠ Factory Reset</button>':''}
-      <div class="spacer"></div>
-      <button class="btn ghost" onclick="closeModal()">Close</button>
-    </div>
-  `);
+  `;
   getStorageUsage().then(({used, quota})=>{
     const el = document.getElementById('storageBar');
     if(!el) return;
@@ -2413,7 +2441,7 @@ function openSettings(){
 }
 function saveSignupCode(){
   DB.settings.signupCode = document.getElementById('signupCodeInput').value.trim();
-  saveDB(); toast('Invite code updated'); closeModal(); openSettings();
+  saveDB(); toast('Invite code updated'); go('settings');
 }
 async function saveCompanyProfile(){
   DB.settings.companyName = document.getElementById('cpName').value;
@@ -2425,7 +2453,7 @@ async function saveCompanyProfile(){
   DB.settings.companyTIN = document.getElementById('cpTIN').value;
   saveDB();
   toast('Company profile updated');
-  closeModal(); openSettings();
+  render();
 }
 function openManageAnnouncements(){
   if(session.type !== 'Admin'){ toast('Only an Admin can manage announcements.'); return; }
@@ -2447,7 +2475,7 @@ function openManageAnnouncements(){
         </div>
       `).join('') : `<div class="empty">No announcements yet</div>`}
     </div>
-    <div class="btnrow"><button class="btn ghost" onclick="closeModal();openSettings()">Back to Settings</button></div>
+    <div class="btnrow"><button class="btn ghost" onclick="closeModal();go('settings')">Back to Settings</button></div>
   `);
 }
 function postAnnouncement(){
@@ -2464,7 +2492,7 @@ function deleteAnnouncement(id){
 }
 function saveSheetsUrl(){
   DB.settings.sheetsWebhookUrl = document.getElementById('sheetsUrl').value.trim();
-  saveDB(); toast('Google Sheets URL saved'); closeModal(); openSettings();
+  saveDB(); toast('Google Sheets URL saved'); go('settings');
 }
 async function pushSheetTab(url, sheetName, headers, rows){
   const res = await fetch(url, {
@@ -2536,7 +2564,7 @@ function doGet(e) {
       <b>8.</b> Paste that URL into Konstrukt Settings → Google Sheets Mirror → Save → Sync Now.
     </div>
     <div class="mut" style="font-size:11.5px;margin-top:10px">This only pushes data out — nothing you type in the Sheet ever changes anything in Konstrukt. Re-run "Sync Now" any time you want a fresh snapshot.</div>
-    <div class="btnrow"><button class="btn ghost" onclick="closeModal();openSettings()">Back to Settings</button></div>
+    <div class="btnrow"><button class="btn ghost" onclick="closeModal();go('settings')">Back to Settings</button></div>
   `);
 }
 function openManageTestimonials(){
@@ -2559,7 +2587,7 @@ function openManageTestimonials(){
         </div>
       `).join('') : `<div class="empty">No testimonials yet</div>`}
     </div>
-    <div class="btnrow"><button class="btn ghost" onclick="closeModal();openSettings()">Back to Settings</button></div>
+    <div class="btnrow"><button class="btn ghost" onclick="closeModal();go('settings')">Back to Settings</button></div>
   `);
 }
 function saveTestimonial(){
@@ -2592,7 +2620,7 @@ function openManageGallery(){
         </div>
       `).join('') || `<div class="empty" style="grid-column:1/-1">No photos yet — upload your first one above.</div>`}
     </div>
-    <div class="btnrow"><button class="btn ghost" onclick="closeModal();openSettings()">Back to Settings</button></div>
+    <div class="btnrow"><button class="btn ghost" onclick="closeModal();go('settings')">Back to Settings</button></div>
   `);
 }
 function uploadGalleryPhotos(fileList){
@@ -2623,7 +2651,7 @@ function saveTaxRates(){
   const po = Number(document.getElementById('taxPO').value)||0;
   DB.settings.salesTaxRate = sales/100;
   DB.settings.poTaxRate = po/100;
-  saveDB(); toast('Tax rates updated'); closeModal(); openSettings();
+  saveDB(); toast('Tax rates updated'); go('settings');
 }
 function openCloudGuide(){ toast('This is the local version — cloud sync is not available'); }
 /* ============================================================ LOGIN ============================================================ */
@@ -11824,13 +11852,13 @@ async function enableBrowserNotifications(){
   localStorage.setItem('buildsuite_notify_enabled', '1');
   toast('Notifications enabled');
   startNotifyChecks();
-  if(typeof openSettings === 'function' && document.querySelector('.modal-bg')) openSettings();
+  if(view === 'settings') render();
 }
 function disableBrowserNotifications(){
   localStorage.setItem('buildsuite_notify_enabled', '0');
   stopNotifyChecks();
   toast('Notifications turned off');
-  if(document.querySelector('.modal-bg')) openSettings();
+  if(view === 'settings') render();
 }
 function startNotifyChecks(){
   if(notifyCheckTimer) clearInterval(notifyCheckTimer);
